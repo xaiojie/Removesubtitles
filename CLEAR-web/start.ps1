@@ -1,5 +1,6 @@
 $base = $PSScriptRoot
-$endpoint = 'http://127.0.0.1:8765'
+$port = if ($env:CLEAR_PORT) { [int]$env:CLEAR_PORT } else { 8765 }
+$endpoint = "http://127.0.0.1:$port"
 function Test-ClearServer {
     try {
         return (Invoke-WebRequest -UseBasicParsing "$endpoint/api/system" -TimeoutSec 1).StatusCode -eq 200

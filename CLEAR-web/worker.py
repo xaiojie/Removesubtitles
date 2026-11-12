@@ -1,6 +1,8 @@
 from functools import lru_cache
+from itertools import chain, islice
 import json
 import math
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -10,21 +12,22 @@ import imageio_ffmpeg
 import numpy as np
 from PIL import Image
 
+from inference_options import InferenceOptions
+from video_segments import decoded_frames, find_shot_cuts, video_batches
+
 ROOT = Path(__file__).resolve().parent
-MODELS = ROOT.parent / 'CLEAR-models'
+WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
+MODELS = WORKSPACE / 'CLEAR-models'
 WAN = MODELS / 'Wan2.1-T2V-1.3B'
 PROMPT = ('Please remove the subtitle text from the video while preserving the character appearance, '
           'background composition, and color style. Do not add any new elements.')
-STEPS = 5
-CHUNK = 21
-OVERLAP = 4
 
 
 def report(**fields):
     print('CLEAR_STATUS ' + json.dumps(fields), flush=True)
 
 
-def load_model(source):
+def load_model(source, lora_scale=1.0):
     import torch
 
     sys.path.insert(0, str(source))
@@ -62,7 +65,7 @@ def load_model(source):
     adapter = Wan21InferencePipeline.__new__(Wan21InferencePipeline)
     adapter.pipe = pipe
     adapter.lora_rank = 64
-    adapter.lora_scale = 1.0
+    adapter.lora_scale = lora_scale
     adapter.lora_target_modules = ['q', 'k', 'v', 'o', 'ffn.0', 'ffn.2']
     adapter.load_lora(str(MODELS / 'CLEAR-mask-free-subtitle-removal.pt'))
     lora_b = [value for name, value in pipe.dit.named_parameters() if '.lora_B.' in name]
@@ -74,33 +77,83 @@ def load_model(source):
     return pipe
 
 
-def repair_batch(frames, roi, predict):
+def repair_batch(frames, roi, predict, context="roi", resolution="auto", blend_mode="rectangle"):
     x1, y1, x2, y2 = roi
     height, width = frames[0].shape[:2]
     margin_x = max(24, (x2 - x1) // 8)
     margin_y = max(48, (y2 - y1) // 2)
     left, top = max(0, x1 - margin_x), max(0, y1 - margin_y)
     right, bottom = min(width, x2 + margin_x), min(height, y2 + margin_y)
+    if context == "frame":
+        left, top, right, bottom = 0, 0, width, height
     crop_width, crop_height = right - left, bottom - top
     scale = min(1, math.sqrt((832 * 480) / (crop_width * crop_height)), 1024 / max(crop_width, crop_height))
     shape = (max(16, round(crop_width * scale / 16) * 16),
              max(16, round(crop_height * scale / 16) * 16))
-    inputs = [
-        Image.fromarray(cv2.cvtColor(frame[top:bottom, left:right], cv2.COLOR_BGR2RGB))
-        .resize(shape, Image.Resampling.LANCZOS)
-        for frame in frames
-    ]
+    inputs = []
+    for frame in frames:
+        pixels = cv2.cvtColor(frame[top:bottom, left:right], cv2.COLOR_BGR2RGB)
+        if resolution == "native":
+            pixels = cv2.copyMakeBorder(pixels, 0, -crop_height % 16, 0, -crop_width % 16,
+                                        cv2.BORDER_REPLICATE)
+            inputs.append(Image.fromarray(pixels))
+        else:
+            inputs.append(Image.fromarray(pixels).resize(shape, Image.Resampling.LANCZOS))
     # Wan requires 4n+1 frames. Replicate the tail and discard only the padding.
     inputs.extend([inputs[-1]] * (-(len(inputs) - 1) % 4))
     outputs = predict(inputs)
     if len(outputs) != len(inputs):
         raise RuntimeError('模型返回的帧数与输入不一致。')
     local_roi = (x1 - left, y1 - top, x2 - left, y2 - top)
+    generated = []
     for frame, image in zip(frames, outputs):
-        repaired_image = image.convert('RGB').resize((crop_width, crop_height), Image.Resampling.LANCZOS)
+        repaired_image = image.convert('RGB')
+        if resolution == "native":
+            repaired_image = repaired_image.crop((0, 0, crop_width, crop_height))
+        else:
+            repaired_image = repaired_image.resize((crop_width, crop_height), Image.Resampling.LANCZOS)
         repaired = cv2.cvtColor(np.asarray(repaired_image), cv2.COLOR_RGB2BGR)
         composite = blend_region(frame[top:bottom, left:right], repaired, local_roi)
+        generated.append(composite)
+    if blend_mode == "lines":
+        original = np.stack([frame[y1:y2, x1:x2] for frame in frames])
+        generated = blend_subtitle_lines(original, np.stack(generated))
+    for frame, composite in zip(frames, generated):
         frame[y1:y2, x1:x2] = composite
+
+
+def blend_subtitle_lines(original, generated):
+    luminance = original.min(axis=3)
+    probe = ((luminance >= 175) & (original.max(axis=3) - luminance <= 55)
+             & (luminance.astype(np.int16) - generated.min(axis=3) >= 24))
+    indices = np.arange(len(probe))
+    support = sum(probe[np.clip(indices + offset, 0, len(probe) - 1)].astype(np.uint8)
+                  for offset in range(-2, 3))
+    output = []
+    for source, repaired, glyphs in zip(original, generated, probe & (support >= 3)):
+        active = (glyphs.sum(axis=1) >= 12).astype(np.uint8)
+        active = cv2.morphologyEx(active[:, None], cv2.MORPH_CLOSE, np.ones((7, 1), np.uint8))[:, 0]
+        edges = np.flatnonzero(np.diff(np.r_[False, active.astype(bool), False]))
+        plane = np.zeros(glyphs.shape, dtype=np.float32)
+        for top, bottom in zip(edges[::2], edges[1::2]):
+            if bottom - top < 6:
+                continue
+            columns = np.nonzero(glyphs[top:bottom])[1]
+            if not columns.size:
+                continue
+            left, right = np.percentile(columns, [.25, 99.75]).astype(int)
+            plane[max(0, top - 8):bottom + 8, max(0, left - 8):right + 9] = 1
+        if not plane.any():
+            output.append(repaired)
+            continue
+        alpha = cv2.GaussianBlur(plane, (0, 0), 3)[..., None]
+        source, repaired = source.astype(np.float32), repaired.astype(np.float32)
+        background = 1 - plane
+        correction = cv2.GaussianBlur((source - repaired) * background[..., None], (0, 0), 12)
+        correction /= np.maximum(cv2.GaussianBlur(background, (0, 0), 12)[..., None], 0.1)
+        candidate = repaired + np.clip(correction, -25, 25)
+        output.append(np.clip(np.rint(source * (1 - alpha) + candidate * alpha), 0, 255).astype(np.uint8))
+    return output
 
 
 def blend_region(original, repaired, roi):
@@ -130,60 +183,77 @@ def run(folder, source):
         height, width = first.shape[:2]
         if [width, height] != config['dimensions']:
             raise ValueError('浏览器与解码器读取的画面尺寸不同。请先导出为标准 MP4。')
-        pipe = load_model(source)
+        options = InferenceOptions.parse(json.dumps(config.get("inference", {})))
+        frame_range = options.frame_range(fps, total)
+        cuts = []
+        if options.segment_mode == "shots":
+            cuts = scan_shots(input_file, config['roi'], frame_range)
+        pipe = load_model(source, options.lora_scale)
         report(percent=8, stage='正在准备首段视频')
-        encode(cap, first, fps, total, pipe, config['roi'], folder)
+        encode(cap, first, fps, total, pipe, config['roi'], folder, options, frame_range, cuts)
     finally:
         cap.release()
 
 
-def encode(cap, first, fps, total, pipe, roi, folder):
+def scan_shots(input_file, roi, frame_range):
+    report(percent=5, stage="正在检测切镜")
+    start, end = frame_range
+    scan = cv2.VideoCapture(str(input_file), cv2.CAP_FFMPEG)
+    try:
+        if not scan.isOpened():
+            raise ValueError("无法重新打开视频进行切镜检测。")
+        cuts = find_shot_cuts(islice(decoded_frames(scan), start, end), roi)
+    finally:
+        scan.release()
+    cuts = [start + cut for cut in cuts]
+    print("SHOT_CUTS", json.dumps(cuts), flush=True)
+    return cuts
+
+
+def encode(cap, first, fps, total, pipe, roi, folder, options, frame_range, cuts):
     height, width = first.shape[:2]
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     command = [
         ffmpeg, '-hide_banner', '-loglevel', 'error', '-y',
         '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-video_size', f'{width}x{height}',
         '-framerate', str(fps), '-i', 'pipe:0', '-i', str(folder / 'source.video'),
-        '-map', '0:v:0', '-map', '1:a?', '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
+        '-map', '0:v:0', '-map', '1:a?', '-c:v', 'libx264', '-preset', 'fast', '-crf', str(options.export_crf),
         '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-pix_fmt', 'yuv420p',
         '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(folder / 'partial.mp4'),
     ]
+    start_frame, end_frame = frame_range
+    selected_total = end_frame - start_frame if end_frame is not None else max(0, total - start_frame)
     done = 0
     segment = 0
-    carry = []
-    pending = [first]
+    frames = chain((first,), decoded_frames(cap))
     with subprocess.Popen(command, stdin=subprocess.PIPE) as writer:
         try:
-            while pending:
-                while len(carry) + len(pending) < CHUNK:
-                    ok, frame = cap.read()
-                    if not ok:
-                        break
-                    pending.append(frame)
+            for carry, pending, selected in video_batches(frames, frame_range, cuts, options):
+                if not selected:
+                    writer.stdin.write(pending[0].tobytes())
+                    continue
                 segment += 1
                 batch = carry + pending
-                next_carry = [frame.copy() for frame in batch[-OVERLAP:]]
 
                 def predict(images):
                     def progress(timesteps):
                         for step, timestep in enumerate(timesteps, 1):
-                            fraction = (done + len(pending) * (step - 1) / STEPS) / max(total, done + len(pending))
-                            report(percent=min(94, int(8 + 86 * fraction)), stage=f'第 {segment} 段 · 去噪 {step}/{STEPS}')
+                            fraction = (done + len(pending) * (step - 1) / options.steps) / max(selected_total, done + len(pending))
+                            report(percent=min(94, int(8 + 86 * fraction)), stage=f'第 {segment} 段 · 去噪 {step}/{options.steps}')
                             yield timestep
                     return pipe(prompt=PROMPT, control_video=images,
                                 width=images[0].width, height=images[0].height,
-                                num_frames=len(images), num_inference_steps=STEPS, cfg_scale=1.0,
-                                seed=42, tiled=True, tile_size=(30, 52), tile_stride=(15, 26),
+                                num_frames=len(images), num_inference_steps=options.steps, cfg_scale=options.cfg_scale,
+                                seed=options.seed, tiled=True, tile_size=(30, 52), tile_stride=(15, 26),
                                 progress_bar_cmd=progress)
 
-                repair_batch(batch, roi, predict)
+                repair_batch(batch, roi, predict, options.context, options.resolution, options.blend_mode)
                 for frame in pending:
                     writer.stdin.write(frame.tobytes())
                 done += len(pending)
-                report(percent=min(94, int(8 + 86 * done / max(total, done))), stage=f'已修复 {done} 帧')
-                carry = next_carry
-                ok, frame = cap.read()
-                pending = [frame] if ok else []
+                report(percent=min(94, int(8 + 86 * done / max(selected_total, done))), stage=f'已修复 {done} 帧')
+            if not done:
+                raise ValueError('The selected time range contains no decoded frames.')
             report(percent=97, stage='正在封装视频与音轨')
             writer.stdin.close()
             if writer.wait():

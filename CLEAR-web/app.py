@@ -1,5 +1,7 @@
+from dataclasses import asdict
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -9,8 +11,10 @@ from uuid import uuid4
 
 from flask import Flask, abort, jsonify, request, send_file
 
+from inference_options import InferenceOptions
+
 ROOT = Path(__file__).resolve().parent
-WORKSPACE = ROOT.parent
+WORKSPACE = Path(os.environ.get("CLEAR_WORKSPACE", ROOT.parent)).resolve()
 MODELS = WORKSPACE / 'CLEAR-models'
 WAN = MODELS / 'Wan2.1-T2V-1.3B'
 REQUIRED = {
@@ -105,7 +109,8 @@ def index():
 def system():
     ready, model = model_status()
     gpu = gpu_status()
-    return jsonify(ready=ready and gpu is not None, model=model, gpu=gpu)
+    return jsonify(ready=ready and gpu is not None, model=model, gpu=gpu,
+                   inference_defaults=asdict(InferenceOptions()))
 
 
 @app.errorhandler(413)
@@ -156,6 +161,7 @@ def submit():
         abort(403)
     try:
         roi, dimensions = region(request.form.get('roi'), request.form.get('dimensions'))
+        inference = asdict(InferenceOptions.parse(request.form.get('inference', '{}')))
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
     video = request.files.get('video')
@@ -166,12 +172,12 @@ def submit():
     with lock:
         if any(job['state'] == 'running' for job in jobs.values()):
             return jsonify(error='GPU 正在处理另一个视频。'), 409
-        jobs[job_id] = dict(state='running', stage='正在保存视频', percent=4)
+        jobs[job_id] = dict(state='running', stage='正在保存视频', percent=4, inference=inference)
     folder = DATA / job_id
     try:
         folder.mkdir()
         video.save(folder / 'source.video')
-        (folder / 'config.json').write_text(json.dumps(dict(roi=roi, dimensions=dimensions)), encoding='utf-8')
+        (folder / 'config.json').write_text(json.dumps(dict(roi=roi, dimensions=dimensions, inference=inference)), encoding='utf-8')
         Thread(target=run_job, args=(job_id, folder), daemon=True).start()
     except OSError:
         (folder / 'source.video').unlink(missing_ok=True)
@@ -180,23 +186,33 @@ def submit():
     return jsonify(id=job_id), 202
 
 
+def completed_output(job_id):
+    if not re.fullmatch(r'[0-9a-f]{32}', job_id):
+        return None
+    path = DATA / job_id / 'output.mp4'
+    return path if path.is_file() else None
+
+
 @app.get('/api/jobs/<job_id>')
 def status(job_id):
     with lock:
         job = jobs.get(job_id)
-        if job is None:
-            return jsonify(error='任务已结束或本地服务已重启。'), 404
-        return jsonify(job.copy())
+        if job is not None:
+            return jsonify(job.copy())
+    path = completed_output(job_id)
+    if path is None:
+        return jsonify(error='Job not found.'), 404
+    config = json.loads((path.parent / 'config.json').read_text(encoding='utf-8'))
+    return jsonify(state='done', percent=100, stage='Completed', inference=config.get('inference', {}))
 
 
 @app.get('/api/jobs/<job_id>/output')
 def output(job_id):
-    with lock:
-        if jobs.get(job_id, {}).get('state') != 'done':
-            abort(404)
-    return send_file(DATA / job_id / 'output.mp4', as_attachment=True,
-                     download_name='CLEAR-processed.mp4', mimetype='video/mp4')
+    path = completed_output(job_id)
+    if path is None:
+        abort(404)
+    return send_file(path, as_attachment=True, download_name='CLEAR-processed.mp4', mimetype='video/mp4')
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=8765, threaded=True)
+    app.run(host='127.0.0.1', port=int(os.environ.get('CLEAR_PORT', '8765')), threaded=True)

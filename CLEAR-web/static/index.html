@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -16,12 +16,22 @@
       <div class="panel-head"><div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div><label class="button secondary" for="file">选择视频</label><input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" class="visually-hidden"></div>
       <div class="stage">
         <label id="empty" for="file"><span class="film" aria-hidden="true">▶</span><strong>打开本地视频</strong><small>使用浏览器可播放的视频，例如 MP4 或 WebM</small></label>
-        <div id="surface" hidden><video id="video" playsinline preload="auto"></video><div id="overlay" aria-label="在画面上拖动鼠标框选字幕"><div id="box" hidden></div></div></div>
+        <div id="players" class="players" hidden>
+          <section class="player" aria-labelledby="original-title">
+            <h3 id="original-title" hidden>原视频</h3>
+            <div id="surface"><video id="video" playsinline preload="auto"></video><div id="overlay" aria-label="在画面上拖动鼠标框选字幕"><div id="box" hidden></div></div></div>
+          </section>
+          <section id="result-panel" class="player" aria-labelledby="result-title" hidden>
+            <h3 id="result-title">处理结果</h3>
+            <video id="result-video" playsinline muted preload="auto"></video>
+          </section>
+        </div>
       </div>
       <div class="controls">
         <button id="play" class="button secondary" disabled>播放</button>
         <input id="timeline" type="range" min="0" max="0" value="0" step=".01" aria-label="播放位置" disabled>
         <output id="time">00:00 / 00:00</output>
+        <button id="audio" class="button secondary" hidden>开启声音</button>
         <button id="reset" class="button secondary" disabled>清除框选</button>
       </div>
     </section>
@@ -29,6 +39,31 @@
       <section class="panel task">
         <h2>处理任务</h2>
         <dl class="details"><div><dt>字幕区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型文件</dt><dd id="model">正在检查</dd></div></dl>
+        <fieldset id="processing-options" class="processing-options" disabled>
+          <legend>处理设置</legend>
+          <div class="settings-grid">
+            <label>开始时间（秒）<input id="start-seconds" type="number" min="0" step="any" value="0" required></label>
+            <label>处理时长（秒）<input id="duration-seconds" type="number" min="0.001" step="any" placeholder="到视频结束"></label>
+            <label>移除强度（LoRA）<input data-option="lora_scale" type="number" min="0.5" max="2" step="0.05" value="1" required></label>
+            <label>去噪步数<input data-option="steps" type="number" min="1" max="24" step="1" value="5" required></label>
+          </div>
+          <button id="use-current-time" type="button" class="button secondary">从当前播放位置开始</button>
+          <details>
+            <summary>高级参数</summary>
+            <div class="settings-grid">
+              <label>CFG<input data-option="cfg_scale" type="number" min="1" max="3" step="0.1" value="1" required></label>
+              <label>随机种子<input data-option="seed" type="number" min="0" max="4294967295" step="1" value="123" required></label>
+              <label id="segment-option" class="settings-wide" hidden>分段方式<select data-option="segment_mode"><option value="shots">按镜头分段</option><option value="fixed">固定帧数分段</option></select></label>
+              <label>分段帧数<select data-option="chunk_frames"><option>5</option><option>9</option><option>13</option><option>17</option><option selected>21</option><option>25</option><option>29</option><option>33</option></select></label>
+              <label>重叠帧数<input data-option="overlap_frames" type="number" min="0" max="16" step="1" value="4" required></label>
+              <label>模型输入<select data-option="context"><option value="frame">整帧</option><option value="roi">选区及周边</option></select></label>
+              <label>推理分辨率<select data-option="resolution"><option value="auto">自动缩放</option><option value="native">原像素尺寸</option></select></label>
+              <label class="settings-wide">合成方式<select data-option="blend_mode"><option value="lines">按字幕行合成并匹配底色</option><option value="rectangle">矩形选区合成</option></select></label>
+              <label class="settings-wide">导出画质<select data-option="export_crf"><option value="18">高画质 MP4</option><option value="14" selected>更高画质 MP4</option><option value="0">无损 H.264（YUV 4:2:0）</option></select></label>
+            </div>
+            <small>原像素推理更耗显存，可调低分段帧数。无损编码从转换后的 YUV 画面开始计算。</small>
+          </details>
+        </fieldset>
         <button id="submit" class="button primary" disabled>开始移除字幕</button>
         <div class="metric"><span id="status" role="status">等待开始</span><b id="percent">0%</b></div>
         <progress id="progress" max="100" value="0" aria-label="字幕移除进度"></progress>
