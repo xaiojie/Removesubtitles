@@ -1,0 +1,7 @@
+Flask==3.1.3
+diffsynth==1.1.9
+imageio-ffmpeg==0.8.1
+numpy>=2,<2.4
+opencv-python-headless==5.0.0.93
+peft==0.18.1
+transformers==4.57.6

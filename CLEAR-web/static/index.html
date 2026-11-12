@@ -1,0 +1,50 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLEAR · 视频字幕移除</title>
+<link rel="stylesheet" href="/static/style.css">
+<script type="module" src="/static/app.mjs"></script>
+</head>
+<body>
+<header class="top"><div class="brand"><span class="mark" aria-hidden="true">C</span>CLEAR</div><span class="local"><i></i> 本地工作台</span></header>
+<main>
+  <div class="intro"><h1>视频字幕移除</h1><p>选择视频，在画面上拖框标出字幕，再导出修复后的 MP4。</p></div>
+  <div class="workspace">
+    <section class="panel editor" aria-labelledby="preview-title">
+      <div class="panel-head"><div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div><label class="button secondary" for="file">选择视频</label><input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" class="visually-hidden"></div>
+      <div class="stage">
+        <label id="empty" for="file"><span class="film" aria-hidden="true">▶</span><strong>打开本地视频</strong><small>使用浏览器可播放的视频，例如 MP4 或 WebM</small></label>
+        <div id="surface" hidden><video id="video" playsinline preload="auto"></video><div id="overlay" aria-label="在画面上拖动鼠标框选字幕"><div id="box" hidden></div></div></div>
+      </div>
+      <div class="controls">
+        <button id="play" class="button secondary" disabled>播放</button>
+        <input id="timeline" type="range" min="0" max="0" value="0" step=".01" aria-label="播放位置" disabled>
+        <output id="time">00:00 / 00:00</output>
+        <button id="reset" class="button secondary" disabled>清除框选</button>
+      </div>
+    </section>
+    <aside>
+      <section class="panel task">
+        <h2>处理任务</h2>
+        <dl class="details"><div><dt>字幕区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型文件</dt><dd id="model">正在检查</dd></div></dl>
+        <button id="submit" class="button primary" disabled>开始移除字幕</button>
+        <div class="metric"><span id="status" role="status">等待开始</span><b id="percent">0%</b></div>
+        <progress id="progress" max="100" value="0" aria-label="字幕移除进度"></progress>
+        <p id="error" role="alert" hidden></p>
+        <a id="download" class="button secondary" hidden download>下载处理后的视频</a>
+      </section>
+      <section class="panel gpu">
+        <h2>GPU 监控</h2>
+        <p class="muted" id="gpu-name">读取显卡状态…</p>
+        <div class="metric"><span>GPU 利用率</span><b id="util-value">—</b></div>
+        <progress id="util" max="100" value="0" aria-label="GPU 利用率"></progress>
+        <div class="metric"><span>显存</span><b id="memory-value">—</b></div>
+        <progress id="memory" max="100" value="0" aria-label="显存使用率"></progress>
+      </section>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,21 @@
+﻿:root{color-scheme:dark;--bg:#101219;--panel:#191c25;--border:#2e3443;--text:#f3f5fb;--muted:#aab3c6;--accent:#b4ed70;font-family:Inter,"Microsoft YaHei UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}[hidden]{display:none!important}
+.top{height:66px;padding:0 max(24px,calc((100% - 1232px)/2));border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#151720}
+.brand{display:flex;gap:11px;align-items:center;font-size:19px;letter-spacing:.11em;font-weight:800}.mark{background:var(--accent);color:#142007;border-radius:9px;display:grid;place-items:center;width:34px;height:34px;letter-spacing:0}
+.local{color:var(--muted);font-size:13px;white-space:nowrap}.local i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:4px}
+main{max-width:1280px;padding:38px 24px 40px;margin:auto}.intro{margin-bottom:26px}h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.045em;margin:0 0 10px}.intro p,.muted,dt{color:var(--muted)}.intro p{margin:0;line-height:1.6}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,318px);gap:18px;align-items:start}
+aside{display:grid;gap:16px}.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}.panel-head{padding:17px 19px;display:flex;align-items:center;justify-content:space-between;gap:15px}.panel-head>div{min-width:0}
+h2{font-size:17px;margin:0 0 5px}.muted{font-size:13px;overflow-wrap:anywhere}
+.stage{min-height:280px;display:grid;place-items:center;background:#0b0d13;border-block:1px solid var(--border);padding:12px}
+#empty{cursor:pointer;min-height:clamp(250px,33vw,440px);width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+.film{width:57px;height:57px;border:1px solid #3d4d33;background:#1b261b;border-radius:16px;display:grid;place-items:center;color:var(--accent);margin-bottom:4px}
+small{font-size:13px;color:var(--muted)}#surface{position:relative;width:fit-content;max-width:100%;line-height:0}video{display:block;max-width:100%;max-height:65vh;width:auto;height:auto}#overlay{position:absolute;inset:0;cursor:crosshair;touch-action:none;overflow:hidden}#box{position:absolute;border:2px solid var(--accent);background:#b4ed701f;box-shadow:0 0 0 120vmax #05070a55;pointer-events:none}
+.controls{padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.controls input{flex:1;min-width:60px;accent-color:var(--accent)}output{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.button{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;padding:9px 12px;cursor:pointer;font:inherit;font-size:13px;text-decoration:none;white-space:nowrap;color:inherit;border:1px solid transparent}
+.secondary{background:#242936;border-color:#373e50}.secondary:hover{background:#303849}.primary{background:var(--accent);color:#17230d;font-weight:800;width:100%;padding:12px}.primary:hover{background:#c4fa89}.button:disabled{cursor:default;opacity:.48}.button:focus-visible,input:focus-visible,body:has(#file:focus-visible) label[for=file]{outline:2px solid var(--accent);outline-offset:3px}
+.task,.gpu{padding:18px}.details{margin:14px 0 17px;font-size:13px}.details>div,.metric{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.details>div{padding:9px 0;border-bottom:1px solid var(--border)}dd{margin:0;text-align:right}
+.metric{margin:16px 0 7px;font-size:13px;color:var(--muted)}.metric b{color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+progress{display:block;width:100%;height:7px;appearance:none;border:0;border-radius:100px;overflow:hidden;background:#2c3240}progress::-webkit-progress-bar{background:#2c3240}progress::-webkit-progress-value{background:var(--accent)}progress::-moz-progress-bar{background:var(--accent)}#download{margin-top:14px;width:100%}#error{color:#ffabab;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:760px){.workspace{grid-template-columns:1fr}main{padding:26px 14px}.top{padding-inline:14px}.stage{min-height:0}.panel-head{padding-inline:14px}}

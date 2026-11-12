@@ -1,0 +1,12 @@
+/CLEAR-models/
+/CLEAR-runtime/
+/.venv/
+/CLEAR-web/jobs/
+/CLEAR-web/*.ready
+__pycache__/
+*.py[cod]
+*.log
+*.pt
+*.pth
+*.safetensors
+*.whl
