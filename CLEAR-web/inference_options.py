@@ -8,16 +8,17 @@ class InferenceOptions:
     steps: int = 5
     cfg_scale: float = 1.0
     lora_scale: float = 1.0
-    seed: int = 123
-    chunk_frames: int = 21
+    seed: int = 20261113
+    chunk_frames: int = 33
     overlap_frames: int = 4
     context: str = "frame"
     start_seconds: float = 0
     duration_seconds: float | None = None
-    resolution: str = "auto"
-    export_crf: int = 14
+    resolution: str = "native"
+    export_crf: int = 10
     blend_mode: str = "lines"
     segment_mode: str = "shots"
+    vae_tiled: bool = False
 
     def frame_range(self, fps, total):
         first = math.ceil(self.start_seconds * fps - 1e-8)
@@ -37,6 +38,8 @@ class InferenceOptions:
         if not isinstance(data, dict) or data.keys() - {f.name for f in fields(cls)}:
             raise ValueError('inference 必须是有效的推理参数对象。')
         options = cls(**data)
+        if type(options.vae_tiled) is not bool:
+            raise ValueError('vae_tiled 必须是布尔值。')
         for name, low, high in (
             ('steps', 1, 24), ('seed', 0, 2**32-1), ('chunk_frames', 5, 33),
             ('overlap_frames', 0, 16), ('export_crf', 0, 30),

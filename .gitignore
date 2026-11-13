@@ -10,3 +10,4 @@ __pycache__/
 *.pth
 *.safetensors
 *.whl
+.pytest_cache/

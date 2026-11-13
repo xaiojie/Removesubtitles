@@ -6,7 +6,7 @@ class InferenceOptionsTests(TestCase):
     def test_partial_options_keep_unspecified_defaults(self):
         options = InferenceOptions.parse('{"steps":9,"lora_scale":1.3,"overlap_frames":0}')
         self.assertEqual((options.steps, options.lora_scale, options.overlap_frames), (9, 1.3, 0))
-        self.assertEqual(options.chunk_frames, 21)
+        self.assertEqual(options.chunk_frames, 33)
         self.assertEqual(options.context, "frame")
 
     def test_rejects_invalid_and_ambiguous_parameters(self):

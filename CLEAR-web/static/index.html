@@ -3,23 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CLEAR · 视频字幕移除</title>
+<title>CLEAR · 字幕与水印移除</title>
+<meta name="theme-color" content="#101512">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/static/style.css">
 <script type="module" src="/static/app.mjs"></script>
 </head>
 <body>
-<header class="top"><div class="brand"><span class="mark" aria-hidden="true">C</span>CLEAR</div><span class="local"><i></i> 本地工作台</span></header>
+<header class="top"><div class="brand"><span class="mark" aria-hidden="true">C</span>CLEAR</div><span class="local"><i></i> GPU 视频工作台</span></header>
 <main>
-  <div class="intro"><h1>视频字幕移除</h1><p>选择视频，在画面上拖框标出字幕，再导出修复后的 MP4。</p></div>
+  <div class="intro"><div><h1>字幕与水印移除</h1><p>上传视频，框选多处字幕或水印，导出处理后的 MP4。</p></div><div class="workflow" aria-label="操作流程"><span>上传视频</span><i aria-hidden="true">→</i><span>框选字幕与水印</span><i aria-hidden="true">→</i><span>处理与下载</span></div></div>
   <div class="workspace">
     <section class="panel editor" aria-labelledby="preview-title">
-      <div class="panel-head"><div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div><label class="button secondary" for="file">选择视频</label><input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" class="visually-hidden"></div>
+      <div class="panel-head"><div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div><label class="button secondary upload-button" for="file">选择视频</label><input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" class="visually-hidden"></div>
       <div class="stage">
-        <label id="empty" for="file"><span class="film" aria-hidden="true">▶</span><strong>打开本地视频</strong><small>使用浏览器可播放的视频，例如 MP4 或 WebM</small></label>
+        <label id="empty" for="file"><span class="film" aria-hidden="true">＋</span><strong>选择要处理的视频</strong><small>点击打开文件 · 支持浏览器可播放的 MP4、WebM</small></label>
         <div id="players" class="players" hidden>
           <section class="player" aria-labelledby="original-title">
             <h3 id="original-title" hidden>原视频</h3>
-            <div id="surface"><video id="video" playsinline preload="auto"></video><div id="overlay" aria-label="在画面上拖动鼠标框选字幕"><div id="box" hidden></div></div></div>
+            <div id="surface"><video id="video" playsinline preload="auto"></video><div id="overlay" aria-label="在画面上拖动框选字幕或水印"><div id="region-boxes"></div><div id="box" hidden></div></div></div>
           </section>
           <section id="result-panel" class="player" aria-labelledby="result-title" hidden>
             <h3 id="result-title">处理结果</h3>
@@ -27,51 +29,85 @@
           </section>
         </div>
       </div>
+      <div class="selection-tools" aria-label="字幕与水印选区工具">
+        <div class="selection-actions"><button id="add-subtitle" class="button secondary" type="button" disabled>＋ 字幕框</button><button id="add-watermark" class="button secondary watermark-action" type="button" disabled>＋ 水印框</button><button id="redraw" class="button quiet" type="button" disabled>重画当前</button><button id="delete-region" class="button quiet" type="button" disabled>删除当前</button><button id="reset" class="button quiet" type="button" disabled>清空全部</button></div>
+        <div class="selection-actions selection-shortcuts"><span class="tool-label">字幕快捷框</span><button id="select-single" class="button quiet" type="button" disabled>底部单行</button><button id="select-double" class="button quiet" type="button" disabled>底部双行</button><button id="copy-settings" type="button" class="button secondary" disabled>复制选区参数</button></div>
+        <p id="selection-hint">打开视频后，可添加多个字幕框和水印框。</p>
+        <div id="region-list" class="region-list" aria-label="已选区域"></div>
+        <output id="copy-status" role="status"></output>
+      </div>
       <div class="controls">
         <button id="play" class="button secondary" disabled>播放</button>
         <input id="timeline" type="range" min="0" max="0" value="0" step=".01" aria-label="播放位置" disabled>
         <output id="time">00:00 / 00:00</output>
         <button id="audio" class="button secondary" hidden>开启声音</button>
-        <button id="reset" class="button secondary" disabled>清除框选</button>
       </div>
     </section>
     <aside>
       <section class="panel task">
-        <h2>处理任务</h2>
-        <dl class="details"><div><dt>字幕区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型文件</dt><dd id="model">正在检查</dd></div></dl>
+        <h2>处理与导出</h2>
+        <div class="routing-summary"><span>处理流程</span><strong id="routing-flow" role="status">请先框选字幕或水印</strong></div>
+        <dl class="details"><div><dt>处理区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型状态</dt><dd id="model">正在检查</dd></div></dl>
         <fieldset id="processing-options" class="processing-options" disabled>
-          <legend>处理设置</legend>
+          <legend>范围与画质</legend>
           <div class="settings-grid">
             <label>开始时间（秒）<input id="start-seconds" type="number" min="0" step="any" value="0" required></label>
             <label>处理时长（秒）<input id="duration-seconds" type="number" min="0.001" step="any" placeholder="到视频结束"></label>
-            <label>移除强度（LoRA）<input data-option="lora_scale" type="number" min="0.5" max="2" step="0.05" value="1" required></label>
-            <label>去噪步数<input data-option="steps" type="number" min="1" max="24" step="1" value="5" required></label>
+            <label class="settings-wide">导出画质（CRF）<input id="export-crf" type="number" min="0" max="30" step="1" value="10" required></label>
           </div>
           <button id="use-current-time" type="button" class="button secondary">从当前播放位置开始</button>
           <details>
-            <summary>高级参数</summary>
+            <summary>高级参数<span>精细调整</span></summary>
+            <fieldset id="clear-options" class="engine-options" data-engine="clear" hidden disabled>
+              <legend>字幕参数 · CLEAR</legend>
             <div class="settings-grid">
+              <label>移除强度（LoRA）<input data-option="lora_scale" type="number" min="0.5" max="2" step="0.05" value="1" required></label>
+              <label>去噪步数<input data-option="steps" type="number" min="1" max="24" step="1" value="5" required></label>
               <label>CFG<input data-option="cfg_scale" type="number" min="1" max="3" step="0.1" value="1" required></label>
-              <label>随机种子<input data-option="seed" type="number" min="0" max="4294967295" step="1" value="123" required></label>
+              <label>随机种子<input data-option="seed" type="number" min="0" max="4294967295" step="1" value="20261113" required></label>
               <label id="segment-option" class="settings-wide" hidden>分段方式<select data-option="segment_mode"><option value="shots">按镜头分段</option><option value="fixed">固定帧数分段</option></select></label>
-              <label>分段帧数<select data-option="chunk_frames"><option>5</option><option>9</option><option>13</option><option>17</option><option selected>21</option><option>25</option><option>29</option><option>33</option></select></label>
+              <label>分段帧数<select data-option="chunk_frames"><option>5</option><option>9</option><option>13</option><option>17</option><option>21</option><option>25</option><option>29</option><option selected>33</option></select></label>
               <label>重叠帧数<input data-option="overlap_frames" type="number" min="0" max="16" step="1" value="4" required></label>
               <label>模型输入<select data-option="context"><option value="frame">整帧</option><option value="roi">选区及周边</option></select></label>
-              <label>推理分辨率<select data-option="resolution"><option value="auto">自动缩放</option><option value="native">原像素尺寸</option></select></label>
+              <label>推理分辨率<select data-option="resolution"><option value="auto">自动缩放</option><option value="native" selected>原像素尺寸</option></select></label>
+              <label class="settings-wide">VAE 分块<select data-option="vae_tiled"><option value="false" selected>关闭分块</option><option value="true">启用分块</option></select></label>
               <label class="settings-wide">合成方式<select data-option="blend_mode"><option value="lines">按字幕行合成并匹配底色</option><option value="rectangle">矩形选区合成</option></select></label>
-              <label class="settings-wide">导出画质<select data-option="export_crf"><option value="18">高画质 MP4</option><option value="14" selected>更高画质 MP4</option><option value="0">无损 H.264（YUV 4:2:0）</option></select></label>
             </div>
             <small>原像素推理更耗显存，可调低分段帧数。无损编码从转换后的 YUV 画面开始计算。</small>
+            </fieldset>
+            <fieldset id="propainter-options" class="engine-options" data-engine="propainter">
+              <legend>水印参数 · ProPainter</legend>
+              <div class="settings-grid">
+                <label class="settings-wide">水印遮罩<select data-option="watermark_mask_mode"><option value="auto" selected>自动精细（文字水印）</option><option value="rectangle">完整选框（复杂LOGO）</option></select></label>
+                <label>遮罩扩展（像素）<input data-option="mask_dilation" type="number" min="0" step="1" value="8" required></label>
+                <label>相邻帧数<input data-option="neighbor_length" type="number" min="1" step="1" value="10" required></label>
+                <label>参考帧间隔<input data-option="ref_stride" type="number" min="1" step="1" value="5" required></label>
+                <label>分段长度（帧）<input data-option="subvideo_length" type="number" min="1" step="1" value="40" required></label>
+                <label>光流迭代次数<input data-option="raft_iter" type="number" min="1" step="1" value="20" required></label>
+                <label>计算精度<select data-option="fp16"><option value="true" selected>FP16</option><option value="false">FP32</option></select></label>
+                <label class="settings-wide">分段方式<select data-option="segment_mode"><option value="shots" selected>按镜头分段</option><option value="fixed">连续处理</option></select></label>
+                <label>处理分辨率<select data-option="resolution"><option value="native" selected>原像素尺寸</option><option value="auto">自动缩放</option></select></label>
+              </div>
+              <small>字幕使用完整选框。水印可选择自动精细遮罩，或完整覆盖复杂 LOGO。</small>
+            </fieldset>
           </details>
         </fieldset>
-        <button id="submit" class="button primary" disabled>开始移除字幕</button>
+        <button id="submit" class="button primary" disabled>开始移除 <span aria-hidden="true">→</span></button>
+        <div id="pipeline-status" class="pipeline-status" hidden></div>
+        <div id="phase-status" class="phase-status" hidden><span id="phase-label"></span><b id="phase-percent"></b></div>
         <div class="metric"><span id="status" role="status">等待开始</span><b id="percent">0%</b></div>
-        <progress id="progress" max="100" value="0" aria-label="字幕移除进度"></progress>
+        <progress id="progress" max="100" value="0" aria-label="移除进度"></progress>
+        <div id="task-timing" class="task-timing" hidden><span id="eta">正在估算剩余时间</span><span id="elapsed"></span></div>
         <p id="error" role="alert" hidden></p>
-        <a id="download" class="button secondary" hidden download>下载处理后的视频</a>
+        <button id="retry" type="button" class="button secondary" hidden>继续失败任务</button>
+        <div id="download-actions" class="download-actions" hidden>
+          <a id="download" class="button primary download-button" hidden download>下载处理后的视频 <span aria-hidden="true">↓</span></a>
+          <button id="download-comparison" type="button" class="button secondary" disabled>下载对比视频</button>
+        </div>
+        <p id="comparison-status" class="comparison-status" role="status" hidden></p>
       </section>
       <section class="panel gpu">
-        <h2>GPU 监控</h2>
+        <h2>运行状态</h2>
         <p class="muted" id="gpu-name">读取显卡状态…</p>
         <div class="metric"><span>GPU 利用率</span><b id="util-value">—</b></div>
         <progress id="util" max="100" value="0" aria-label="GPU 利用率"></progress>

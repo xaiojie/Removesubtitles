@@ -1,4 +1,4 @@
-﻿from itertools import chain, islice
+from itertools import chain, islice
 
 import cv2
 import numpy as np
@@ -14,6 +14,7 @@ def decoded_frames(capture):
 
 def find_shot_cuts(frames, roi):
     """Return frame indices that start new shots, using one frame of lookahead."""
+    rectangles = [region["roi"] for region in roi] if roi and isinstance(roi[0], dict) else [roi]
     previous = None
     weights = None
     preceding_delta = 0.0
@@ -32,10 +33,10 @@ def find_shot_cuts(frames, roi):
         height, width = frame.shape[:2]
         thumbnail = cv2.resize(frame, (48, 64), interpolation=cv2.INTER_AREA).astype(np.int16)
         if weights is None:
-            left, top, right, bottom = roi
             weights = np.ones(thumbnail.shape[:2], dtype=np.float32)
-            weights[top*64//height:(bottom*64+height-1)//height,
-                    left*48//width:(right*48+width-1)//width] = 0.03
+            for left, top, right, bottom in rectangles:
+                weights[top*64//height:(bottom*64+height-1)//height,
+                        left*48//width:(right*48+width-1)//width] = 0.03
             weights /= weights.sum()
         if previous is not None:
             difference = np.abs(thumbnail - previous).mean(axis=2)
