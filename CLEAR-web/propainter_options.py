@@ -7,6 +7,8 @@ from inference_options import InferenceOptions
 
 @dataclass(frozen=True)
 class ProPainterOptions:
+    """Watermark defaults paired with the selected A100 larger-context preset."""
+
     start_seconds: float = 0
     duration_seconds: float | None = None
     segment_mode: str = "shots"

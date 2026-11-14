@@ -4,11 +4,13 @@ import subprocess
 import cv2
 import imageio_ffmpeg
 
+from video_capture import open_video_capture
+
 
 def validate_video_pair(original, processed):
     information = []
     for path in (original, processed):
-        capture = cv2.VideoCapture(str(path), cv2.CAP_FFMPEG)
+        capture = open_video_capture(str(path), cv2.CAP_FFMPEG)
         try:
             ok, first = capture.read()
             fps = capture.get(cv2.CAP_PROP_FPS)
@@ -26,7 +28,7 @@ def validate_video_pair(original, processed):
         # MOV headers can count edit-list frames that the decoder never emits.
         decoded_counts = []
         for path in (original, processed):
-            capture = cv2.VideoCapture(str(path), cv2.CAP_FFMPEG)
+            capture = open_video_capture(str(path), cv2.CAP_FFMPEG)
             try:
                 count = 0
                 while capture.grab():
@@ -44,7 +46,7 @@ def create_comparison(original, processed, destination):
     temporary = destination.with_name('comparison.partial.mp4')
     timeline = f'setpts=N/({fps:.12g}*TB)'
     filters = (
-        f'[0:v]pad={width}:{height}:0:0,setsar=1,settb=AVTB,{timeline}[original];'
+        f'[0:v]scale={width}:{height},setsar=1,settb=AVTB,{timeline}[original];'
         f'[1:v]setsar=1,settb=AVTB,{timeline}[processed];'
         '[original][processed]hstack=inputs=2:shortest=1,'
         'pad=ceil(iw/2)*2:ceil(ih/2)*2[comparison]'

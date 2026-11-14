@@ -12,8 +12,9 @@ import sys
 import imageio_ffmpeg
 
 ROOT = Path(__file__).resolve().parent
-WEIGHTS = {'clear': 0.6, 'propainter': 0.4}
-LABELS = {'clear': '字幕修复', 'propainter': '水印修复'}
+WEIGHTS = {'clear': 0.6, 'ltx': 0.8, 'propainter': 0.4}
+LABELS = {'clear': '字幕修复', 'ltx': 'LTX 字幕修复（测试）', 'propainter': '水印修复'}
+PIPELINES = (['clear'], ['ltx'], ['propainter'], ['clear', 'propainter'], ['ltx', 'propainter'])
 
 
 def report(**fields):
@@ -35,7 +36,7 @@ def signature(config):
 
 
 def artifact_path(folder, phase, pipeline):
-    filename = 'output.mkv' if phase == 'clear' and len(pipeline) > 1 else 'output.mp4'
+    filename = 'output.mkv' if phase in ('clear', 'ltx') and len(pipeline) > 1 else 'output.mp4'
     return folder / 'stages' / phase / filename
 
 
@@ -46,7 +47,7 @@ def completed_stages(folder):
     except (OSError, ValueError):
         return []
     pipeline = config.get('pipeline', [])
-    if pipeline not in (['clear'], ['propainter'], ['clear', 'propainter']):
+    if pipeline not in PIPELINES:
         return []
     finished = []
     for phase in pipeline:
@@ -64,7 +65,7 @@ def completed_stages(folder):
 
 
 def stage_config(config, phase, original):
-    kind = 'subtitle' if phase == 'clear' else 'watermark'
+    kind = 'subtitle' if phase in ('clear', 'ltx') else 'watermark'
     regions = [region for region in config['regions'] if region['type'] == kind]
     if not regions:
         raise ValueError('该修复阶段没有对应类型的选区。')
@@ -77,7 +78,7 @@ def stage_config(config, phase, original):
     result['roi'] = [min(region['roi'][0] for region in regions), min(region['roi'][1] for region in regions),
                      max(region['roi'][2] for region in regions), max(region['roi'][3] for region in regions)]
     if len(config['pipeline']) > 1:
-        if phase == 'clear':
+        if phase in ('clear', 'ltx'):
             result['lossless_output'] = True
         else:
             result['mask_reference'] = str(original)
@@ -104,7 +105,8 @@ class Progress:
 
 
 def run_phase(phase, folder, source, python, forward):
-    command = [str(python), '-u', str(ROOT / ('worker.py' if phase == 'clear' else 'propainter_worker.py')),
+    scripts = {'clear': 'worker.py', 'ltx': 'ltx_worker.py', 'propainter': 'propainter_worker.py'}
+    command = [str(python), '-u', str(ROOT / scripts[phase]),
                str(folder), str(source)]
     environment = os.environ.copy()
     environment['PYTHONUNBUFFERED'] = '1'
@@ -150,13 +152,14 @@ def run(folder, clear_source, propainter_source, propainter_python):
     folder = Path(folder).resolve()
     config = json.loads((folder / 'config.json').read_text(encoding='utf-8'))
     pipeline = config['pipeline']
-    if pipeline not in (['clear'], ['propainter'], ['clear', 'propainter']):
+    if pipeline not in PIPELINES:
         raise ValueError('视频修复流程无效。')
     original = folder / 'source.video'
     progress = Progress(pipeline)
     finished = completed_stages(folder)
-    sources = {'clear': clear_source, 'propainter': propainter_source}
-    pythons = {'clear': sys.executable, 'propainter': propainter_python}
+    sources = {'clear': clear_source, 'propainter': propainter_source,
+               'ltx': Path(os.environ.get('LTX_ROOT', '/opt/LTX2-ICEdit-Insight'))}
+    pythons = {'clear': sys.executable, 'propainter': propainter_python, 'ltx': sys.executable}
     previous = original
     (folder / 'output.mp4').unlink(missing_ok=True)
     try:

@@ -15,7 +15,13 @@
   <div class="intro"><div><h1>字幕与水印移除</h1><p>上传视频，框选多处字幕或水印，导出处理后的 MP4。</p></div><div class="workflow" aria-label="操作流程"><span>上传视频</span><i aria-hidden="true">→</i><span>框选字幕与水印</span><i aria-hidden="true">→</i><span>处理与下载</span></div></div>
   <div class="workspace">
     <section class="panel editor" aria-labelledby="preview-title">
-      <div class="panel-head"><div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div><label class="button secondary upload-button" for="file">选择视频</label><input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" class="visually-hidden"></div>
+      <div class="panel-head"><div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div><label class="button secondary upload-button" for="file">添加视频</label><input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" multiple class="visually-hidden"></div>
+      <section id="batch-panel" class="batch-panel" hidden aria-label="批量视频队列">
+        <div class="batch-heading"><h2>批量视频</h2><span id="batch-summary" class="muted"></span></div>
+        <div id="batch-list" class="batch-list"></div>
+        <div class="batch-actions"><button id="batch-save-next" class="button secondary" type="button">保存设置，下一个</button><button id="batch-start" class="button primary" type="button" disabled>开始批量处理</button></div>
+        <p id="batch-message" class="muted">逐个选择视频，分别框选字幕并保存设置。</p>
+      </section>
       <div class="stage">
         <label id="empty" for="file"><span class="film" aria-hidden="true">＋</span><strong>选择要处理的视频</strong><small>点击打开文件 · 支持浏览器可播放的 MP4、WebM</small></label>
         <div id="players" class="players" hidden>
@@ -50,12 +56,31 @@
         <dl class="details"><div><dt>处理区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型状态</dt><dd id="model">正在检查</dd></div></dl>
         <fieldset id="processing-options" class="processing-options" disabled>
           <legend>范围与画质</legend>
+          <label class="subtitle-model">字幕模型<select id="subtitle-model"><option value="clear" selected>CLEAR</option><option value="ltx">LTX（测试）</option></select></label>
           <div class="settings-grid">
             <label>开始时间（秒）<input id="start-seconds" type="number" min="0" step="any" value="0" required></label>
             <label>处理时长（秒）<input id="duration-seconds" type="number" min="0.001" step="any" placeholder="到视频结束"></label>
             <label class="settings-wide">导出画质（CRF）<input id="export-crf" type="number" min="0" max="30" step="1" value="10" required></label>
           </div>
           <button id="use-current-time" type="button" class="button secondary">从当前播放位置开始</button>
+          <fieldset id="ltx-options" class="engine-options" data-engine="ltx" hidden disabled>
+            <legend>字幕参数 · LTX（测试）</legend>
+            <label class="prompt-label">提示词<textarea data-option="prompt" rows="5" maxlength="6000" required>Clean natural footage with the original subjects, background, camera motion, lighting and fine textures preserved. No subtitles or text overlays.</textarea></label>
+            <small>可用英文描述希望保留的干净场景、人物和镜头运动。LTX 会生成画面内容，最终仅合成字幕框内区域。</small>
+            <div class="settings-grid">
+              <label>任务模式<select data-option="mode"><option value="subtitle_rm" selected>subtitle_rm · 字幕</option><option value="watermark_rm">watermark_rm · 交叉测试</option></select></label>
+              <label>移除强度（LoRA）<input data-option="lora_scale" type="number" min="0" max="2" step="0.05" value="1" required></label>
+              <label>随机种子<input data-option="seed" type="number" min="0" max="4294967295" step="1" value="42" required></label>
+              <label>Sigma 调度<select data-option="sigma_profile"><option value="workflow" selected>workflow · 5 步</option><option value="distilled">distilled</option></select></label>
+              <label>分段帧数<input data-option="chunk_frames" type="number" min="9" step="8" value="97" required></label>
+              <label>重叠帧数<input data-option="overlap_frames" type="number" min="0" max="64" step="1" value="16" required></label>
+              <label>推理宽度<input data-option="model_width" type="number" min="0" max="2048" step="32" value="0" required></label>
+              <label>推理高度<input data-option="model_height" type="number" min="0" max="2048" step="32" value="0" required></label>
+              <label class="settings-wide">参考视频强度<input data-option="video_conditioning_strength" type="number" min="0" max="2" step="0.05" value="1" required></label>
+            </div>
+            <p id="ltx-dimensions" class="muted" role="status">打开视频后显示推理与导出尺寸。</p>
+            <small>单阶段推理，保持原帧率与总时长。宽高都填 0 时按原比例选择尺寸，长边上限 1248，手动尺寸需为 32 的倍数。导出保留原视频尺寸与音频。</small>
+          </fieldset>
           <details>
             <summary>高级参数<span>精细调整</span></summary>
             <fieldset id="clear-options" class="engine-options" data-engine="clear" hidden disabled>

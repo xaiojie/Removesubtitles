@@ -9,6 +9,8 @@ import sys
 
 import cv2
 import imageio_ffmpeg
+
+from video_capture import open_video_capture
 import numpy as np
 from PIL import Image
 
@@ -214,7 +216,7 @@ def blend_region(original, repaired, roi):
 def run(folder, source):
     config = json.loads((folder / 'config.json').read_text(encoding='utf-8'))
     input_file = folder / 'source.video'
-    cap = cv2.VideoCapture(str(input_file), cv2.CAP_FFMPEG)
+    cap = open_video_capture(str(input_file), cv2.CAP_FFMPEG)
     try:
         ok, first = cap.read()
         fps = cap.get(cv2.CAP_PROP_FPS)
@@ -241,7 +243,7 @@ def run(folder, source):
 def scan_shots(input_file, roi, frame_range):
     report(percent=5, stage="正在检测切镜")
     start, end = frame_range
-    scan = cv2.VideoCapture(str(input_file), cv2.CAP_FFMPEG)
+    scan = open_video_capture(str(input_file), cv2.CAP_FFMPEG)
     try:
         if not scan.isOpened():
             raise ValueError("无法重新打开视频进行切镜检测。")

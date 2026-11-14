@@ -13,6 +13,7 @@ from flask import Flask, abort, jsonify, request, send_file
 
 from inference_options import InferenceOptions
 from propainter_options import ProPainterOptions
+from ltx_options import LTXOptions
 from regions import region, parse_regions, bounds, regions_from_config
 from task_options import prepare_task
 from comparison_video import create_comparison, validate_video_pair
@@ -31,6 +32,8 @@ REQUIRED = {
 SOURCE = WORKSPACE / 'CLEAR'
 PROPAINTER_ROOT = Path(os.environ.get("PROPAINTER_ROOT", "/opt/propainter"))
 PROPAINTER_PYTHON = Path(os.environ.get("PROPAINTER_PYTHON", "/opt/propainter-eval/venv/bin/python"))
+LTX_ROOT = Path(os.environ.get('LTX_ROOT', '/opt/LTX2-ICEdit-Insight'))
+LTX_PYTHON = Path(os.environ.get('LTX_PYTHON', str(LTX_ROOT / '.venv/bin/python')))
 PROPAINTER_WEIGHTS = {
     "ProPainter.pth": 157780510,
     "raft-things.pth": 21108000,
@@ -110,7 +113,18 @@ def propainter_status():
     return True, "已就绪"
 
 
+def ltx_status():
+    if not (LTX_ROOT / 'run_pipeline.py').is_file() or not LTX_PYTHON.is_file():
+        return False, '正在准备 LTX 程序与环境'
+    for marker in ('models.complete', 'environment.complete', 'test.complete'):
+        if not (LTX_ROOT / '.install' / marker).is_file():
+            return False, '正在校验 LTX 模型与环境'
+    return True, 'LTX 已就绪（测试）'
+
+
 def engine_status(engine):
+    if engine == 'ltx':
+        return ltx_status()
     if engine == "propainter":
         return propainter_status()
     return model_status()
@@ -138,15 +152,18 @@ def system():
     ready, model = model_status()
     gpu = gpu_status()
     propainter_ready, propainter_model = propainter_status()
+    ltx_ready, ltx_model = ltx_status()
     engines = {
         "clear": dict(ready=ready and gpu is not None, model=model),
         "propainter": dict(ready=propainter_ready and gpu is not None, model=propainter_model),
+        'ltx': dict(ready=ltx_ready and gpu is not None, model=ltx_model),
     }
     return jsonify(ready=ready and gpu is not None, model=model, gpu=gpu,
                    inference_defaults=asdict(InferenceOptions()), region_types=["subtitle", "watermark"],
                    default_engine="auto", auto_routing=True,
                    routing={"subtitle": "clear", "watermark": "propainter"}, engines=engines,
-                   propainter_defaults=asdict(ProPainterOptions()))
+                   propainter_defaults=asdict(ProPainterOptions()), ltx_defaults=asdict(LTXOptions()),
+                   subtitle_models=['clear', 'ltx'], batch_queue=True)
 
 
 @app.errorhandler(413)
@@ -166,7 +183,7 @@ def save_configuration(folder, configuration):
 def set_job(job_id, **changes):
     with lock:
         jobs[job_id].update(changes)
-        if changes.get("state") in ("done", "failed"):
+        if changes.get("state") in ("queued", "done", "failed"):
             folder = DATA / job_id
             if folder.is_dir():
                 temporary = folder / "status.partial.json"
@@ -177,6 +194,21 @@ def set_job(job_id, **changes):
                     pass
                 finally:
                     temporary.unlink(missing_ok=True)
+
+
+def dispatch_next():
+    with lock:
+        if any(job['state'] == 'running' for job in jobs.values()):
+            return
+        job_id = next((key for key, job in jobs.items() if job['state'] == 'queued'), None)
+        if job_id is None:
+            return
+        jobs[job_id].update(state='running', stage='正在准备处理', can_retry=False)
+    try:
+        Thread(target=run_job, args=(job_id, DATA / job_id), daemon=True).start()
+    except RuntimeError:
+        set_job(job_id, state='failed', stage='任务启动失败', can_retry=True)
+        dispatch_next()
 
 
 def run_job(job_id, folder):
@@ -207,6 +239,7 @@ def run_job(job_id, folder):
                 can_retry=(folder / "source.video").is_file())
     finally:
         (folder / "partial.mp4").unlink(missing_ok=True)
+        dispatch_next()
 
 
 @app.post("/api/jobs")
@@ -225,10 +258,11 @@ def submit():
     if video is None or not video.filename:
         return jsonify(error="请选择视频。"), 400
     job_id = uuid4().hex
+    enqueue = request.form.get('queue') == '1'
     with lock:
-        if any(job["state"] == "running" for job in jobs.values()):
+        if not enqueue and any(job["state"] == "running" for job in jobs.values()):
             return jsonify(error="GPU 正在处理另一个视频。"), 409
-        jobs[job_id] = dict(state="running", stage="正在保存视频", percent=4,
+        jobs[job_id] = dict(state="uploading" if enqueue else "running", stage="正在保存视频", percent=4,
                             regions=regions, can_retry=False, **task)
     folder = DATA / job_id
     try:
@@ -237,12 +271,17 @@ def submit():
         configuration = dict(roi=bounds(regions), regions=regions, dimensions=dimensions,
                              original_filename=video.filename, **task)
         save_configuration(folder, configuration)
-        Thread(target=run_job, args=(job_id, folder), daemon=True).start()
+        if enqueue:
+            set_job(job_id, state='queued', stage='等待前面的视频完成', percent=0)
+            dispatch_next()
+        else:
+            Thread(target=run_job, args=(job_id, folder), daemon=True).start()
     except (OSError, RuntimeError):
         (folder / "source.video").unlink(missing_ok=True)
         set_job(job_id, state="failed", stage="保存失败", can_retry=False)
+        dispatch_next()
         return jsonify(error="无法保存视频，请检查工作区空间。"), 500
-    return jsonify(id=job_id), 202
+    return jsonify(id=job_id, state=jobs[job_id]['state']), 202
 
 
 def completed_output(job_id):
@@ -301,17 +340,25 @@ def retry_job(job_id):
     for engine in task["pipeline"]:
         if engine not in completed and not engine_status(engine)[0]:
             return jsonify(error=f"{engine} 模型或运行环境仍在准备。"), 503
+    enqueue = request.args.get('queue') == '1'
     with lock:
-        if any(job["state"] == "running" for job in jobs.values()):
+        if jobs.get(job_id, {}).get('state') in ('running', 'queued', 'uploading'):
+            return jsonify(error='任务已经在处理队列中。'), 409
+        if not enqueue and any(job["state"] == "running" for job in jobs.values()):
             return jsonify(error="GPU 正在处理另一个视频。"), 409
-        jobs[job_id] = dict(state="running", stage="正在继续处理", percent=4,
+        jobs[job_id] = dict(state="uploading" if enqueue else "running", stage="正在继续处理", percent=4,
                             regions=regions, can_retry=False, **task)
     config.update(task)
     try:
         save_configuration(folder, config)
-        Thread(target=run_job, args=(job_id, folder), daemon=True).start()
+        if enqueue:
+            set_job(job_id, state='queued', stage='等待继续处理', percent=0)
+            dispatch_next()
+        else:
+            Thread(target=run_job, args=(job_id, folder), daemon=True).start()
     except (OSError, RuntimeError):
         set_job(job_id, state="failed", stage="任务启动失败", can_retry=True)
+        dispatch_next()
         return jsonify(error="无法启动任务，已保留处理数据，请重试。"), 500
     return jsonify(id=job_id, percent=4, pipeline=task["pipeline"]), 202
 

@@ -13,6 +13,8 @@ from types import SimpleNamespace
 
 import cv2
 import imageio_ffmpeg
+
+from video_capture import open_video_capture
 import numpy as np
 
 from propainter_masks import MaskBuilder
@@ -120,7 +122,7 @@ def process_window(frames, masks, source, folder, options, progress):
 
 
 def analyze_video(input_file, regions, options):
-    capture = cv2.VideoCapture(str(input_file), cv2.CAP_FFMPEG)
+    capture = open_video_capture(str(input_file), cv2.CAP_FFMPEG)
     try:
         ok, first = capture.read()
         fps = capture.get(cv2.CAP_PROP_FPS)
@@ -170,8 +172,8 @@ def encode(folder, source, options, information, frame_range, mask_reference=Non
                '-crf', str(options.export_crf), '-threads', '8',
                '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-pix_fmt', 'yuv420p',
                '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(temporary)]
-    capture = cv2.VideoCapture(str(folder / 'source.video'), cv2.CAP_FFMPEG)
-    reference_capture = cv2.VideoCapture(str(mask_reference), cv2.CAP_FFMPEG) if mask_reference else None
+    capture = open_video_capture(str(folder / 'source.video'), cv2.CAP_FFMPEG)
+    reference_capture = open_video_capture(str(mask_reference), cv2.CAP_FFMPEG) if mask_reference else None
     reference_frames = iter(decoded_frames(reference_capture)) if reference_capture is not None else None
     reference_carry = []
     done = 0

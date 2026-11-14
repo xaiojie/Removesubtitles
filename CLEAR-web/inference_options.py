@@ -5,6 +5,11 @@ import math
 
 @dataclass(frozen=True)
 class InferenceOptions:
+    """Web defaults selected from the A100 larger-context experiment.
+
+    Context cropping and resident-model execution belong to the research runner.
+    """
+
     steps: int = 5
     cfg_scale: float = 1.0
     lora_scale: float = 1.0

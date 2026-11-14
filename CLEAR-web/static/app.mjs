@@ -1,5 +1,6 @@
 import { selection } from './selection.mjs';
 import { estimateRemainingSeconds } from './timing.mjs';
+import { saveVideoDraft } from './batch.mjs';
 
 const $ = (id) => document.getElementById(id);
 const video = $('video');
@@ -14,6 +15,7 @@ const settings = $('processing-options');
 const exportQuality = $('export-crf');
 const startTime = $('start-seconds');
 const duration = $('duration-seconds');
+const subtitleModel = $('subtitle-model');
 const tuningFields = [...settings.querySelectorAll('[data-option]')];
 let comparisonStart = 0;
 const defaultsLoaded = new Set();
@@ -40,6 +42,210 @@ let comparisonSession = null;
 let comparisonPollTimer = null;
 let retryJobId = null;
 let retryController = null;
+let batchItems = [];
+let batchIndex = -1;
+let batchLoading = false;
+let batchUploading = false;
+let batchWatching = false;
+
+function persistBatch() {
+  try {
+    localStorage.setItem('clear-batch-jobs', JSON.stringify(batchItems.filter(item => item.jobId)
+      .map(item => ({ name: item.name, jobId: item.jobId, state: item.state, percent: item.percent || 0 }))));
+  } catch {}
+}
+
+function renderBatch() {
+  $('batch-panel').hidden = batchItems.length < 2;
+  const list = $('batch-list');
+  list.replaceChildren();
+  const names = { draft: '待设置', uploading: '正在上传', queued: '等待处理', running: '处理中', done: '已完成', failed: '失败' };
+  for (const [index, item] of batchItems.entries()) {
+    const row = document.createElement('div');
+    row.className = 'batch-row' + (index === batchIndex ? ' selected' : '');
+    const select = document.createElement('button');
+    select.type = 'button';
+    select.className = 'batch-file';
+    select.textContent = item.name;
+    select.disabled = active || !item.file;
+    select.onclick = () => selectBatchVideo(index);
+    const state = document.createElement('span');
+    state.className = 'batch-state';
+    state.textContent = item.ready && !item.jobId ? '已设置 ' + item.regions.length + ' 处'
+      : (names[item.state] || '待设置') + (item.state === 'running' ? ' ' + (item.percent || 0) + '%' : '');
+    row.append(select, state);
+    if (item.state === 'done' && item.jobId) {
+      const download = document.createElement('a');
+      download.className = 'button quiet';
+      download.textContent = '下载';
+      download.href = '/api/jobs/' + item.jobId + '/output';
+      download.download = '';
+      row.append(download);
+    } else if (item.state === 'failed' && item.jobId) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'button quiet';
+      retry.textContent = '重试';
+      retry.disabled = batchUploading;
+      retry.onclick = () => retryBatchVideo(item);
+      row.append(retry);
+    } else if (!item.jobId && !active) {
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'button quiet';
+      remove.textContent = '移出';
+      remove.onclick = () => {
+        saveBatchVideo();
+        batchItems.splice(index, 1);
+        if (!batchItems.length) { batchIndex = -1; renderBatch(); return; }
+        batchIndex = -1;
+        selectBatchVideo(Math.min(index, batchItems.length - 1));
+      };
+      row.append(remove);
+    }
+    if (item.error) row.title = item.error;
+    list.append(row);
+  }
+  const drafts = batchItems.filter(item => !item.jobId && item.file);
+  $('batch-summary').textContent = batchItems.length + ' 个视频 · ' + drafts.filter(item => item.ready).length + ' 个已设置';
+  $('batch-save-next').disabled = active || batchIndex < 0 || batchLoading;
+  $('batch-save-next').textContent = batchIndex < batchItems.length - 1 ? '保存设置，下一个' : '保存当前视频设置';
+  $('batch-start').disabled = active || batchUploading || !drafts.length || drafts.some(item => !item.ready);
+}
+
+function currentForm() {
+  return { model: subtitleModel.value, start: startTime.value, duration: duration.value,
+    crf: exportQuality.value, fields: tuningFields.map(field => ({
+      engine: field.closest('[data-engine]').dataset.engine, name: field.dataset.option,
+      value: field.value, checked: field.checked,
+    })) };
+}
+
+function restoreForm(form) {
+  if (!form) return;
+  subtitleModel.value = form.model;
+  startTime.value = form.start;
+  duration.value = form.duration;
+  exportQuality.value = form.crf;
+  for (const saved of form.fields) {
+    const field = fieldsForEngine(saved.engine).find(field => field.dataset.option === saved.name);
+    if (field) { field.value = saved.value; if (field.type === 'checkbox') field.checked = saved.checked; }
+  }
+}
+
+function saveBatchVideo() {
+  const item = batchItems[batchIndex];
+  if (!item?.file || batchLoading || players.hidden || active) return false;
+  const inference = regions.length ? readSettings() : null;
+  saveVideoDraft(item, regions, [video.videoWidth, video.videoHeight], inference, currentForm());
+  renderBatch();
+  return item.ready;
+}
+
+function selectBatchVideo(index) {
+  if (active || !batchItems[index]?.file) return;
+  saveBatchVideo();
+  batchIndex = index;
+  batchLoading = true;
+  openVideoFile(batchItems[index].file);
+  restoreForm(batchItems[index].form);
+  renderBatch();
+}
+
+function markBatchDirty() {
+  const item = batchItems[batchIndex];
+  if (item && !item.jobId && !batchLoading && !active) { item.ready = false; renderBatch(); }
+}
+
+settings.addEventListener('input', markBatchDirty);
+settings.addEventListener('change', markBatchDirty);
+
+$('batch-save-next').onclick = () => {
+  if (!saveBatchVideo()) { showError('请先为当前视频框选字幕或水印，并检查参数。'); return; }
+  if (batchIndex < batchItems.length - 1) selectBatchVideo(batchIndex + 1);
+  else $('batch-message').textContent = '各视频选区已保存，可以开始批量处理。';
+};
+
+$('batch-start').onclick = async () => {
+  if (active) return;
+  saveBatchVideo();
+  const pending = batchItems.filter(item => !item.jobId && item.file);
+  if (!pending.length || pending.some(item => !item.ready)) return;
+  active = batchUploading = batchWatching = true;
+  job = null;
+  clearComparison();
+  resetRetry();
+  resetComparisonDownload();
+  resetTiming();
+  startTiming();
+  refreshButtons();
+  for (const [index, item] of pending.entries()) {
+    item.state = 'uploading';
+    $('batch-message').textContent = '正在上传 ' + (index + 1) + ' / ' + pending.length + '，每个视频使用各自的选区。';
+    renderBatch();
+    const body = new FormData();
+    body.set('video', item.file);
+    body.set('engine', 'auto');
+    body.set('queue', '1');
+    body.set('regions', JSON.stringify(item.regions));
+    body.set('dimensions', JSON.stringify(item.dimensions));
+    body.set('inference', JSON.stringify(item.inference));
+    try {
+      const result = await json(await fetch('/api/jobs', { method: 'POST', body }));
+      item.jobId = result.id;
+      item.state = result.state || 'queued';
+      item.percent = 0;
+      persistBatch();
+    } catch (error) {
+      item.state = 'failed';
+      item.error = error.message;
+      showError(item.name + ' · ' + error.message);
+    }
+  }
+  batchUploading = false;
+  $('batch-message').textContent = '上传完成，服务器会按顺序处理；完成后可逐个下载。';
+  await pollBatch();
+};
+
+async function retryBatchVideo(item) {
+  try {
+    await json(await fetch('/api/jobs/' + item.jobId + '/retry?queue=1', { method: 'POST' }));
+    item.state = 'queued';
+    item.error = null;
+    active = batchWatching = true;
+    resetTiming();
+    startTiming();
+    persistBatch();
+    refreshButtons();
+  } catch (error) { showError(error.message); }
+}
+
+async function pollBatch() {
+  const submitted = batchItems.filter(item => item.jobId);
+  await Promise.all(submitted.map(async item => {
+    if (item.state === 'done') return;
+    try {
+      const result = await json(await fetch('/api/jobs/' + item.jobId));
+      item.state = result.state;
+      item.percent = result.percent || 0;
+      item.error = result.error || null;
+    } catch (error) { item.error = error.message; }
+  }));
+  if (batchWatching) {
+    const unfinished = submitted.some(item => ['queued', 'running', 'uploading'].includes(item.state));
+    const done = submitted.filter(item => item.state === 'done').length;
+    const percent = submitted.length ? Math.floor(submitted.reduce((sum, item) => sum + item.percent, 0) / submitted.length) : 0;
+    showProgress(percent, '批量处理 · 已完成 ' + done + ' / ' + submitted.length);
+    if (!unfinished && !batchUploading) {
+      active = batchWatching = false;
+      finishTiming('批量处理结束');
+      $('batch-message').textContent = '处理结束，可逐个下载结果；失败的视频可单独重试。';
+    }
+    refreshButtons();
+  }
+  persistBatch();
+  renderBatch();
+}
 
 function renderTiming() {
   if (startedAt === null) return;
@@ -100,6 +306,7 @@ function refreshButtons() {
     $(id).disabled = active || players.hidden;
   }
   for (const button of document.querySelectorAll('.region-item, .region-label')) button.disabled = active;
+  renderBatch();
   $('add-subtitle').setAttribute('aria-pressed', String(selectionMode === 'add' && drawingType === 'subtitle'));
   $('add-watermark').setAttribute('aria-pressed', String(selectionMode === 'add' && drawingType === 'watermark'));
   const typeName = drawingType === 'watermark' ? '水印' : '字幕';
@@ -117,7 +324,7 @@ function fieldsForEngine(engine) {
 
 function requiredEngines() {
   const engines = [];
-  if (regions.some(region => region.type === 'subtitle')) engines.push('clear');
+  if (regions.some(region => region.type === 'subtitle')) engines.push(subtitleModel.value);
   if (regions.some(region => region.type === 'watermark')) engines.push('propainter');
   return engines;
 }
@@ -135,11 +342,30 @@ function refreshRoutingState() {
   supportsSegmentation = Object.hasOwn(latestSystem?.inference_defaults || {}, 'segment_mode');
   $('segment-option').hidden = !supportsSegmentation;
   $('model').textContent = states.length ? states.map((state, index) => state?.model || (engines[index] === 'clear' ? 'CLEAR 正在检查' : 'ProPainter 正在检查')).join(' · ') : '等待选区';
-  $('routing-flow').textContent = engines.length === 2 ? 'CLEAR 擦字幕 → ProPainter 去水印'
+  const subtitleName = subtitleModel.value === 'ltx' ? 'LTX（测试）' : 'CLEAR';
+  $('routing-flow').textContent = engines.length === 2 ? subtitleName + ' 擦字幕 → ProPainter 去水印'
     : engines[0] === 'clear' ? '字幕 · CLEAR'
+    : engines[0] === 'ltx' ? '字幕 · LTX（测试）'
     : engines[0] === 'propainter' ? '水印 · ProPainter' : '请先框选字幕或水印';
+  refreshLTXDimensions();
   refreshButtons();
 }
+
+function refreshLTXDimensions() {
+  if (!video.videoWidth || !video.videoHeight) return;
+  const fields = fieldsForEngine('ltx');
+  let width = Number(fields.find(field => field.dataset.option === 'model_width').value);
+  let height = Number(fields.find(field => field.dataset.option === 'model_height').value);
+  if (!width && !height) {
+    const scale = Math.min(1, 1248 / Math.max(video.videoWidth, video.videoHeight));
+    width = Math.max(32, Math.round(video.videoWidth * scale / 32) * 32);
+    height = Math.max(32, Math.round(video.videoHeight * scale / 32) * 32);
+  }
+  $('ltx-dimensions').textContent = '推理 ' + width + ' × ' + height
+    + ' · 导出 ' + video.videoWidth + ' × ' + video.videoHeight;
+}
+
+for (const field of fieldsForEngine('ltx')) field.addEventListener('input', refreshLTXDimensions);
 
 function positionBox(element, rectangle) {
   const [left, top, right, bottom] = rectangle;
@@ -213,6 +439,7 @@ function updateRegions() {
   showSelection(null);
   renderRegions();
   refreshRoutingState();
+  markBatchDirty();
 }
 
 function beginRegion(type) {
@@ -273,7 +500,7 @@ function showProgress(percent, stage, frameProgress = {}) {
   $('status').textContent = stage;
   latestPercent = percent;
   const pipeline = frameProgress.pipeline;
-  const names = { clear: 'CLEAR 擦字幕', propainter: 'ProPainter 去水印' };
+  const names = { clear: 'CLEAR 擦字幕', ltx: 'LTX 擦字幕（测试）', propainter: 'ProPainter 去水印' };
   const pipelineText = Array.isArray(pipeline) ? pipeline.map(step => {
     const name = typeof step === 'string' ? step : step.label || step.engine;
     return names[name] || name || '';
@@ -352,8 +579,15 @@ audio.onclick = () => {
   audio.textContent = video.muted ? '开启声音' : '静音';
 };
 fileInput.onchange = () => {
-  const chosen = fileInput.files[0];
-  if (!chosen) return;
+  if (!fileInput.files.length || active) return;
+  saveBatchVideo();
+  const first = batchItems.length;
+  for (const chosen of fileInput.files) batchItems.push({ file: chosen, name: chosen.name, state: 'draft', regions: [], ready: false });
+  fileInput.value = '';
+  selectBatchVideo(first);
+};
+
+function openVideoFile(chosen) {
   clearComparison();
   resetTiming();
   resetComparisonDownload();
@@ -378,13 +612,21 @@ fileInput.onchange = () => {
   $('play').disabled = timeline.disabled = true;
   $('file-name').textContent = file.name;
   video.src = url;
-};
+}
 video.onloadeddata = () => {
   players.hidden = false;
   $('empty').hidden = true;
   $('play').disabled = timeline.disabled = false;
   timeline.max = Number.isFinite(video.duration) ? video.duration : 0;
   video.ontimeupdate();
+  const item = batchItems[batchIndex];
+  if (batchLoading && item) {
+    regions = structuredClone(item.regions || []);
+    selectedRegion = regions.length ? 0 : -1;
+    updateRegions();
+    batchLoading = false;
+  }
+  refreshRoutingState();
   refreshButtons();
 };
 video.onerror = () => showError('浏览器无法预览此视频。请使用 H.264 MP4 或 WebM。');
@@ -560,7 +802,8 @@ function readSettings() {
     showError('开始时间和处理时长必须在视频范围内。');
     return null;
   }
-  const inference = { start_seconds: start, duration_seconds: length, export_crf: exportQuality.valueAsNumber };
+  const inference = { start_seconds: start, duration_seconds: length, export_crf: exportQuality.valueAsNumber,
+    subtitle_model: subtitleModel.value };
   for (const engine of engines) {
     const options = {};
     for (const field of fieldsForEngine(engine)) {
@@ -568,7 +811,7 @@ function readSettings() {
       if (['vae_tiled', 'fp16'].includes(field.dataset.option)) {
         options[field.dataset.option] = field.type === 'checkbox' ? field.checked : field.value === 'true';
       } else {
-        options[field.dataset.option] = ['context', 'resolution', 'blend_mode', 'segment_mode', 'watermark_mask_mode'].includes(field.dataset.option)
+        options[field.dataset.option] = ['context', 'resolution', 'blend_mode', 'segment_mode', 'watermark_mask_mode', 'prompt', 'mode', 'sigma_profile'].includes(field.dataset.option)
           ? field.value : Number(field.value);
       }
     }
@@ -578,8 +821,14 @@ function readSettings() {
     showError('重叠帧数必须小于分段帧数。');
     return null;
   }
+  if (inference.ltx && inference.ltx.overlap_frames >= inference.ltx.chunk_frames) {
+    showError('LTX 重叠帧数必须小于分段帧数。');
+    return null;
+  }
   return inference;
 }
+
+subtitleModel.onchange = refreshRoutingState;
 
 function resetRetry() {
   retryController?.abort();
@@ -663,6 +912,8 @@ $('submit').onclick = () => {
   request.onload = () => {
     if (request.status !== 202) return fail(request.response?.error || '无法启动处理');
     job = request.response.id;
+    const item = batchItems[batchIndex];
+    if (item) { item.jobId = job; item.state = 'running'; persistBatch(); renderBatch(); }
     startTiming();
     showProgress(4, '视频已上传，正在启动处理');
   };
@@ -682,8 +933,9 @@ async function poll() {
     const system = await json(await fetch('/api/system'));
     timingDisconnected = false;
     latestSystem = system;
-    for (const engine of ['clear', 'propainter']) {
-      const defaults = engine === 'clear' ? system.inference_defaults : system.propainter_defaults;
+    for (const engine of ['clear', 'ltx', 'propainter']) {
+      const defaults = engine === 'clear' ? system.inference_defaults
+        : engine === 'ltx' ? system.ltx_defaults : system.propainter_defaults;
       if (defaults && !defaultsLoaded.has(engine)) {
         for (const field of fieldsForEngine(engine)) {
           const value = defaults[field.dataset.option];
@@ -742,6 +994,7 @@ async function poll() {
         refreshButtons();
       }
     }
+    if (batchItems.some(item => item.jobId)) await pollBatch();
   } catch (error) {
     timingDisconnected = true;
     firstRepairSample = latestRepairSample = null;
@@ -755,4 +1008,11 @@ async function poll() {
     setTimeout(poll, 1500);
   }
 }
+try {
+  const saved = JSON.parse(localStorage.getItem('clear-batch-jobs') || '[]');
+  batchItems = saved.filter(item => /^[0-9a-f]{32}$/.test(item.jobId));
+  batchWatching = batchItems.some(item => ['queued', 'running'].includes(item.state));
+  if (batchWatching) { active = true; startTiming(); }
+} catch {}
+renderBatch();
 poll();
