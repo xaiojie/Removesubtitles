@@ -1,0 +1,11 @@
+av
+addict
+einops
+future
+scipy
+matplotlib
+scikit-image
+pyyaml
+requests
+timm
+yapf

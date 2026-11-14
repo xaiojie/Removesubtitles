@@ -41,7 +41,11 @@ DATA.mkdir(exist_ok=True)
 tempfile.tempdir = str(DATA)
 HIDE = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 app = Flask(__name__)
-app.config.update(MAX_CONTENT_LENGTH=8 * 1024**3, TRUSTED_HOSTS=['localhost', '127.0.0.1'])
+trusted_hosts = os.environ.get('CLEAR_TRUSTED_HOSTS') or 'localhost,127.0.0.1'
+app.config.update(
+    MAX_CONTENT_LENGTH=8 * 1024**3,
+    TRUSTED_HOSTS=[host.strip() for host in trusted_hosts.split(',') if host.strip()],
+)
 jobs = {}
 comparisons = {}
 lock = Lock()
@@ -49,8 +53,9 @@ lock = Lock()
 
 def gpu_status():
     try:
+        selected_gpu = os.environ.get('CUDA_VISIBLE_DEVICES', '').split(',')[0].strip() or '0'
         report = subprocess.check_output(
-            ['nvidia-smi', '-i', '0', '--query-gpu=name,utilization.gpu,memory.used,memory.total',
+            ['nvidia-smi', '-i', selected_gpu, '--query-gpu=name,utilization.gpu,memory.used,memory.total',
              '--format=csv,noheader,nounits'],
             text=True, timeout=3, stderr=subprocess.DEVNULL, creationflags=HIDE,
         )

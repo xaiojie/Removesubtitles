@@ -95,8 +95,13 @@ class ProPainterWorkerTests(unittest.TestCase):
         import json
         worker = self.api()
         frames = [np.full((48, 64, 3), 40 + index * 5, dtype=np.uint8) for index in range(8)]
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as upstream_directory:
             folder = Path(directory)
+            source = Path(upstream_directory)
+            (source / 'inference_propainter.py').touch()
+            (source / 'weights').mkdir()
+            for name in ('raft-things.pth', 'recurrent_flow_completion.pth', 'ProPainter.pth'):
+                (source / 'weights' / name).touch()
             command = [imageio_ffmpeg.get_ffmpeg_exe(), '-hide_banner', '-loglevel', 'error', '-y',
                        '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-s', '64x48', '-r', '5', '-i', 'pipe:0',
                        '-f', 'lavfi', '-i', 'sine=frequency=400:sample_rate=44100', '-t', '1.6',
@@ -121,7 +126,7 @@ class ProPainterWorkerTests(unittest.TestCase):
                 return self.fake_upstream(*arguments)
             with patch.object(worker, 'run_upstream', side_effect=upstream):
                 with patch.object(worker, 'window_settings', return_value=(2, 1)):
-                    worker.run(folder, Path('/opt/propainter'))
+                    worker.run(folder, source)
             self.assertEqual(seen_context, [int(source_frames[2][24, 30, 0]),
                                             int(source_frames[3][24, 30, 0])])
             capture = cv2.VideoCapture(str(folder / 'output.mp4'))

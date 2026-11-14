@@ -1,0 +1,111 @@
+{
+  "propainter_revision": "326782529a63d997cab80ab21439b92ed422b3d3",
+  "assets": [
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/fun-control.safetensors",
+      "size": 3129305312,
+      "sha256": "4d51c942b0cfe92821c29b37fdb062756e026280084746ba1cc5d5dba39ee684",
+      "urls": [
+        "https://modelscope.cn/models/PAI/Wan2.1-Fun-V1.1-1.3B-Control/resolve/master/diffusion_pytorch_model.safetensors",
+        "https://huggingface.co/alibaba-pai/Wan2.1-Fun-V1.1-1.3B-Control/resolve/main/diffusion_pytorch_model.safetensors"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/Wan2.1_VAE.pth",
+      "size": 507609880,
+      "sha256": "38071ab59bd94681c686fa51d75a1968f64e470262043be31f7a094e442fd981",
+      "urls": [
+        "https://modelscope.cn/models/PAI/Wan2.1-Fun-V1.1-1.3B-Control/resolve/master/Wan2.1_VAE.pth",
+        "https://huggingface.co/alibaba-pai/Wan2.1-Fun-V1.1-1.3B-Control/resolve/main/Wan2.1_VAE.pth"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/models_t5_umt5-xxl-enc-bf16.pth",
+      "size": 11361920418,
+      "sha256": "7cace0da2b446bbbbc57d031ab6cf163a3d59b366da94e5afe36745b746fd81d",
+      "urls": [
+        "https://modelscope.cn/models/Wan-AI/Wan2.1-T2V-1.3B/resolve/master/models_t5_umt5-xxl-enc-bf16.pth",
+        "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B/resolve/main/models_t5_umt5-xxl-enc-bf16.pth"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/CLEAR-mask-free-subtitle-removal.pt",
+      "size": 175181778,
+      "sha256": "2c0bc5c1317098fbf5f98b83ea8c495d0e7a82cd2557b757139399d174fa08b2",
+      "urls": [
+        "https://huggingface.co/charlesw09/CLEAR-mask-free-video-subtitle-removal/resolve/main/CLEAR-mask-free-subtitle-removal.pt"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/google/umt5-xxl/tokenizer.json",
+      "size": 16837417,
+      "sha256": "6e197b4d3dbd71da14b4eb255f4fa91c9c1f2068b20a2de2472967ca3d22602b",
+      "urls": [
+        "https://modelscope.cn/models/PAI/Wan2.1-Fun-V1.1-1.3B-Control/resolve/master/google/umt5-xxl/tokenizer.json",
+        "https://huggingface.co/alibaba-pai/Wan2.1-Fun-V1.1-1.3B-Control/resolve/main/google/umt5-xxl/tokenizer.json"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/google/umt5-xxl/tokenizer_config.json",
+      "size": 61728,
+      "sha256": "ed9a3a8b0faa71a70a32847e0435fe036e6e112d4df4edb7bb48a921e344dc05",
+      "urls": [
+        "https://modelscope.cn/models/PAI/Wan2.1-Fun-V1.1-1.3B-Control/resolve/master/google/umt5-xxl/tokenizer_config.json",
+        "https://huggingface.co/alibaba-pai/Wan2.1-Fun-V1.1-1.3B-Control/resolve/main/google/umt5-xxl/tokenizer_config.json"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/google/umt5-xxl/spiece.model",
+      "size": 4548313,
+      "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458",
+      "urls": [
+        "https://modelscope.cn/models/PAI/Wan2.1-Fun-V1.1-1.3B-Control/resolve/master/google/umt5-xxl/spiece.model",
+        "https://huggingface.co/alibaba-pai/Wan2.1-Fun-V1.1-1.3B-Control/resolve/main/google/umt5-xxl/spiece.model"
+      ]
+    },
+    {
+      "component": "clear",
+      "path": "CLEAR-models/Wan2.1-T2V-1.3B/google/umt5-xxl/special_tokens_map.json",
+      "size": 6623,
+      "sha256": "7b8a9f5040adb67b5805abdfd42c1f8d0f3d0e711f10726580eb3789cd0ad61d",
+      "urls": [
+        "https://modelscope.cn/models/PAI/Wan2.1-Fun-V1.1-1.3B-Control/resolve/master/google/umt5-xxl/special_tokens_map.json",
+        "https://huggingface.co/alibaba-pai/Wan2.1-Fun-V1.1-1.3B-Control/resolve/main/google/umt5-xxl/special_tokens_map.json"
+      ]
+    },
+    {
+      "component": "propainter",
+      "path": "weights/ProPainter.pth",
+      "size": 157780510,
+      "sha256": "12c070c4b48f374c91d8a2a17851140b85c159621080989f9e191bbc18bd6591",
+      "urls": [
+        "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/ProPainter.pth"
+      ]
+    },
+    {
+      "component": "propainter",
+      "path": "weights/raft-things.pth",
+      "size": 21108000,
+      "sha256": "fcfa4125d6418f4de95d84aec20a3c5f4e205101715a79f193243c186ac9a7e1",
+      "urls": [
+        "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/raft-things.pth"
+      ]
+    },
+    {
+      "component": "propainter",
+      "path": "weights/recurrent_flow_completion.pth",
+      "size": 20348681,
+      "sha256": "22939a1a7900da878dbe1ccd011d646b1bfb30b8290039d8ff0e0c2fefbfd283",
+      "urls": [
+        "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/recurrent_flow_completion.pth"
+      ]
+    }
+  ]
+}

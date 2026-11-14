@@ -2,7 +2,15 @@
 
 基于 CLEAR 和 ProPainter 的视频字幕与水印移除工具。网页支持视频预览、多处字幕与水印框选、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
 
-## 运行
+## Linux 服务器一键部署
+
+运行 `bash scripts/deploy.sh` 打开分步菜单，或用下面的命令完整安装所选组件。脚本支持国内及官方网络配置、代理、自定义源、断点续传、离线部署和后台服务管理。[查看 Linux 部署教程](docs/linux-deployment.md)
+
+```bash
+bash scripts/deploy.sh all --components both --network cn --yes
+```
+
+## Windows 手动运行
 
 需要 Python 3.12、支持 CUDA 的 NVIDIA 显卡和驱动。在仓库根目录运行以下命令。
 

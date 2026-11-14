@@ -11,3 +11,6 @@ __pycache__/
 *.safetensors
 *.whl
 .pytest_cache/
+/.deploy/
+/.test-env/
+/ProPainter/
