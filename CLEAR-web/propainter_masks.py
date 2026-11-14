@@ -2,6 +2,8 @@
 import cv2
 import numpy as np
 
+from adaptive_processing import foreground_core
+
 
 def bright_core(crop):
     minimum = crop.min(axis=2)
@@ -25,11 +27,12 @@ def line_boxes(core):
 
 
 class MaskBuilder:
-    def __init__(self, regions, dimensions, mode='auto', dilation=8):
+    def __init__(self, regions, dimensions, mode='auto', dilation=8, adaptive=False):
         self.regions = regions
         self.width, self.height = dimensions
         self.mode = mode
         self.dilation = dilation
+        self.adaptive = adaptive
         self.sample_count = 0
         self.support = []
         self.stable = []
@@ -42,12 +45,28 @@ class MaskBuilder:
 
     def observe(self, frame):
         self.sample_count += 1
-        if self.mode == 'rectangle':
+        if self.mode == 'rectangle' and not self.adaptive:
             return
         for region, support in zip(self.regions, self.support):
             if region['type'] == 'watermark':
                 x1, y1, x2, y2 = region['roi']
-                support += bright_core(frame[y1:y2, x1:x2])
+                crop = frame[y1:y2, x1:x2]
+                if self.adaptive:
+                    support += self.overlay_core(crop)
+                else:
+                    support += bright_core(crop)
+
+    @staticmethod
+    def overlay_core(crop):
+        core = foreground_core(crop)
+        height, width = core.shape
+        count, labels, statistics, _ = cv2.connectedComponentsWithStats(core, 8)
+        for label, (x, y, component_width, component_height, _) in enumerate(statistics[1:count], 1):
+            horizontal_border = component_width >= width * 0.9 and component_height <= max(3, height * 0.08)
+            vertical_border = component_height >= height * 0.9 and component_width <= max(3, width * 0.08)
+            if horizontal_border or vertical_border:
+                core[labels == label] = 0
+        return core > 0
 
     def finalize(self):
         self.stable = []
@@ -60,10 +79,17 @@ class MaskBuilder:
             stable = support >= threshold
             template = line_boxes(stable)
             # An unsupported/colored watermark uses the complete user selection.
-            if (region['type'] != 'watermark' or self.mode == 'rectangle'
+            if (region['type'] != 'watermark' or (self.mode == 'rectangle' and not self.adaptive)
                     or stable.sum() < 6 or not template.any()):
                 stable = None
                 template = np.full(support.shape, 255, dtype=np.uint8)
+            if self.adaptive and stable is not None:
+                # Include colored interiors and gaps between logo text components.
+                x, y, width, height = cv2.boundingRect(template)
+                template[:] = 0
+                template[y:y+height, x:x+width] = 255
+                if self.mode == 'rectangle':
+                    template[:] = 255
             self.stable.append(stable)
             self.templates.append(template)
 
@@ -74,14 +100,28 @@ class MaskBuilder:
         for region, stable, template in zip(self.regions, self.stable, self.templates):
             x1, y1, x2, y2 = region['roi']
             if stable is not None:
-                current = bright_core(frame[y1:y2, x1:x2])
+                crop = frame[y1:y2, x1:x2]
+                current = self.overlay_core(crop) if self.adaptive else bright_core(crop)
                 agreement = np.count_nonzero(current & stable) / np.count_nonzero(stable)
-                if agreement < 0.30:
+                threshold = min(0.85, max(0.30, float(current.mean()) + 0.15)) if self.adaptive else 0.30
+                if agreement < threshold:
                     continue
+            elif self.adaptive and np.count_nonzero(self.overlay_core(frame[y1:y2, x1:x2])) < 6:
+                continue
             np.maximum(mask[y1:y2, x1:x2], template, out=mask[y1:y2, x1:x2])
         return mask
 
     def expanded_mask(self, mask):
+        if self.adaptive:
+            expanded = np.zeros_like(mask)
+            for region in self.regions:
+                x1, y1, x2, y2 = region['roi']
+                local = mask[y1:y2, x1:x2]
+                radius = min(self.dilation, max(1, round(min(local.shape) * 0.03)))
+                if radius:
+                    local = cv2.dilate(local, np.ones((2 * radius + 1, 2 * radius + 1), np.uint8))
+                np.maximum(expanded[y1:y2, x1:x2], local, out=expanded[y1:y2, x1:x2])
+            return expanded
         if self.dilation:
             mask = cv2.dilate(mask, cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3)),
                               iterations=self.dilation)

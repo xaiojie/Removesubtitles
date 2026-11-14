@@ -56,7 +56,8 @@
         <dl class="details"><div><dt>处理区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型状态</dt><dd id="model">正在检查</dd></div></dl>
         <fieldset id="processing-options" class="processing-options" disabled>
           <legend>范围与画质</legend>
-          <label class="subtitle-model">字幕模型<select id="subtitle-model"><option value="clear" selected>CLEAR</option><option value="ltx">LTX（测试）</option></select></label>
+          <label class="subtitle-model">字幕模型<select id="subtitle-model"><option value="clear" selected>CLEAR（默认自动处理）</option><option value="ltx">LTX（测试）</option></select></label>
+          <p id="clear-profile" class="muted">自动重建黑边背景，复杂背景字幕交给 CLEAR，水印交给 ProPainter。</p>
           <div class="settings-grid">
             <label>开始时间（秒）<input id="start-seconds" type="number" min="0" step="any" value="0" required></label>
             <label>处理时长（秒）<input id="duration-seconds" type="number" min="0.001" step="any" placeholder="到视频结束"></label>
@@ -86,6 +87,7 @@
             <fieldset id="clear-options" class="engine-options" data-engine="clear" hidden disabled>
               <legend>字幕参数 · CLEAR</legend>
             <div class="settings-grid">
+              <label class="settings-wide">自动背景分析<select data-option="adaptive_processing"><option value="true" selected>开启（默认）</option><option value="false">关闭</option></select></label>
               <label>移除强度（LoRA）<input data-option="lora_scale" type="number" min="0.5" max="2" step="0.05" value="1" required></label>
               <label>去噪步数<input data-option="steps" type="number" min="1" max="24" step="1" value="5" required></label>
               <label>CFG<input data-option="cfg_scale" type="number" min="1" max="3" step="0.1" value="1" required></label>
@@ -96,15 +98,16 @@
               <label>模型输入<select data-option="context"><option value="frame">整帧</option><option value="roi">选区及周边</option></select></label>
               <label>推理分辨率<select data-option="resolution"><option value="auto">自动缩放</option><option value="native" selected>原像素尺寸</option></select></label>
               <label class="settings-wide">VAE 分块<select data-option="vae_tiled"><option value="false" selected>关闭分块</option><option value="true">启用分块</option></select></label>
-              <label class="settings-wide">合成方式<select data-option="blend_mode"><option value="lines">按字幕行合成并匹配底色</option><option value="rectangle">矩形选区合成</option></select></label>
+              <label class="settings-wide">合成方式<select data-option="blend_mode"><option value="lines">自动文字遮罩合成</option><option value="rectangle">矩形选区合成</option></select></label>
             </div>
             <small>原像素推理更耗显存，可调低分段帧数。无损编码从转换后的 YUV 画面开始计算。</small>
             </fieldset>
             <fieldset id="propainter-options" class="engine-options" data-engine="propainter">
               <legend>水印参数 · ProPainter</legend>
               <div class="settings-grid">
-                <label class="settings-wide">水印遮罩<select data-option="watermark_mask_mode"><option value="auto" selected>自动精细（文字水印）</option><option value="rectangle">完整选框（复杂LOGO）</option></select></label>
-                <label>遮罩扩展（像素）<input data-option="mask_dilation" type="number" min="0" step="1" value="8" required></label>
+                <label class="settings-wide">自动水印分析<select data-option="adaptive_processing"><option value="true" selected>开启（默认）</option><option value="false">关闭</option></select></label>
+                <label class="settings-wide">水印遮罩<select data-option="watermark_mask_mode"><option value="auto" selected>自动覆盖文字与彩色 LOGO</option><option value="rectangle">完整选框（复杂LOGO）</option></select></label>
+                <label>遮罩扩展上限（像素）<input data-option="mask_dilation" type="number" min="0" step="1" value="8" required></label>
                 <label>相邻帧数<input data-option="neighbor_length" type="number" min="1" step="1" value="10" required></label>
                 <label>参考帧间隔<input data-option="ref_stride" type="number" min="1" step="1" value="5" required></label>
                 <label>分段长度（帧）<input data-option="subvideo_length" type="number" min="1" step="1" value="40" required></label>
@@ -113,7 +116,7 @@
                 <label class="settings-wide">分段方式<select data-option="segment_mode"><option value="shots" selected>按镜头分段</option><option value="fixed">连续处理</option></select></label>
                 <label>处理分辨率<select data-option="resolution"><option value="native" selected>原像素尺寸</option><option value="auto">自动缩放</option></select></label>
               </div>
-              <small>字幕使用完整选框。水印可选择自动精细遮罩，或完整覆盖复杂 LOGO。</small>
+              <small>自动分析水印出现的帧，按选区尺寸调整遮罩和参考画面。完整选框适用于边界复杂的 LOGO。</small>
             </fieldset>
           </details>
         </fieldset>
@@ -123,6 +126,7 @@
         <div class="metric"><span id="status" role="status">等待开始</span><b id="percent">0%</b></div>
         <progress id="progress" max="100" value="0" aria-label="移除进度"></progress>
         <div id="task-timing" class="task-timing" hidden><span id="eta">正在估算剩余时间</span><span id="elapsed"></span></div>
+        <p id="quality-status" class="muted" hidden role="status"></p>
         <p id="error" role="alert" hidden></p>
         <button id="retry" type="button" class="button secondary" hidden>继续失败任务</button>
         <div id="download-actions" class="download-actions" hidden>

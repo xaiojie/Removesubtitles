@@ -331,6 +331,7 @@ function requiredEngines() {
 
 function refreshRoutingState() {
   const engines = requiredEngines();
+  $('clear-profile').hidden = subtitleModel.value !== 'clear';
   for (const panel of settings.querySelectorAll('[data-engine]')) {
     panel.hidden = !engines.includes(panel.dataset.engine);
     panel.disabled = panel.hidden;
@@ -343,8 +344,8 @@ function refreshRoutingState() {
   $('segment-option').hidden = !supportsSegmentation;
   $('model').textContent = states.length ? states.map((state, index) => state?.model || (engines[index] === 'clear' ? 'CLEAR 正在检查' : 'ProPainter 正在检查')).join(' · ') : '等待选区';
   const subtitleName = subtitleModel.value === 'ltx' ? 'LTX（测试）' : 'CLEAR';
-  $('routing-flow').textContent = engines.length === 2 ? subtitleName + ' 擦字幕 → ProPainter 去水印'
-    : engines[0] === 'clear' ? '字幕 · CLEAR'
+  $('routing-flow').textContent = engines.length === 2 ? subtitleName + ' 自动去字幕 → ProPainter 去水印'
+    : engines[0] === 'clear' ? '字幕 · 自动背景分析 + CLEAR'
     : engines[0] === 'ltx' ? '字幕 · LTX（测试）'
     : engines[0] === 'propainter' ? '水印 · ProPainter' : '请先框选字幕或水印';
   refreshLTXDimensions();
@@ -588,6 +589,7 @@ fileInput.onchange = () => {
 };
 
 function openVideoFile(chosen) {
+  $('quality-status').hidden = true;
   clearComparison();
   resetTiming();
   resetComparisonDownload();
@@ -808,7 +810,7 @@ function readSettings() {
     const options = {};
     for (const field of fieldsForEngine(engine)) {
       if (engine === 'clear' && field.dataset.option === 'segment_mode' && !supportsSegmentation) continue;
-      if (['vae_tiled', 'fp16'].includes(field.dataset.option)) {
+      if (['vae_tiled', 'fp16', 'adaptive_processing'].includes(field.dataset.option)) {
         options[field.dataset.option] = field.type === 'checkbox' ? field.checked : field.value === 'true';
       } else {
         options[field.dataset.option] = ['context', 'resolution', 'blend_mode', 'segment_mode', 'watermark_mask_mode', 'prompt', 'mode', 'sigma_profile'].includes(field.dataset.option)
@@ -982,6 +984,14 @@ async function poll() {
         retryJobId = result.state === 'failed' && result.can_retry === true ? job : null;
         $('retry').hidden = !retryJobId;
         if (result.state === 'done') {
+          const quality = result.quality;
+          const observations = quality?.observations || [];
+          $('quality-status').hidden = !quality?.suspected_frames;
+          if (quality?.suspected_frames) {
+            const times = [...new Set(observations.map(item => item.seconds.toFixed(2)))].slice(0, 8);
+            $('quality-status').textContent = '画面特征检测标记了 ' + quality.suspected_frames
+              + ' 次疑似残留，可重点查看 ' + times.join('、') + ' 秒附近。';
+          }
           completedJobId = job;
           $('download-actions').hidden = false;
           $('download-comparison').disabled = false;

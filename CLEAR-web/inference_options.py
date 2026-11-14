@@ -5,10 +5,7 @@ import math
 
 @dataclass(frozen=True)
 class InferenceOptions:
-    """Web defaults selected from the A100 larger-context experiment.
-
-    Context cropping and resident-model execution belong to the research runner.
-    """
+    """Selected generation defaults with adaptive subtitle analysis enabled."""
 
     steps: int = 5
     cfg_scale: float = 1.0
@@ -24,6 +21,7 @@ class InferenceOptions:
     blend_mode: str = "lines"
     segment_mode: str = "shots"
     vae_tiled: bool = False
+    adaptive_processing: bool = True
 
     def frame_range(self, fps, total):
         first = math.ceil(self.start_seconds * fps - 1e-8)
@@ -45,6 +43,8 @@ class InferenceOptions:
         options = cls(**data)
         if type(options.vae_tiled) is not bool:
             raise ValueError('vae_tiled 必须是布尔值。')
+        if type(options.adaptive_processing) is not bool:
+            raise ValueError('adaptive_processing 必须是布尔值。')
         for name, low, high in (
             ('steps', 1, 24), ('seed', 0, 2**32-1), ('chunk_frames', 5, 33),
             ('overlap_frames', 0, 16), ('export_crf', 0, 30),

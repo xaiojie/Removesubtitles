@@ -148,6 +148,22 @@ def finalize_output(artifact, original, destination, remux_audio):
         temporary.unlink(missing_ok=True)
 
 
+def collect_quality(folder, pipeline):
+    stages, observations = [], []
+    suspected = 0
+    for phase in pipeline:
+        path = folder / 'stages' / phase / 'quality.json'
+        if not path.is_file():
+            continue
+        data = json.loads(path.read_text(encoding='utf-8'))
+        stages.append(data)
+        suspected += data.get('suspected_frames', 0)
+        observations.extend(dict(item, engine=phase) for item in data.get('observations', []))
+    observations.sort(key=lambda item: item['seconds'])
+    return dict(detector='local-contrast-heuristic', stages=stages,
+                suspected_frames=suspected, observations=observations[:200])
+
+
 def run(folder, clear_source, propainter_source, propainter_python):
     folder = Path(folder).resolve()
     config = json.loads((folder / 'config.json').read_text(encoding='utf-8'))
@@ -162,6 +178,7 @@ def run(folder, clear_source, propainter_source, propainter_python):
     pythons = {'clear': sys.executable, 'propainter': propainter_python, 'ltx': sys.executable}
     previous = original
     (folder / 'output.mp4').unlink(missing_ok=True)
+    (folder / 'quality.json').unlink(missing_ok=True)
     try:
         for phase in pipeline:
             artifact = artifact_path(folder, phase, pipeline)
@@ -172,6 +189,7 @@ def run(folder, clear_source, propainter_source, propainter_python):
                 continue
             stage.mkdir(parents=True, exist_ok=True)
             (stage / 'success.json').unlink(missing_ok=True)
+            (stage / 'quality.json').unlink(missing_ok=True)
             artifact.unlink(missing_ok=True)
             source_link = stage / 'source.video'
             temporary_link = stage / 'source.video.tmp'
@@ -189,8 +207,10 @@ def run(folder, clear_source, propainter_source, propainter_python):
         report(percent=97, stage='正在封装原视频音轨', pipeline=pipeline,
                phase='finalize', phase_label='封装导出', phase_percent=0)
         finalize_output(previous, original, folder / 'output.mp4', remux_audio=len(pipeline) > 1)
+        quality = collect_quality(folder, pipeline)
+        atomic_json(folder / 'quality.json', quality)
         report(percent=100, stage='视频修复完成', pipeline=pipeline,
-               phase='finalize', phase_label='封装导出', phase_percent=100)
+               phase='finalize', phase_label='封装导出', phase_percent=100, quality=quality)
     finally:
         (folder / 'output.finalizing.mp4').unlink(missing_ok=True)
         for phase in pipeline:

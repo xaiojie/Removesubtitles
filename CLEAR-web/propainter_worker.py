@@ -1,5 +1,6 @@
 """Bounded, lossless-frame adapter for the installed upstream ProPainter CLI."""
 from collections import deque
+from dataclasses import replace
 from itertools import chain, islice
 import json
 import math
@@ -20,6 +21,9 @@ import numpy as np
 from propainter_masks import MaskBuilder
 from regions import regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
+from adaptive_processing import context_boxes, QualityReport
+
+_resident_runtime = None
 
 
 def report(**fields):
@@ -56,6 +60,9 @@ def run_upstream(source, frames_dir, masks_dir, result_dir, options, size, progr
                '--subvideo_length', str(options.subvideo_length), '--raft_iter', str(options.raft_iter)]
     if options.fp16:
         command.append('--fp16')
+    if _resident_runtime is not None:
+        _resident_runtime.run(command, progress)
+        return result_dir / frames_dir.name / 'frames'
     environment = os.environ.copy()
     environment['PYTHONUNBUFFERED'] = '1'
     recent = deque(maxlen=30)
@@ -82,6 +89,21 @@ def process_window(frames, masks, source, folder, options, progress):
     if not any(mask.any() for mask in masks):
         return [frame.copy() for frame in frames]
     height, width = frames[0].shape[:2]
+    if options.adaptive_processing:
+        union = np.zeros((height, width), dtype=np.uint8)
+        for mask in masks:
+            np.maximum(union, mask, out=union)
+        boxes = context_boxes(union, width, height)
+        results = [frame.copy() for frame in frames]
+        crop_options = replace(options, adaptive_processing=False, mask_dilation=0)
+        for index, (left, top, right, bottom) in enumerate(boxes):
+            cropped_frames = [frame[top:bottom, left:right].copy() for frame in frames]
+            cropped_masks = [mask[top:bottom, left:right].copy() for mask in masks]
+            predictions = process_window(cropped_frames, cropped_masks, source, folder, crop_options,
+                                         lambda value: progress(int(100 * (index + value / 100) / len(boxes))))
+            for result, prediction in zip(results, predictions):
+                result[top:bottom, left:right] = prediction
+        return results
     size = processing_size(width, height, options.resolution)
     inputs, input_masks = list(frames), list(masks)
     if len(inputs) == 1:
@@ -130,7 +152,8 @@ def analyze_video(input_file, regions, options):
         if not ok or not math.isfinite(fps) or fps <= 0:
             raise ValueError('无法读取视频或识别帧率。')
         height, width = first.shape[:2]
-        builder = MaskBuilder(regions, (width, height), options.watermark_mask_mode, options.mask_dilation)
+        builder = MaskBuilder(regions, (width, height), options.watermark_mask_mode,
+                              options.mask_dilation, adaptive=options.adaptive_processing)
         sample_stride = max(1, math.ceil(max(estimated, 1) / 120))
         total = 0
         def scan():
@@ -138,7 +161,7 @@ def analyze_video(input_file, regions, options):
             for index, frame in enumerate(chain((first,), decoded_frames(capture))):
                 if frame.shape != first.shape:
                     raise ValueError('视频帧尺寸发生变化。请先导出为标准 MP4。')
-                if index % sample_stride == 0:
+                if options.adaptive_processing or index % sample_stride == 0:
                     builder.observe(frame)
                 total += 1
                 yield frame
@@ -159,13 +182,32 @@ def composite_frame(original, repaired, mask):
     original[selected] = repaired[selected]
 
 
+def adaptive_window_settings(builder, options):
+    boxes = context_boxes(builder.allowed, builder.width, builder.height)
+    area = max((processing_size(right-left, bottom-top, options.resolution)[0]
+                * processing_size(right-left, bottom-top, options.resolution)[1]
+                for left, top, right, bottom in boxes), default=builder.width * builder.height)
+    import torch
+    memory_scale = 0.25
+    if torch.cuda.is_available():
+        available, _ = torch.cuda.mem_get_info()
+        memory_scale = min(1.0, max(0.1, available / (32 * 1024**3)))
+    capacity = max(10, min(160, int(80 * 1280 * 720 * memory_scale / area)))
+    source_capacity = max(10, (160 * 1280 * 720) // (builder.width * builder.height))
+    capacity = min(capacity, source_capacity)
+    return capacity, min(8, capacity - 1)
+
+
 def encode(folder, source, options, information, frame_range, mask_reference=None):
     width, height, fps, total, cuts, builder = information
     selected_total = frame_range[1] - frame_range[0] if frame_range[1] is not None else total - frame_range[0]
-    capacity, overlap = window_settings(*processing_size(width, height, options.resolution))
+    if options.adaptive_processing:
+        capacity, overlap = adaptive_window_settings(builder, options)
+    else:
+        capacity, overlap = window_settings(*processing_size(width, height, options.resolution))
     batching = SimpleNamespace(chunk_frames=capacity, overlap_frames=overlap)
     temporary = folder / 'partial.mp4'
-    command = [imageio_ffmpeg.get_ffmpeg_exe(), '-hide_banner', '-loglevel', 'error', '-y',
+    command = [imageio_ffmpeg.get_ffmpeg_exe(), '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
                '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-video_size', f'{width}x{height}',
                '-framerate', f'{fps:.12g}', '-i', 'pipe:0', '-i', str(folder / 'source.video'),
                '-map', '0:v:0', '-map', '1:a?', '-c:v', 'libx264', '-preset', 'fast',
@@ -179,34 +221,50 @@ def encode(folder, source, options, information, frame_range, mask_reference=Non
     done = 0
     written = 0
     segment = 0
+    quality = QualityReport('propainter', fps)
+    regions = builder.regions
     try:
-        actual_size = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        valid, first = capture.read()
+        actual_size = (first.shape[1], first.shape[0]) if valid else (0, 0)
         actual_fps = capture.get(cv2.CAP_PROP_FPS)
         if actual_size != (width, height) or not math.isfinite(actual_fps) or abs(actual_fps - fps) > 0.001:
             raise ValueError('中间视频与原视频的尺寸或帧率不一致。')
         with subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE) as writer:
             try:
-                for carry, pending, selected in video_batches(decoded_frames(capture), frame_range, cuts, batching):
+                for carry, pending, selected in video_batches(chain((first,), decoded_frames(capture)), frame_range, cuts, batching):
                     reference_pending = list(islice(reference_frames, len(pending))) if reference_frames is not None else pending
                     if len(reference_pending) != len(pending):
                         raise RuntimeError('原视频参考与中间视频帧数不一致。')
                     if selected:
                         segment += 1
                         batch = carry + pending
+                        before = [frame.copy() for frame in pending] if options.adaptive_processing else []
                         reference_batch = batch
                         if reference_frames is not None:
                             reference_batch = (reference_carry[-len(carry):] if carry else []) + reference_pending
                             reference_carry = reference_batch[-overlap:] if overlap else []
                         masks = [builder.mask(frame) for frame in reference_batch]
+                        repair_options = options
+                        if options.adaptive_processing:
+                            masks = [builder.expanded_mask(mask) for mask in masks]
+                            repair_options = replace(options, mask_dilation=0)
                         def progress(percent):
                             fraction = (done + len(pending) * percent / 100) / max(1, selected_total)
                             report(percent=min(94, int(8 + 86 * fraction)),
                                    stage=f'第 {segment} 段 · 视频修复 {percent}%',
                                    completed_frames=done, total_frames=selected_total)
                         progress(0)
-                        repaired = process_window(batch, masks, source, folder, options, progress)
+                        repaired = process_window(batch, masks, source, folder, repair_options, progress)
                         for frame, result, mask in zip(batch, repaired, masks):
-                            composite_frame(frame, result, builder.expanded_mask(mask))
+                            selected_mask = mask if options.adaptive_processing else builder.expanded_mask(mask)
+                            composite_frame(frame, result, selected_mask)
+                        if options.adaptive_processing:
+                            for offset, (original, result, mask) in enumerate(zip(before, pending, masks[len(carry):])):
+                                active_regions = [region for region in regions if mask[
+                                    region['roi'][1]:region['roi'][3], region['roi'][0]:region['roi'][2]].any()]
+                                method = 'propainter_frames' if active_regions else 'skipped_frames'
+                                quality.methods[method] += 1
+                                quality.observe(frame_range[0] + done + offset, original, result, active_regions)
                         done += len(pending)
                     for frame in pending:
                         writer.stdin.write(frame.tobytes())
@@ -226,6 +284,9 @@ def encode(folder, source, options, information, frame_range, mask_reference=Non
                     writer.kill()
                     writer.wait()
         temporary.replace(folder / 'output.mp4')
+        if options.adaptive_processing:
+            quality.save(folder)
+            report(quality=quality.summary())
     finally:
         capture.release()
         if reference_capture is not None:
@@ -235,6 +296,7 @@ def encode(folder, source, options, information, frame_range, mask_reference=Non
 
 
 def run(folder, source):
+    global _resident_runtime
     from propainter_options import ProPainterOptions
     folder, source = Path(folder).resolve(), Path(source).resolve()
     config = json.loads((folder / 'config.json').read_text(encoding='utf-8'))
@@ -250,7 +312,13 @@ def run(folder, source):
     frame_range = options.frame_range(fps, total)
     report(percent=8, stage='正在准备视频修复', completed_frames=0,
            total_frames=(frame_range[1] or total) - frame_range[0])
-    encode(folder, source, options, information, frame_range, mask_reference=mask_reference)
+    try:
+        if options.adaptive_processing:
+            from propainter_runtime import ResidentProPainter
+            _resident_runtime = ResidentProPainter(source, folder / 'upstream.log')
+        encode(folder, source, options, information, frame_range, mask_reference=mask_reference)
+    finally:
+        _resident_runtime = None
 
 
 if __name__ == '__main__':

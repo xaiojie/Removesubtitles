@@ -163,7 +163,8 @@ def system():
                    default_engine="auto", auto_routing=True,
                    routing={"subtitle": "clear", "watermark": "propainter"}, engines=engines,
                    propainter_defaults=asdict(ProPainterOptions()), ltx_defaults=asdict(LTXOptions()),
-                   subtitle_models=['clear', 'ltx'], batch_queue=True)
+                   subtitle_models=['clear', 'ltx'], batch_queue=True,
+                   clear_processing_profile='clear-propainter-adaptive-v1')
 
 
 @app.errorhandler(413)
@@ -307,6 +308,9 @@ def status(job_id):
     metadata = dict(inference=config.get("inference", {}), regions=config.get("regions", []),
                     engine=config.get("engine", "clear"), pipeline=config.get("pipeline", [config.get("engine", "clear")]))
     if (folder / "output.mp4").is_file():
+        quality_path = folder / 'quality.json'
+        if quality_path.is_file():
+            metadata['quality'] = json.loads(quality_path.read_text(encoding='utf-8'))
         return jsonify(state="done", percent=100, stage="处理完成", can_retry=False, **metadata)
     saved = folder / "status.json"
     state = json.loads(saved.read_text(encoding="utf-8")) if saved.is_file() else {}

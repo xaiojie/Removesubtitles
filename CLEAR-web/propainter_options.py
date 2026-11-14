@@ -21,6 +21,7 @@ class ProPainterOptions:
     raft_iter: int = 20
     fp16: bool = True
     watermark_mask_mode: str = "auto"
+    adaptive_processing: bool = True
 
     def frame_range(self, fps, total):
         return InferenceOptions.frame_range(self, fps, total)
@@ -34,6 +35,8 @@ class ProPainterOptions:
         options = cls(**values)
         if type(options.fp16) is not bool:
             raise ValueError("fp16 必须是布尔值。")
+        if type(options.adaptive_processing) is not bool:
+            raise ValueError('adaptive_processing 必须是布尔值。')
         ranges = (
             ("mask_dilation", 0, 32),
             ("neighbor_length", 2, 20),

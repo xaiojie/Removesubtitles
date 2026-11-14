@@ -17,6 +17,7 @@ from PIL import Image
 from inference_options import InferenceOptions
 from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
+from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -85,9 +86,18 @@ def repair_batch(frames, roi, predict, context="roi", resolution="auto", blend_m
                    context, resolution, blend_mode)
 
 
-def repair_regions(frames, regions, predict, context="roi", resolution="auto", blend_mode="rectangle"):
+def repair_regions(frames, regions, predict, context="roi", resolution="auto", blend_mode="rectangle",
+                   adaptive_processing=False):
     """Predict once from original frames, then composite only the selected regions."""
-    x1, y1, x2, y2 = bounds(regions)
+    analyses = prepare_subtitles(frames, regions) if adaptive_processing else []
+    active_regions = [item['region'] for item in analyses if item['needs_model']]
+    if adaptive_processing:
+        active_regions.extend(region for region in regions if region['type'] == 'watermark')
+        if not active_regions:
+            return dict(background_regions=len(analyses), model_regions=0)
+    else:
+        active_regions = regions
+    x1, y1, x2, y2 = bounds(active_regions)
     height, width = frames[0].shape[:2]
     margin_x = max(24, (x2 - x1) // 8)
     margin_y = max(48, (y2 - y1) // 2)
@@ -123,12 +133,26 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
             repaired_image = repaired_image.resize((crop_width, crop_height), Image.Resampling.LANCZOS)
         repaired_frames.append(cv2.cvtColor(np.asarray(repaired_image), cv2.COLOR_RGB2BGR))
     watermark_mask = np.zeros((crop_height, crop_width), dtype=np.uint8)
-    for region in regions:
+    analysis_by_roi = {tuple(item['region']['roi']): item for item in analyses}
+    for region in active_regions:
         x1, y1, x2, y2 = region["roi"]
         local_roi = (x1 - left, y1 - top, x2 - left, y2 - top)
         lx1, ly1, lx2, ly2 = local_roi
         if region["type"] == "watermark":
             watermark_mask[ly1:ly2, lx1:lx2] = 255
+            continue
+        if adaptive_processing:
+            analysis = analysis_by_roi[tuple(region['roi'])]
+            for index, (frame, repaired) in enumerate(zip(frames, repaired_frames)):
+                prepared = frame[y1:y2, x1:x2].copy()
+                mask = analysis['masks'][index]
+                if blend_mode == 'rectangle':
+                    mask = np.full_like(mask, 255)
+                    mask[analysis['background_rows'][index]] = 0
+                composite = composite_subtitle(prepared, repaired[ly1:ly2, lx1:lx2], mask)
+                rows = analysis['background_rows'][index]
+                composite[rows] = prepared[rows]
+                frame[y1:y2, x1:x2] = composite
             continue
         generated = [blend_region(original, repaired, local_roi)
                      for original, repaired in zip(originals, repaired_frames)]
@@ -151,6 +175,8 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                 composite = cv2.seamlessClone(source, destination, mask, center, cv2.NORMAL_CLONE)[1:-1, 1:-1]
             # Watermarks take priority while every unselected pixel stays untouched.
             frame[top:bottom, left:right][selected] = composite[selected]
+    return dict(background_regions=sum(not item['needs_model'] for item in analyses),
+                model_regions=len(active_regions))
 
 
 def prompt_for_regions(regions):
@@ -232,7 +258,15 @@ def run(folder, source):
         cuts = []
         if options.segment_mode == "shots":
             cuts = scan_shots(input_file, regions, frame_range)
-        pipe = load_model(source, options.lora_scale)
+        loaded_model = None
+
+        def pipe(**arguments):
+            nonlocal loaded_model
+            if loaded_model is None:
+                report(stage='正在加载 CLEAR，修复复杂背景字幕')
+                loaded_model = load_model(source, options.lora_scale)
+            return loaded_model(**arguments)
+
         report(percent=8, stage='正在准备首段视频')
         encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, cuts,
                lossless_output=config.get('lossless_output') is True)
@@ -264,7 +298,7 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
     suffix = "mkv" if lossless_output else "mp4"
     temporary = folder / f"partial.{suffix}"
     command = [
-        ffmpeg, '-hide_banner', '-loglevel', 'error', '-y',
+        ffmpeg, '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
         '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-video_size', f'{width}x{height}',
         '-framerate', str(fps), '-i', 'pipe:0', '-i', str(folder / 'source.video'),
         '-map', '0:v:0', '-map', '1:a?', '-c:v', 'libx264', '-preset', 'fast', '-crf', str(options.export_crf),
@@ -272,7 +306,7 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
         '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(temporary),
     ]
     if lossless_output:
-        command = [ffmpeg, '-hide_banner', '-loglevel', 'error', '-y',
+        command = [ffmpeg, '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
                    '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-video_size', f'{width}x{height}',
                    '-framerate', str(fps), '-i', 'pipe:0', '-map', '0:v:0',
                    '-c:v', 'ffv1', '-level', '3', '-pix_fmt', 'bgr0', '-an', str(temporary)]
@@ -280,6 +314,7 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
     selected_total = end_frame - start_frame if end_frame is not None else max(0, total - start_frame)
     done = 0
     segment = 0
+    quality = QualityReport('clear', fps)
     frames = chain((first,), decoded_frames(cap))
     with subprocess.Popen(command, stdin=subprocess.PIPE) as writer:
         try:
@@ -289,6 +324,7 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
                     continue
                 segment += 1
                 batch = carry + pending
+                before = [frame.copy() for frame in pending] if options.adaptive_processing else []
 
                 def predict(images):
                     def progress(timesteps):
@@ -302,7 +338,12 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
                                 seed=options.seed, tiled=options.vae_tiled, tile_size=(30, 52), tile_stride=(15, 26),
                                 progress_bar_cmd=progress)
 
-                repair_regions(batch, regions, predict, options.context, options.resolution, options.blend_mode)
+                methods = repair_regions(batch, regions, predict, options.context, options.resolution,
+                                         options.blend_mode, options.adaptive_processing)
+                if options.adaptive_processing:
+                    quality.methods.update(methods)
+                    for offset, (original, repaired) in enumerate(zip(before, pending)):
+                        quality.observe(start_frame + done + offset, original, repaired, regions)
                 for frame in pending:
                     writer.stdin.write(frame.tobytes())
                 done += len(pending)
@@ -317,6 +358,9 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
             if writer.poll() is None:
                 writer.kill()
     temporary.replace(folder / f'output.{suffix}')
+    if options.adaptive_processing:
+        quality.save(folder)
+        report(quality=quality.summary())
 
 
 if __name__ == '__main__':
