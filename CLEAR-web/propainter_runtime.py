@@ -76,12 +76,13 @@ class ResidentProPainter:
             downloader.load_file_from_url = self.local_weight
             imageio.mimwrite = lambda *args, **kwargs: None
             torch.cuda.empty_cache = lambda: None
-            sys.argv = command[1:]
+            script_path = str(self.source / 'inference_propainter.py')
+            sys.argv = command[command.index(script_path):]
             os.chdir(self.source)
             with self.log_path.open('a', encoding='utf-8') as stream:
                 output = ProgressLog(stream, progress)
                 with redirect_stdout(output), redirect_stderr(output), torch.inference_mode():
-                    runpy.run_path(str(self.source / 'inference_propainter.py'), run_name='__main__')
+                    runpy.run_path(script_path, run_name='__main__')
         finally:
             for module, attribute, original in reversed(replacements):
                 setattr(module, attribute, original)
