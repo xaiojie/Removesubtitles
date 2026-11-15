@@ -5,6 +5,27 @@ from types import ModuleType, SimpleNamespace
 from propainter_runtime import ResidentProPainter
 
 
+def test_cached_constructor_preserves_named_super_class_binding(tmp_path, monkeypatch):
+    module = ModuleType('resident_constructor_fixture')
+    exec(
+        'class Base:\n'
+        '    def __init__(self):\n'
+        '        self.initialized = True\n'
+        'class Model(Base):\n'
+        '    def __init__(self):\n'
+        '        super(Model, self).__init__()\n',
+        module.__dict__,
+    )
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    runner = ResidentProPainter(tmp_path, tmp_path / 'upstream.log')
+    cached = runner.constructor(module.Model)
+    module.Model = cached
+    first = cached()
+    assert first.initialized
+    assert cached() is first
+    assert module.Model is cached
+
+
 def test_resident_runner_strips_python_flags_before_upstream_argparse(tmp_path, monkeypatch):
     source = tmp_path / 'upstream'
     source.mkdir()

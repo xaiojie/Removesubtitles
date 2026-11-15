@@ -39,7 +39,14 @@ class ResidentProPainter:
         def cached(*arguments, **keywords):
             key = (original.__module__, original.__name__, repr(arguments), repr(sorted(keywords.items())))
             if key not in self.models:
-                self.models[key] = original(*arguments, **keywords)
+                module = sys.modules[original.__module__]
+                previous = getattr(module, original.__name__)
+                # Upstream constructors use super(ClassName, self).
+                setattr(module, original.__name__, original)
+                try:
+                    self.models[key] = original(*arguments, **keywords)
+                finally:
+                    setattr(module, original.__name__, previous)
             return self.models[key]
         return cached
 
