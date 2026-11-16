@@ -142,6 +142,8 @@ class PipelineWorkerTests(unittest.TestCase):
         ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
         seen = []
         class Builder:
+            regions = [dict(type='watermark', roi=[4, 4, 12, 12])]
+
             def mask(self, frame):
                 seen.append(int(frame[6, 6, 0]))
                 mask = np.zeros(frame.shape[:2], dtype=np.uint8)
@@ -159,10 +161,10 @@ class PipelineWorkerTests(unittest.TestCase):
             def process(frames, *args):
                 return [np.full_like(frame, 230) for frame in frames]
             with patch.object(worker, 'process_window', side_effect=process):
-                worker.encode(folder, Path('/pp'), ProPainterOptions(segment_mode='fixed'), information, (0, 3), mask_reference=reference)
+                worker.encode(folder, Path('/pp'), ProPainterOptions(segment_mode='fixed', adaptive_processing=False), information, (0, 3), mask_reference=reference)
             self.assertEqual(seen, [200, 200, 200])
             seen.clear()
             with patch.object(worker, 'process_window', side_effect=process):
                 with patch.object(worker, 'window_settings', return_value=(2, 1)):
-                    worker.encode(folder, Path('/pp'), ProPainterOptions(segment_mode='fixed'), information, (0, 3))
+                    worker.encode(folder, Path('/pp'), ProPainterOptions(segment_mode='fixed', adaptive_processing=False), information, (0, 3))
             self.assertEqual(seen, [40, 40, 40, 40])

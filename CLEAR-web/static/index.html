@@ -56,8 +56,11 @@
         <dl class="details"><div><dt>处理区域</dt><dd id="roi">等待框选</dd></div><div><dt>模型状态</dt><dd id="model">正在检查</dd></div></dl>
         <fieldset id="processing-options" class="processing-options" disabled>
           <legend>范围与画质</legend>
-          <label class="subtitle-model">字幕模型<select id="subtitle-model"><option value="clear" selected>CLEAR（默认自动处理）</option><option value="ltx">LTX（测试）</option></select></label>
-          <p id="clear-profile" class="muted">自动重建黑边背景，复杂背景字幕交给 CLEAR，水印交给 ProPainter。</p>
+          <label class="subtitle-model">字幕模型<select id="subtitle-model"><option value="clear" selected>CLEAR</option><option value="ltx">LTX（测试）</option></select></label>
+          <div id="clear-preset-panel">
+            <label class="subtitle-model">字幕处理方案<select id="clear-preset"><option value="fast">快速</option><option value="balanced" selected>较大上下文</option><option value="quality">强化修复</option><option value="custom">自定义</option></select></label>
+            <p id="clear-profile" class="muted" role="status">扩展字幕周边画面，兼顾处理速度和背景衔接。</p>
+          </div>
           <div class="settings-grid">
             <label>开始时间（秒）<input id="start-seconds" type="number" min="0" step="any" value="0" required></label>
             <label>处理时长（秒）<input id="duration-seconds" type="number" min="0.001" step="any" placeholder="到视频结束"></label>
@@ -87,7 +90,7 @@
             <fieldset id="clear-options" class="engine-options" data-engine="clear" hidden disabled>
               <legend>字幕参数 · CLEAR</legend>
             <div class="settings-grid">
-              <label class="settings-wide">自动背景分析<select data-option="adaptive_processing"><option value="true" selected>开启（默认）</option><option value="false">关闭</option></select></label>
+              <label class="settings-wide">自动背景分析<select data-option="adaptive_processing"><option value="true">开启</option><option value="false" selected>关闭</option></select></label>
               <label>移除强度（LoRA）<input data-option="lora_scale" type="number" min="0.5" max="2" step="0.05" value="1" required></label>
               <label>去噪步数<input data-option="steps" type="number" min="1" max="24" step="1" value="5" required></label>
               <label>CFG<input data-option="cfg_scale" type="number" min="1" max="3" step="0.1" value="1" required></label>
@@ -95,10 +98,10 @@
               <label id="segment-option" class="settings-wide" hidden>分段方式<select data-option="segment_mode"><option value="shots">按镜头分段</option><option value="fixed">固定帧数分段</option></select></label>
               <label>分段帧数<select data-option="chunk_frames"><option>5</option><option>9</option><option>13</option><option>17</option><option>21</option><option>25</option><option>29</option><option selected>33</option></select></label>
               <label>重叠帧数<input data-option="overlap_frames" type="number" min="0" max="16" step="1" value="4" required></label>
-              <label>模型输入<select data-option="context"><option value="frame">整帧</option><option value="roi">选区及周边</option></select></label>
+              <label>模型输入<select data-option="context"><option value="expanded" selected>较大周边画面</option><option value="frame">整帧</option><option value="roi">选区及周边</option></select></label>
               <label>推理分辨率<select data-option="resolution"><option value="auto">自动缩放</option><option value="native" selected>原像素尺寸</option></select></label>
               <label class="settings-wide">VAE 分块<select data-option="vae_tiled"><option value="false" selected>关闭分块</option><option value="true">启用分块</option></select></label>
-              <label class="settings-wide">合成方式<select data-option="blend_mode"><option value="lines">自动文字遮罩合成</option><option value="rectangle">矩形选区合成</option></select></label>
+              <label class="settings-wide">合成方式<select data-option="blend_mode"><option value="precise" selected>原图遮罩与颜色融合</option><option value="lines">文字行合成</option><option value="rectangle">矩形选区合成</option></select></label>
             </div>
             <small>原像素推理更耗显存，可调低分段帧数。无损编码从转换后的 YUV 画面开始计算。</small>
             </fieldset>

@@ -10,7 +10,7 @@ COMMON_DEFAULTS = {"start_seconds": 0, "duration_seconds": None, "export_crf": 1
 OPTION_TYPES = {"clear": InferenceOptions, "propainter": ProPainterOptions, "ltx": LTXOptions}
 
 
-def prepare_task(regions, raw, legacy_engine="auto"):
+def prepare_task(regions, raw, legacy_engine="auto", *, default_preset=None):
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("推理参数必须是对象。")
@@ -35,7 +35,10 @@ def prepare_task(regions, raw, legacy_engine="auto"):
         common = {name: data.get(name, value) for name, value in COMMON_DEFAULTS.items()}
         groups = data
     else:
-        previous = asdict(OPTION_TYPES[legacy_engine].parse(raw))
+        previous_data = data
+        if legacy_engine == 'clear' and default_preset is not None:
+            previous_data = {'preset': default_preset, **data}
+        previous = asdict(OPTION_TYPES[legacy_engine].parse(json.dumps(previous_data)))
         common = {name: previous[name] for name in COMMON_DEFAULTS}
         groups = {legacy_engine: previous}
     normalized = dict(common)
@@ -46,6 +49,8 @@ def prepare_task(regions, raw, legacy_engine="auto"):
         if not isinstance(group, dict):
             raise ValueError("模型参数必须是对象。")
         values = {**group, **common}
+        if engine == 'clear' and default_preset is not None:
+            values = {'preset': default_preset, **values}
         normalized[engine] = asdict(OPTION_TYPES[engine].parse(json.dumps(values)))
     return {
         "engine": pipeline[0] if len(pipeline) == 1 else "hybrid",

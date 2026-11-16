@@ -19,7 +19,8 @@ class ProPainterWorkerTests(unittest.TestCase):
 
     def options(self, **values):
         defaults = dict(resolution='native', mask_dilation=8, neighbor_length=10,
-                        ref_stride=5, subvideo_length=40, raft_iter=20, fp16=True)
+                        ref_stride=5, subvideo_length=40, raft_iter=20, fp16=True,
+                        adaptive_processing=False)
         defaults.update(values)
         return SimpleNamespace(**defaults)
 
@@ -117,7 +118,8 @@ class ProPainterWorkerTests(unittest.TestCase):
                 source_frames.append(source_frame)
             source_capture.release()
             config = dict(dimensions=[64, 48], regions=[dict(type='subtitle', roi=[20, 16, 42, 34])],
-                          inference=dict(start_seconds=0.4, duration_seconds=0.6, segment_mode='fixed'))
+                          inference=dict(start_seconds=0.4, duration_seconds=0.6, segment_mode='fixed',
+                                         adaptive_processing=False))
             (folder / 'config.json').write_text(json.dumps(config))
             seen_context = []
             def upstream(*arguments):

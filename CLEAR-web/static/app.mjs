@@ -16,7 +16,9 @@ const exportQuality = $('export-crf');
 const startTime = $('start-seconds');
 const duration = $('duration-seconds');
 const subtitleModel = $('subtitle-model');
+const clearPreset = $('clear-preset');
 const tuningFields = [...settings.querySelectorAll('[data-option]')];
+let clearOptions = {};
 let comparisonStart = 0;
 const defaultsLoaded = new Set();
 let commonDefaultsLoaded = false;
@@ -110,11 +112,13 @@ function renderBatch() {
   $('batch-summary').textContent = batchItems.length + ' 个视频 · ' + drafts.filter(item => item.ready).length + ' 个已设置';
   $('batch-save-next').disabled = active || batchIndex < 0 || batchLoading;
   $('batch-save-next').textContent = batchIndex < batchItems.length - 1 ? '保存设置，下一个' : '保存当前视频设置';
-  $('batch-start').disabled = active || batchUploading || !drafts.length || drafts.some(item => !item.ready);
+  $('batch-start').disabled = active || batchUploading || Boolean(latestSystem?.draining)
+    || !drafts.length || drafts.some(item => !item.ready);
 }
 
 function currentForm() {
-  return { model: subtitleModel.value, start: startTime.value, duration: duration.value,
+  return { model: subtitleModel.value, clearPreset: clearPreset.value, clearOptions: { ...clearOptions },
+    start: startTime.value, duration: duration.value,
     crf: exportQuality.value, fields: tuningFields.map(field => ({
       engine: field.closest('[data-engine]').dataset.engine, name: field.dataset.option,
       value: field.value, checked: field.checked,
@@ -124,6 +128,8 @@ function currentForm() {
 function restoreForm(form) {
   if (!form) return;
   subtitleModel.value = form.model;
+  clearPreset.value = form.clearPreset || 'custom';
+  clearOptions = { ...(form.clearOptions || {}), preset: clearPreset.value };
   startTime.value = form.start;
   duration.value = form.duration;
   exportQuality.value = form.crf;
@@ -131,6 +137,7 @@ function restoreForm(form) {
     const field = fieldsForEngine(saved.engine).find(field => field.dataset.option === saved.name);
     if (field) { field.value = saved.value; if (field.type === 'checkbox') field.checked = saved.checked; }
   }
+  refreshPresetDescription();
 }
 
 function saveBatchVideo() {
@@ -322,6 +329,35 @@ function fieldsForEngine(engine) {
   return tuningFields.filter(field => field.closest('[data-engine]').dataset.engine === engine);
 }
 
+function refreshPresetDescription() {
+  const profile = latestSystem?.clear_presets?.find(item => item.id === clearPreset.value);
+  $('clear-profile').textContent = profile?.description || '使用当前高级参数处理字幕。';
+}
+
+clearPreset.onchange = () => {
+  const profile = latestSystem?.clear_presets?.find(item => item.id === clearPreset.value);
+  if (profile) {
+    clearOptions = { ...profile.options };
+    for (const field of fieldsForEngine('clear')) {
+      if (Object.hasOwn(clearOptions, field.dataset.option)) field.value = clearOptions[field.dataset.option];
+    }
+  }
+  clearOptions.preset = clearPreset.value;
+  refreshPresetDescription();
+  markBatchDirty();
+};
+
+for (const field of fieldsForEngine('clear')) {
+  const customize = () => {
+    if (!latestSystem?.clear_presets) return;
+    clearPreset.value = 'custom';
+    clearOptions.preset = 'custom';
+    refreshPresetDescription();
+  };
+  field.addEventListener('input', customize);
+  field.addEventListener('change', customize);
+}
+
 function requiredEngines() {
   const engines = [];
   if (regions.some(region => region.type === 'subtitle')) engines.push(subtitleModel.value);
@@ -331,21 +367,23 @@ function requiredEngines() {
 
 function refreshRoutingState() {
   const engines = requiredEngines();
-  $('clear-profile').hidden = subtitleModel.value !== 'clear';
+  $('clear-preset-panel').hidden = subtitleModel.value !== 'clear' || !latestSystem?.clear_presets;
   for (const panel of settings.querySelectorAll('[data-engine]')) {
     panel.hidden = !engines.includes(panel.dataset.engine);
     panel.disabled = panel.hidden;
   }
   const states = engines.map(engine => latestSystem?.engines?.[engine] || (engine === 'clear' && latestSystem
     ? { ready: latestSystem.ready, model: latestSystem.model } : null));
-  ready = engines.length > 0 && states.every(state => state?.ready) && !timingDisconnected;
+  ready = engines.length > 0 && states.every(state => state?.ready)
+    && !timingDisconnected && !latestSystem?.draining;
   supportsSettings = true;
   supportsSegmentation = Object.hasOwn(latestSystem?.inference_defaults || {}, 'segment_mode');
   $('segment-option').hidden = !supportsSegmentation;
   $('model').textContent = states.length ? states.map((state, index) => state?.model || (engines[index] === 'clear' ? 'CLEAR 正在检查' : 'ProPainter 正在检查')).join(' · ') : '等待选区';
+  if (latestSystem?.draining) $('model').textContent = '正在准备升级，等待已有任务完成';
   const subtitleName = subtitleModel.value === 'ltx' ? 'LTX（测试）' : 'CLEAR';
   $('routing-flow').textContent = engines.length === 2 ? subtitleName + ' 自动去字幕 → ProPainter 去水印'
-    : engines[0] === 'clear' ? '字幕 · 自动背景分析 + CLEAR'
+    : engines[0] === 'clear' ? '字幕 · CLEAR'
     : engines[0] === 'ltx' ? '字幕 · LTX（测试）'
     : engines[0] === 'propainter' ? '水印 · ProPainter' : '请先框选字幕或水印';
   refreshLTXDimensions();
@@ -807,7 +845,8 @@ function readSettings() {
   const inference = { start_seconds: start, duration_seconds: length, export_crf: exportQuality.valueAsNumber,
     subtitle_model: subtitleModel.value };
   for (const engine of engines) {
-    const options = {};
+    const options = engine === 'clear' && latestSystem?.clear_presets
+      ? { ...clearOptions, preset: clearPreset.value } : {};
     for (const field of fieldsForEngine(engine)) {
       if (engine === 'clear' && field.dataset.option === 'segment_mode' && !supportsSegmentation) continue;
       if (['vae_tiled', 'fp16', 'adaptive_processing'].includes(field.dataset.option)) {
@@ -946,8 +985,18 @@ async function poll() {
             else field.value = value;
           }
         }
+        if (engine === 'clear' && system.clear_presets) {
+          clearOptions = { ...defaults };
+          clearPreset.value = defaults.preset || system.clear_default_preset;
+          refreshPresetDescription();
+        }
         defaultsLoaded.add(engine);
       }
+    }
+    if (Array.isArray(system.ltx_modes)) {
+      const mode = fieldsForEngine('ltx').find(field => field.dataset.option === 'mode');
+      for (const option of mode.options) option.disabled = !system.ltx_modes.includes(option.value);
+      if (!system.ltx_modes.includes(mode.value)) mode.value = system.ltx_modes[0] || '';
     }
     if (!commonDefaultsLoaded) {
       const crf = system.inference_defaults?.export_crf ?? system.propainter_defaults?.export_crf;

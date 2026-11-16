@@ -1,7 +1,9 @@
 from dataclasses import asdict
+import ipaddress
 import json
 import os
 import re
+import secrets
 from pathlib import Path, PureWindowsPath
 import subprocess
 import sys
@@ -9,13 +11,14 @@ import tempfile
 from threading import Lock, Thread
 from uuid import uuid4
 
-from flask import Flask, abort, jsonify, request, send_file
+from flask import Flask, abort, g, jsonify, request, send_file
 
 from inference_options import InferenceOptions
 from propainter_options import ProPainterOptions
 from ltx_options import LTXOptions
 from regions import region, parse_regions, bounds, regions_from_config
 from task_options import prepare_task
+from processing_profiles import default_profile, profile_catalog, profile_defaults
 from comparison_video import create_comparison, validate_video_pair
 
 ROOT = Path(__file__).resolve().parent
@@ -52,6 +55,60 @@ app.config.update(
 jobs = {}
 comparisons = {}
 lock = Lock()
+draining = False
+active_requests = {}
+
+
+@app.before_request
+def admit_processing_request():
+    if request.endpoint not in ('submit', 'retry_job', 'start_comparison'):
+        return
+    with lock:
+        if draining:
+            return jsonify(error='服务正在准备升级，请稍后再提交任务。'), 503
+        admission_id = uuid4().hex
+        active_requests[admission_id] = dict(id=admission_id, state='uploading', kind='request')
+        g.deployment_admission = admission_id
+
+
+@app.teardown_request
+def finish_processing_request(_error):
+    admission_id = g.pop('deployment_admission', None)
+    if admission_id is not None:
+        with lock:
+            active_requests.pop(admission_id, None)
+
+
+@app.route('/api/deploy/drain', methods=['GET', 'POST', 'DELETE'])
+def deployment_drain():
+    global draining
+    try:
+        peer = ipaddress.ip_address(request.remote_addr)
+    except ValueError:
+        abort(403)
+    if not peer.is_loopback:
+        server_socket = request.environ.get('gunicorn.socket') or request.environ.get('werkzeug.socket')
+        try:
+            address = server_socket.getsockname()[0] if server_socket else request.environ.get('SERVER_NAME')
+            if peer != ipaddress.ip_address(address):
+                abort(403)
+        except (OSError, ValueError, TypeError):
+            abort(403)
+    try:
+        token = (WORKSPACE / '.deploy/maintenance.token').read_text().strip()
+    except OSError:
+        abort(403)
+    if not token or not secrets.compare_digest(token, request.headers.get('X-Deploy-Token', '')):
+        abort(403)
+    with lock:
+        if request.method != 'GET':
+            draining = request.method == 'POST'
+        busy = [dict(id=job_id, state=job['state'], kind='job')
+                for job_id, job in jobs.items() if job['state'] in ('running', 'queued', 'uploading')]
+        busy.extend(dict(id=job_id, state='running', kind='comparison')
+                    for job_id, comparison in comparisons.items() if comparison.get('state') == 'running')
+        busy.extend(active_requests.values())
+        return jsonify(draining=draining, busy=busy)
 
 
 def gpu_status():
@@ -113,12 +170,29 @@ def propainter_status():
     return True, "已就绪"
 
 
+def ltx_modes():
+    selection = LTX_ROOT / '.install/selection.json'
+    if not selection.is_file():
+        return ['subtitle_rm', 'watermark_rm']
+    try:
+        tasks = json.loads(selection.read_text(encoding='utf-8'))['tasks']
+        if not isinstance(tasks, list) or not tasks or any(task not in ('subtitle', 'watermark') for task in tasks):
+            return []
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+    return [mode for task, mode in (('subtitle', 'subtitle_rm'), ('watermark', 'watermark_rm')) if task in tasks]
+
+
 def ltx_status():
     if not (LTX_ROOT / 'run_pipeline.py').is_file() or not LTX_PYTHON.is_file():
         return False, '正在准备 LTX 程序与环境'
-    for marker in ('models.complete', 'environment.complete', 'test.complete'):
+    for marker in ('models.complete', 'environment.complete'):
         if not (LTX_ROOT / '.install' / marker).is_file():
             return False, '正在校验 LTX 模型与环境'
+    if not any((LTX_ROOT / '.install' / marker).is_file() for marker in ('runtime.complete', 'test.complete')):
+        return False, '正在校验 LTX 模型与环境'
+    if not ltx_modes():
+        return False, 'LTX 模型用途配置无效，请重新校验安装'
     return True, 'LTX 已就绪（测试）'
 
 
@@ -159,12 +233,15 @@ def system():
         'ltx': dict(ready=ltx_ready and gpu is not None, model=ltx_model),
     }
     return jsonify(ready=ready and gpu is not None, model=model, gpu=gpu,
-                   inference_defaults=asdict(InferenceOptions()), region_types=["subtitle", "watermark"],
+                   inference_defaults=asdict(InferenceOptions.parse(json.dumps(profile_defaults(default_profile())))),
+                   clear_presets=profile_catalog(), clear_default_preset=default_profile(),
+                   draining=draining, region_types=["subtitle", "watermark"],
                    default_engine="auto", auto_routing=True,
                    routing={"subtitle": "clear", "watermark": "propainter"}, engines=engines,
                    propainter_defaults=asdict(ProPainterOptions()), ltx_defaults=asdict(LTXOptions()),
+                   ltx_modes=ltx_modes(),
                    subtitle_models=['clear', 'ltx'], batch_queue=True,
-                   clear_processing_profile='clear-propainter-adaptive-v1')
+                   clear_processing_profile='clear-presets-v2')
 
 
 @app.errorhandler(413)
@@ -249,12 +326,15 @@ def submit():
         abort(403)
     try:
         regions, dimensions = parse_regions(request.form.get("regions"), request.form.get("roi"), request.form.get("dimensions"))
-        task = prepare_task(regions, request.form.get("inference", "{}"), request.form.get("engine", "clear"))
+        task = prepare_task(regions, request.form.get("inference", "{}"), request.form.get("engine", "clear"),
+                            default_preset=default_profile())
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
     for engine in task["pipeline"]:
         if not engine_status(engine)[0]:
             return jsonify(error=f"{engine} 模型或运行环境仍在准备。"), 503
+        if engine == 'ltx' and task['inference']['ltx']['mode'] not in ltx_modes():
+            return jsonify(error='所选 LTX 用途的 LoRA 尚未安装，请补充对应模型。'), 503
     video = request.files.get("video")
     if video is None or not video.filename:
         return jsonify(error="请选择视频。"), 400
@@ -339,11 +419,15 @@ def retry_job(job_id):
     regions = regions_from_config(config)
     legacy = "auto" if "pipeline" in config else config.get("engine", "clear")
     task = prepare_task(regions, json.dumps(config.get("inference", {})), legacy)
+    if config.get('pipeline') == task['pipeline'] and config.get('engine') == task['engine']:
+        task['inference'] = config['inference']
     from pipeline_worker import completed_stages
     completed = completed_stages(folder)
     for engine in task["pipeline"]:
         if engine not in completed and not engine_status(engine)[0]:
             return jsonify(error=f"{engine} 模型或运行环境仍在准备。"), 503
+        if engine == 'ltx' and engine not in completed and task['inference']['ltx']['mode'] not in ltx_modes():
+            return jsonify(error='所选 LTX 用途的 LoRA 尚未安装，请补充对应模型。'), 503
     enqueue = request.args.get('queue') == '1'
     with lock:
         if jobs.get(job_id, {}).get('state') in ('running', 'queued', 'uploading'):

@@ -2,10 +2,12 @@ from dataclasses import dataclass, fields
 import json
 import math
 
+from processing_profiles import profile_defaults
+
 
 @dataclass(frozen=True)
 class InferenceOptions:
-    """Selected generation defaults with adaptive subtitle analysis enabled."""
+    """Legacy defaults remain stable. Named presets are resolved when parsing."""
 
     steps: int = 5
     cfg_scale: float = 1.0
@@ -22,6 +24,8 @@ class InferenceOptions:
     segment_mode: str = "shots"
     vae_tiled: bool = False
     adaptive_processing: bool = True
+    preset: str = 'custom'
+    resident_models: bool = False
 
     def frame_range(self, fps, total):
         first = math.ceil(self.start_seconds * fps - 1e-8)
@@ -40,11 +44,16 @@ class InferenceOptions:
         data = json.loads(raw)
         if not isinstance(data, dict) or data.keys() - {f.name for f in fields(cls)}:
             raise ValueError('inference 必须是有效的推理参数对象。')
+        preset = data.get('preset', 'custom')
+        if preset != 'custom':
+            data = profile_defaults(preset) | data
         options = cls(**data)
         if type(options.vae_tiled) is not bool:
             raise ValueError('vae_tiled 必须是布尔值。')
         if type(options.adaptive_processing) is not bool:
             raise ValueError('adaptive_processing 必须是布尔值。')
+        if type(options.resident_models) is not bool:
+            raise ValueError('resident_models 必须是布尔值。')
         for name, low, high in (
             ('steps', 1, 24), ('seed', 0, 2**32-1), ('chunk_frames', 5, 33),
             ('overlap_frames', 0, 16), ('export_crf', 0, 30),
@@ -58,8 +67,8 @@ class InferenceOptions:
                 raise ValueError(f'{name} 必须在 {low} 到 {high} 之间。')
         if options.chunk_frames % 4 != 1 or options.overlap_frames >= options.chunk_frames:
             raise ValueError('chunk_frames 必须符合 4n+1，overlap_frames 必须小于 chunk_frames。')
-        if options.context not in ("roi", "frame"):
-            raise ValueError('context 必须是 roi 或 frame。')
+        if options.context not in ("roi", "expanded", "frame"):
+            raise ValueError('context 必须是 roi、expanded 或 frame。')
         if options.resolution not in ("auto", "native"):
             raise ValueError('resolution 必须是 auto 或 native。')
         start, duration = options.start_seconds, options.duration_seconds
@@ -67,8 +76,8 @@ class InferenceOptions:
             raise ValueError('start_seconds 必须是非负有限数字。')
         if duration is not None and (type(duration) not in (int, float) or not 0 < duration <= 1e9):
             raise ValueError('duration_seconds 必须是正的有限数字。')
-        if options.blend_mode not in ("lines", "rectangle"):
-            raise ValueError("blend_mode must be lines or rectangle.")
+        if options.blend_mode not in ("lines", "rectangle", "precise"):
+            raise ValueError("blend_mode must be lines, rectangle or precise.")
         if options.segment_mode not in ("shots", "fixed"):
             raise ValueError("segment_mode must be shots or fixed.")
         return options

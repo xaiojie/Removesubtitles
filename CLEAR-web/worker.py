@@ -18,6 +18,7 @@ from inference_options import InferenceOptions
 from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
+from subtitle_compositing import caption_mask, composite_caption
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -31,7 +32,20 @@ def report(**fields):
     print('CLEAR_STATUS ' + json.dumps(fields), flush=True)
 
 
-def load_model(source, lora_scale=1.0):
+def configure_model_residency(pipe, enabled, device_memory_bytes):
+    """Retain generation models only for explicit opt-in on GPUs of at least 20 GiB."""
+    if not enabled or device_memory_bytes < 20*1024**3:
+        return False
+    load_requested_models = pipe.load_models_to_device
+
+    def keep_generation_models(names=None):
+        return load_requested_models(list(dict.fromkeys(list(names or []) + ['dit', 'vae'])))
+
+    pipe.load_models_to_device = keep_generation_models
+    return True
+
+
+def load_model(source, lora_scale=1.0, resident_models=False):
     import torch
 
     sys.path.insert(0, str(source))
@@ -77,6 +91,8 @@ def load_model(source, lora_scale=1.0):
         raise RuntimeError('CLEAR LoRA 权重没有匹配到模型。')
     pipe.dit.eval()
     pipe.enable_vram_management(num_persistent_param_in_dit=1_700_000_000)
+    if resident_models:
+        configure_model_residency(pipe, True, torch.cuda.get_device_properties(0).total_memory)
     pipe.prompter.encode_prompt = lru_cache(maxsize=2)(pipe.prompter.encode_prompt)
     return pipe
 
@@ -86,39 +102,70 @@ def repair_batch(frames, roi, predict, context="roi", resolution="auto", blend_m
                    context, resolution, blend_mode)
 
 
+def context_crop(regions, width, height, context):
+    x1, y1, x2, y2 = bounds(regions)
+    if context == 'frame':
+        return 0, 0, width, height
+    margin_x = max(24, (x2-x1)//8)
+    margin_y = max(48, (y2-y1)//2)
+    if context == 'expanded':
+        crop_width = min(width, max(round(width*.8), x2-x1+2*margin_x))
+        crop_height = min(height, max(round(height*8/15), y2-y1+2*margin_y))
+        # Prefer the image's horizontal center while keeping every selection inside.
+        left = min(max((width-crop_width)//2, x2-crop_width), x1)
+        left = max(0, min(width-crop_width, left))
+        top = max(0, min(height-crop_height, (y1+y2-crop_height)//2))
+        return left, top, left+crop_width, top+crop_height
+    return max(0, x1-margin_x), max(0, y1-margin_y), min(width, x2+margin_x), min(height, y2+margin_y)
+
+
+def model_geometry(width, height, resolution, preserve_aspect=False):
+    if resolution == 'native':
+        return (width, height), (width+(-width % 16), height+(-height % 16))
+    scale = min(1, math.sqrt((832*480)/(width*height)), 1024/max(width, height))
+    padded = (max(16, round(width*scale/16)*16), max(16, round(height*scale/16)*16))
+    if not preserve_aspect:
+        return padded, padded
+    scale = min(1, padded[0]/width, padded[1]/height)
+    resized = (max(1, round(width*scale)), max(1, round(height*scale)))
+    return resized, padded
+
+
 def repair_regions(frames, regions, predict, context="roi", resolution="auto", blend_mode="rectangle",
                    adaptive_processing=False):
     """Predict once from original frames, then composite only the selected regions."""
-    analyses = prepare_subtitles(frames, regions) if adaptive_processing else []
+    precise = blend_mode == 'precise'
+    if precise:
+        analyses = []
+        for region in regions:
+            if region['type'] != 'subtitle':
+                continue
+            x1, y1, x2, y2 = region['roi']
+            masks = [caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy() for frame in frames]
+            analyses.append(dict(region=region, masks=masks, needs_model=any(mask.any() for mask in masks)))
+    else:
+        analyses = prepare_subtitles(frames, regions) if adaptive_processing else []
     active_regions = [item['region'] for item in analyses if item['needs_model']]
-    if adaptive_processing:
+    if adaptive_processing or precise:
         active_regions.extend(region for region in regions if region['type'] == 'watermark')
         if not active_regions:
             return dict(background_regions=len(analyses), model_regions=0)
     else:
         active_regions = regions
-    x1, y1, x2, y2 = bounds(active_regions)
     height, width = frames[0].shape[:2]
-    margin_x = max(24, (x2 - x1) // 8)
-    margin_y = max(48, (y2 - y1) // 2)
-    left, top = max(0, x1 - margin_x), max(0, y1 - margin_y)
-    right, bottom = min(width, x2 + margin_x), min(height, y2 + margin_y)
-    if context == "frame":
-        left, top, right, bottom = 0, 0, width, height
+    left, top, right, bottom = context_crop(active_regions, width, height, context)
     crop_width, crop_height = right - left, bottom - top
-    scale = min(1, math.sqrt((832 * 480) / (crop_width * crop_height)), 1024 / max(crop_width, crop_height))
-    shape = (max(16, round(crop_width * scale / 16) * 16),
-             max(16, round(crop_height * scale / 16) * 16))
+    resized, padded = model_geometry(crop_width, crop_height, resolution, preserve_aspect=precise)
     originals = [frame[top:bottom, left:right].copy() for frame in frames]
     inputs = []
     for original in originals:
         pixels = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
-        if resolution == "native":
-            pixels = cv2.copyMakeBorder(pixels, 0, -crop_height % 16, 0, -crop_width % 16,
-                                        cv2.BORDER_REPLICATE)
-            inputs.append(Image.fromarray(pixels))
-        else:
-            inputs.append(Image.fromarray(pixels).resize(shape, Image.Resampling.LANCZOS))
+        image = Image.fromarray(pixels)
+        if image.size != resized:
+            image = image.resize(resized, Image.Resampling.LANCZOS)
+        pixels = cv2.copyMakeBorder(np.asarray(image), 0, padded[1]-resized[1], 0, padded[0]-resized[0],
+                                    cv2.BORDER_REPLICATE)
+        inputs.append(Image.fromarray(pixels))
     # Wan requires 4n+1 frames. Replicate the tail and discard only the padding.
     inputs.extend([inputs[-1]] * (-(len(inputs) - 1) % 4))
     outputs = predict(inputs)
@@ -127,12 +174,12 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
     repaired_frames = []
     for image in outputs[:len(frames)]:
         repaired_image = image.convert('RGB')
-        if resolution == "native":
-            repaired_image = repaired_image.crop((0, 0, crop_width, crop_height))
-        else:
+        repaired_image = repaired_image.crop((0, 0, *resized))
+        if repaired_image.size != (crop_width, crop_height):
             repaired_image = repaired_image.resize((crop_width, crop_height), Image.Resampling.LANCZOS)
         repaired_frames.append(cv2.cvtColor(np.asarray(repaired_image), cv2.COLOR_RGB2BGR))
     watermark_mask = np.zeros((crop_height, crop_width), dtype=np.uint8)
+    subtitle_masks = [np.zeros((crop_height, crop_width), np.uint8) for _ in frames] if precise else []
     analysis_by_roi = {tuple(item['region']['roi']): item for item in analyses}
     for region in active_regions:
         x1, y1, x2, y2 = region["roi"]
@@ -140,6 +187,10 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
         lx1, ly1, lx2, ly2 = local_roi
         if region["type"] == "watermark":
             watermark_mask[ly1:ly2, lx1:lx2] = 255
+            continue
+        if precise:
+            for mask, detected in zip(subtitle_masks, analysis_by_roi[tuple(region['roi'])]['masks']):
+                mask[ly1:ly2, lx1:lx2] |= detected
             continue
         if adaptive_processing:
             analysis = analysis_by_roi[tuple(region['roi'])]
@@ -161,6 +212,11 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
             generated = blend_subtitle_lines(original_regions, np.stack(generated))
         for frame, composite in zip(frames, generated):
             frame[y1:y2, x1:x2] = composite
+    if precise:
+        for frame, original, repaired, mask in zip(frames, originals, repaired_frames, subtitle_masks):
+            selected = mask > 0
+            composite = composite_caption(original, repaired, mask)
+            frame[top:bottom, left:right][selected] = composite[selected]
     # Match all watermark regions to the original background in one Poisson solve.
     selected = watermark_mask > 0
     if selected.any():
@@ -172,7 +228,7 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
             if min(selected_width, selected_height) >= 5:
                 destination = cv2.copyMakeBorder(original, 1, 1, 1, 1, cv2.BORDER_REPLICATE)
                 source = cv2.copyMakeBorder(repaired, 1, 1, 1, 1, cv2.BORDER_REPLICATE)
-                composite = cv2.seamlessClone(source, destination, mask, center, cv2.NORMAL_CLONE)[1:-1, 1:-1]
+                composite = cv2.seamlessClone(source, destination, mask.copy(), center, cv2.NORMAL_CLONE)[1:-1, 1:-1]
             # Watermarks take priority while every unselected pixel stays untouched.
             frame[top:bottom, left:right][selected] = composite[selected]
     return dict(background_regions=sum(not item['needs_model'] for item in analyses),
@@ -264,7 +320,7 @@ def run(folder, source):
             nonlocal loaded_model
             if loaded_model is None:
                 report(stage='正在加载 CLEAR，修复复杂背景字幕')
-                loaded_model = load_model(source, options.lora_scale)
+                loaded_model = load_model(source, options.lora_scale, options.resident_models)
             return loaded_model(**arguments)
 
         report(percent=8, stage='正在准备首段视频')

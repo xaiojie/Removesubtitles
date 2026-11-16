@@ -4,6 +4,126 @@ import numpy as np
 from worker import repair_batch
 
 
+class ProfileGeometryTests(unittest.TestCase):
+    def test_expanded_context_reproduces_proportional_landscape_context(self):
+        from worker import context_crop
+        regions = [{'type': 'subtitle', 'roi': [261, 622, 970, 718]}]
+        self.assertEqual(context_crop(regions, 1280, 720, 'expanded'), (128, 336, 1152, 720))
+
+    def test_expanded_context_contains_portrait_edge_and_multiple_selections(self):
+        from worker import context_crop
+        cases = [
+            (720, 1280, [[120, 1040, 600, 1120]]),
+            (1920, 1080, [[0, 0, 240, 100]]),
+            (1080, 1920, [[870, 1600, 1080, 1920]]),
+            (1280, 720, [[0, 30, 180, 120], [1080, 600, 1280, 720]]),
+        ]
+        for width, height, rois in cases:
+            with self.subTest(width=width, height=height, rois=rois):
+                left, top, right, bottom = context_crop(
+                    [dict(type='subtitle', roi=roi) for roi in rois], width, height, 'expanded')
+                self.assertTrue(0 <= left < right <= width)
+                self.assertTrue(0 <= top < bottom <= height)
+                self.assertGreaterEqual(right-left, min(width, round(width*.8)))
+                self.assertGreaterEqual(bottom-top, min(height, round(height*8/15)))
+                for x1, y1, x2, y2 in rois:
+                    self.assertTrue(left <= x1 < x2 <= right)
+                    self.assertTrue(top <= y1 < y2 <= bottom)
+
+    def test_quality_geometry_resizes_proportionally_then_pads_to_model_grid(self):
+        from worker import model_geometry
+        self.assertEqual(model_geometry(1280, 720, 'auto', preserve_aspect=True),
+                         ((848, 477), (848, 480)))
+        for width, height in ((720, 1280), (83, 49), (2, 3), (3840, 2160)):
+            resized, padded = model_geometry(width, height, 'auto', preserve_aspect=True)
+            self.assertLessEqual(abs(resized[0]/width - resized[1]/height), 1/min(width, height))
+            self.assertEqual((padded[0] % 16, padded[1] % 16), (0, 0))
+            self.assertTrue(resized[0] <= padded[0] and resized[1] <= padded[1])
+
+    def test_precise_subtitle_without_text_skips_prediction_and_retains_pixels(self):
+        from worker import repair_regions
+        original = np.full((72, 128, 3), (70, 85, 95), dtype=np.uint8)
+        frame = original.copy()
+        def predict(images):
+            self.fail('blank subtitle selections should not require the model')
+        methods = repair_regions([frame], [dict(type='subtitle', roi=[0, 48, 128, 72])],
+                                 predict, context='expanded', resolution='native', blend_mode='precise')
+        np.testing.assert_array_equal(frame, original)
+        self.assertEqual(methods, dict(background_regions=1, model_regions=0))
+
+    def test_quality_prediction_uses_full_frame_with_aspect_padding(self):
+        from worker import repair_regions
+        frame = np.full((720, 1280, 3), 85, dtype=np.uint8)
+        import cv2
+        cv2.putText(frame, 'Caption', (490, 660), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 0, 0), 6, cv2.LINE_AA)
+        cv2.putText(frame, 'Caption', (490, 660), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (245, 245, 245), 2, cv2.LINE_AA)
+        calls = []
+        def predict(images):
+            calls.append(len(images))
+            self.assertEqual(images[0].size, (848, 480))
+            return images
+        repair_regions([frame], [dict(type='subtitle', roi=[450, 620, 800, 700])], predict,
+                       context='frame', resolution='auto', blend_mode='precise')
+        self.assertEqual(calls, [1])
+
+    def test_precise_multiple_rois_process_short_text_and_leave_blank_frames_exact(self):
+        from worker import repair_regions
+        from PIL import Image
+        import cv2
+        original = np.full((180, 320, 3), 95, dtype=np.uint8)
+        cv2.putText(original, 'OK', (35, 62), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (245, 245, 245), 2, cv2.LINE_AA)
+        cv2.putText(original, 'NO', (215, 155), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (20, 220, 245), 2, cv2.LINE_AA)
+        blank = np.full_like(original, 95)
+        frames = [original.copy(), blank.copy()]
+        calls = []
+        def predict(images):
+            calls.append(len(images))
+            return [Image.new('RGB', image.size, (95, 95, 95)) for image in images]
+        repair_regions(frames, [dict(type='subtitle', roi=[20, 25, 110, 80]),
+                                dict(type='subtitle', roi=[195, 115, 300, 175])], predict,
+                       context='expanded', resolution='native', blend_mode='precise')
+        self.assertEqual(calls, [5])
+        self.assertLess(int(frames[0][40:65, 35:78].max()), 100)
+        self.assertLess(int(frames[0][135:157, 215:260].max()), 100)
+        np.testing.assert_array_equal(frames[1], blank)
+        selected = np.zeros(original.shape[:2], bool)
+        selected[25:80, 20:110] = True
+        selected[115:175, 195:300] = True
+        np.testing.assert_array_equal(frames[0][~selected], original[~selected])
+
+
+class ResidentModelTests(unittest.TestCase):
+    def test_opt_in_large_gpu_retains_dit_and_vae_without_losing_other_requested_models(self):
+        from worker import configure_model_residency
+        class Pipeline:
+            def load_models_to_device(self, names=None):
+                return names
+        for capacity in (20*1024**3, 24*1024**3):
+            with self.subTest(capacity=capacity):
+                pipeline = Pipeline()
+                self.assertTrue(configure_model_residency(pipeline, True, capacity))
+                self.assertEqual(pipeline.load_models_to_device(['text_encoder', 'dit']),
+                                 ['text_encoder', 'dit', 'vae'])
+                self.assertEqual(pipeline.load_models_to_device(), ['dit', 'vae'])
+                self.assertEqual(pipeline.load_models_to_device([]), ['dit', 'vae'])
+
+    def test_low_memory_and_legacy_opt_out_retain_original_model_loading(self):
+        from worker import configure_model_residency
+        class Pipeline:
+            def load_models_to_device(self, names=None):
+                return names
+        for enabled, capacity in ((False, 80*1024**3), (True, 20*1024**3-1), (True, 16*1024**3)):
+            with self.subTest(enabled=enabled, capacity=capacity):
+                pipeline = Pipeline()
+                self.assertFalse(configure_model_residency(pipeline, enabled, capacity))
+                self.assertEqual(pipeline.load_models_to_device(['dit']), ['dit'])
+                self.assertIsNone(pipeline.load_models_to_device())
+
+
 class RegionRepairTests(unittest.TestCase):
     def test_repair_changes_only_selected_pixels_and_keeps_tail(self):
         frames = [np.zeros((24, 40, 3), dtype=np.uint8) for _ in range(3)]
