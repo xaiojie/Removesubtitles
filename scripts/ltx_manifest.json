@@ -1,0 +1,827 @@
+{
+  "schema_version": 1,
+  "source": {
+    "repository": "joyfoxai/LTX2-ICEdit-Insight",
+    "revision": "e54392f735fa7f3e8640fb6fe70bc08c5f5dcf5d",
+    "archive": {
+      "path": ".install/source-e54392f735fa7f3e8640fb6fe70bc08c5f5dcf5d.tar.gz",
+      "size": 37114274,
+      "sha256": "80782c9ddfaaa20de9c0f06e8379ddea1d68043a5ce1daffedcc9ca821a8e258",
+      "urls": [
+        "https://github.com/joyfoxai/LTX2-ICEdit-Insight/archive/e54392f735fa7f3e8640fb6fe70bc08c5f5dcf5d.tar.gz",
+        "https://codeload.github.com/joyfoxai/LTX2-ICEdit-Insight/tar.gz/e54392f735fa7f3e8640fb6fe70bc08c5f5dcf5d"
+      ]
+    },
+    "files": [
+      {
+        "path": "ltx_vendor/ltx_core/__init__.py",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/batch_split.py",
+        "size": 3783,
+        "sha256": "c4ace5360f2f473085dd8cb0bf80d9bea4732a6050cb4d7559acd6a6bd293d14"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/__init__.py",
+        "size": 485,
+        "sha256": "319cdb78afb9d95413d0da0cd4c96afeb1b4dd3d1f4cf6aa30c838f03bccb393"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/diffusion_steps.py",
+        "size": 4605,
+        "sha256": "18baaea797522b04a773a5b320053a2613a18d5f369493daae8d7ff03d5a19a1"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/guiders.py",
+        "size": 15207,
+        "sha256": "21f41fb77fcea2567ddcc833a8a757f8c6bcf794d53263c0b8d48ad7821d5069"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/noisers.py",
+        "size": 1088,
+        "sha256": "b7764741bba285c5d6aa1c6045ee6fddda20f19ef177ca7ebb882fefa07e848d"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/patchifiers.py",
+        "size": 14286,
+        "sha256": "65ae83be774f1c10dbda5de16891d2a2554207da27e9bd1017468cdc39b4a07d"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/protocols.py",
+        "size": 3147,
+        "sha256": "d1d79c9507c57b786ff752aedc8fc988b24895ef81eb95f31506cdcb8253dbc3"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/components/schedulers.py",
+        "size": 4855,
+        "sha256": "ca318b9e9d0e3166e7085b8abf1950a2851790f9427bfdcb8e825cc6a8d06be4"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/__init__.py",
+        "size": 613,
+        "sha256": "3578950f1ad0e341bfec17e5b233f27566fc0ec6ea2ae8abd47bd1b1f2f1b5ea"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/exceptions.py",
+        "size": 95,
+        "sha256": "fb618772f349090b17cee84e28f862a42b5273b2da2e9f50f94c9a44692c0585"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/item.py",
+        "size": 750,
+        "sha256": "0b081dcbb0050dc5e56e8dc89bc5732f6abcf2bbb16ad6f4711c9314862d8509"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/mask_utils.py",
+        "size": 9174,
+        "sha256": "2f401b1ec81dd56646d9ead6f1bbb08def409976761d7a743c7d2fa11b01e6a3"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/types/__init__.py",
+        "size": 581,
+        "sha256": "ab76085b0ad0330d89b1d02666f4c0bd2ff508ecab1e845ca716180fb5a7e441"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/types/attention_strength_wrapper.py",
+        "size": 3007,
+        "sha256": "370279deb618d63d7bdf3d71e6b83fa6fcbdc071cb5d631a51f767c1f4d5dcc6"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/types/keyframe_cond.py",
+        "size": 2840,
+        "sha256": "813c0cc368e86a8d56ce10056fb9bd908640889ee484c639405fa9cece4228b9"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/types/latent_cond.py",
+        "size": 2000,
+        "sha256": "96cb70f92cfdc934ace8432238aba7aaba1704feacec73b549269bacc1b4abeb"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/types/noise_mask_cond.py",
+        "size": 2353,
+        "sha256": "9eb20e1d5c7a32a87b3f7233420a4a8537c688d56042339a93dc043540bf6bbc"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/conditioning/types/reference_video_cond.py",
+        "size": 3864,
+        "sha256": "ce61121ec2ffd22dca7a8f14d1c490387f68c76ea012f668892bb6863ee9503b"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/guidance/__init__.py",
+        "size": 332,
+        "sha256": "87d78713485160abab95edb4eae52a4a65d037e1f4ab26369fa228ef4e8b294e"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/guidance/perturbations.py",
+        "size": 2890,
+        "sha256": "a78a5b105e8fbbf4bcd793572997f70d134adae55745f3ef1db4e0763168a820"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/layer_streaming.py",
+        "size": 13697,
+        "sha256": "112b526e037e6f5dbfa4c4a44a1856b4ad6bfa8bf03d548695950f5d2ebcfd5b"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/__init__.py",
+        "size": 1388,
+        "sha256": "14d949755009633f1cb70f309b8f2cb6e7be12837acef0f087e50b28c00271a8"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/fuse_loras.py",
+        "size": 4870,
+        "sha256": "9a343301c3177c86c051dae49c70ebf7b80e2836e9ec0703633e115e3ac477bb"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/kernels.py",
+        "size": 2699,
+        "sha256": "6bf2fbbdb066308efe33ea5b0bbd3f6ca2fdeea68edb903210feb1524bb7f134"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/module_ops.py",
+        "size": 397,
+        "sha256": "70f4a23a285fd174ddeec90580d0f73322f51ea72c54a40a57a1c99911196db8"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/primitives.py",
+        "size": 4815,
+        "sha256": "a325ab379d839f42fe1a5c01f8088f28cd4bd235b9be8c225bfdf069a8bb3fd9"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/registry.py",
+        "size": 2835,
+        "sha256": "fc61a22fc6644d9b5e7a0c946993c74c58e89779a3089c94381addb3237c7d8c"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/sd_ops.py",
+        "size": 4832,
+        "sha256": "4a718a414cecbe845d3431adc2dd7a0a31fcfacc43058347ba3f9702c5271f48"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/sft_loader.py",
+        "size": 2789,
+        "sha256": "66999542a48e4899cf6dbe04ef490f5fe170d6c8e9034ad08447a62da4b55759"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/loader/single_gpu_model_builder.py",
+        "size": 6751,
+        "sha256": "aaffc99da98000f6d9619021707bc4386964bab712b54a2210263622abb2a411"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/modality_tiling.py",
+        "size": 10353,
+        "sha256": "4d19157e439066d4e45955997e53a75975a7f8bf771d337e3aff86555084860b"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/__init__.py",
+        "size": 164,
+        "sha256": "1403e9f983f414b7f8428410e6c197082ecd1d9fcb9b2dec3326be099c078b5c"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/__init__.py",
+        "size": 884,
+        "sha256": "3741027ec23edb22148eb939b3f2343bacb3b153d807e153f344d1f6e5a2ea44"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/attention.py",
+        "size": 2459,
+        "sha256": "8e6d04197b2d92f409e555261eca7be1c6fe177d78c80d3c806d44a2d41d7918"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/audio_vae.py",
+        "size": 20011,
+        "sha256": "61045a649458b8b4987dfd3360c5e36b7d112c86ad594157b2b95f09f38ba0bc"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/causal_conv_2d.py",
+        "size": 3853,
+        "sha256": "739a4793d9418df48b440b2820decbc95ad4a5d8aa878cc8a65a8fc5d1c4317c"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/causality_axis.py",
+        "size": 231,
+        "sha256": "3d37e5bc06ed13c689c822efd25bc8a4743ea2919281cbb0780623a4b3c752a9"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/downsample.py",
+        "size": 3855,
+        "sha256": "9835e1b0b55463a2b9edc49fb73e628ab303d37cb714c32bc6db10436f8531aa"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/model_configurator.py",
+        "size": 8876,
+        "sha256": "18a156c81e8a496682d0a41753809bb55c3532f7d3aae6c0562964c56661c65b"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/ops.py",
+        "size": 2691,
+        "sha256": "5897dd6089e3f0dc7192f36d6bdba09267bed01e55a744aeb15ed605a7311478"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/resnet.py",
+        "size": 5850,
+        "sha256": "00e571dd7f78ba455d94686b8cf1c8610cf24da09167a62fb2e2c4e3d8117c0e"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/upsample.py",
+        "size": 4074,
+        "sha256": "40dea5e410aa17eb1c070d42a2b13d3da010beef5823170f5549af4068607c5f"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/audio_vae/vocoder.py",
+        "size": 25013,
+        "sha256": "40f4577350392eeef38752b50ed2c2062c7404d3164f291c3c2694aff9e69975"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/common/__init__.py",
+        "size": 207,
+        "sha256": "8b04d2684dd4e483ae35d08dc475c664a4ca6bdea44d5723c4ffa5e7b0083f70"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/common/normalization.py",
+        "size": 1970,
+        "sha256": "e0cc7179f1e00d8a517c8c8a61ee0f2f8dd6476fe21c69175b9fd57bc35e840b"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/model_protocol.py",
+        "size": 296,
+        "sha256": "6722def2769fd92a79e5e31b6846085688cfefdcca8cbfe1b95963f79f1c6dc0"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/__init__.py",
+        "size": 479,
+        "sha256": "870d22c64a7e7590d547249ddb8cf43b3feb1eebbe45768de44f1d37b34f39b1"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/adaln.py",
+        "size": 1732,
+        "sha256": "87be8b1ec9b1395156d2e0f22834ed993af31d684198109d33e61c68f53cd065"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/attention.py",
+        "size": 9707,
+        "sha256": "4507a46fdbf48f75d0cba99def38cb804086255fa902174b763641f65d424abb"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/compiling.py",
+        "size": 1380,
+        "sha256": "888106afde1eee922abc0b992ba2f50e41895afa57a89cb3312338bf17d5c60d"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/feed_forward.py",
+        "size": 490,
+        "sha256": "e2616cd5d64a01c2429d193426a7ca6122caa00de66208175c80551ac0bed9bb"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/gelu_approx.py",
+        "size": 320,
+        "sha256": "411cda521697663f14142fa7b3108cdc43bcc9392f5c8995e5b154a880cab8d8"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/modality.py",
+        "size": 2833,
+        "sha256": "7e6228930bbb36f063421d1205a46e2d509103a17dd161631c9f98ecb4337450"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/model.py",
+        "size": 20526,
+        "sha256": "f04cb0ed09f038b0fff1ed5ddedec57a43c5d681fc96959a3d65aa01061bbb97"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/model_configurator.py",
+        "size": 8196,
+        "sha256": "82bafc186ce19dd97ce54c331ee67a8f4a63f69d3587969a403472120c10370d"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/rope.py",
+        "size": 7051,
+        "sha256": "5829640c65338f7e6ac69528222108c3cf74bac617067497e8cda19b6e8ef871"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/text_projection.py",
+        "size": 1795,
+        "sha256": "989cd23bfd6491328625a5850f8212afda855418570f1059b20377415b8b2e7a"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/timestep_embedding.py",
+        "size": 4737,
+        "sha256": "3a75ff5ef6231bed408f10279a4fb3f0b76c7b027ebaf0aae8c0255fb5338b97"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/transformer.py",
+        "size": 16637,
+        "sha256": "4c4120c23248483eb6d47df4b90268365d5726ea810a617ab8efc2eb612dabc9"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/transformer/transformer_args.py",
+        "size": 11986,
+        "sha256": "a638adbac68065cacbf4adecff4eb13c2fa42ef3b216a181435ec76246e12b40"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/__init__.py",
+        "size": 296,
+        "sha256": "0b45fe1ac690abd8b60c626c6777649faa46bddb94052b9f308623e8e01bbe82"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/blur_downsample.py",
+        "size": 2124,
+        "sha256": "e0a33bee6f7e747b23894217f8c5eb37abfd76044001d80b5e5b6dd0a5d58107"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/model.py",
+        "size": 5680,
+        "sha256": "bd20f50bae5c640b33dd481bf912003c88d7c0420933c9f87ab8349cd359328e"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/model_configurator.py",
+        "size": 1283,
+        "sha256": "144556893c1ced2f1a211bc41e19ab06362668ab2758c39b09c7a92c76f1437e"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/pixel_shuffle.py",
+        "size": 2089,
+        "sha256": "b5d7f2848ee36b7d11eb1d7db9dd924ba8bc8cbe7a74376b51924216653916d8"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/res_block.py",
+        "size": 1332,
+        "sha256": "721bd9ba693081956951218bf09b13d293160f70cbf01d77fbff860c63cd161d"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/upsampler/spatial_rational_resampler.py",
+        "size": 2005,
+        "sha256": "7053d186f03c3905a0cf17da703df757e436f23b21271045eeca319a81bc15c7"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/__init__.py",
+        "size": 714,
+        "sha256": "89f1fb2dae116f36677f34a715d8fed8f0dd681d42ec04976115892a828180a6"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/convolution.py",
+        "size": 10404,
+        "sha256": "593eb8ab8e7290a25f665f3088a2f67c3583ce8ce6c56912b2a61d4be170e060"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/enums.py",
+        "size": 371,
+        "sha256": "9e9f9fc83f0f76ab1022576a52c65b5ba8dc99f5ad872e7de372333479d3bedd"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/model_configurator.py",
+        "size": 3508,
+        "sha256": "4f2360b7d7d3ab70b98c512358c33057cd2c3bf978e6c5867dacfb3ebdabf6fd"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/normalization.py",
+        "size": 139,
+        "sha256": "f89acdf4e98d01c343b4891e31b2be83a4cc5c148b1a8bc1eb5e07d5b717c8d9"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/ops.py",
+        "size": 3369,
+        "sha256": "c1e0dbd37bf9131d2f2589d4d712e4224de067fb0b9d370424c2449dded6e02d"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/resnet.py",
+        "size": 10341,
+        "sha256": "347924a483610c3fb66da2dc8dd2d9ed323cb6b8fe8d43b44f587323e1a7b852"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/sampling.py",
+        "size": 3687,
+        "sha256": "1dea756da9269d1552c0659c63cb88d960d957e7b54605f762113497aea0a614"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/tiling.py",
+        "size": 3173,
+        "sha256": "91dca0c9ee355b93cd2b29926b1ffd8513fcb9a2ee4a03bbf8adc00a5aab4727"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/model/video_vae/video_vae.py",
+        "size": 47525,
+        "sha256": "6cfc948ccc2acacb26ad92119f90ff7c69532dde433f8b7598791802ec6eecb4"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/quantization/__init__.py",
+        "size": 505,
+        "sha256": "4e8dd9f754ababd30ecaf4d81e1adc3747e6d17cc60ae26ad84e1f5a09d8d84b"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/quantization/fp8_cast.py",
+        "size": 6443,
+        "sha256": "aeb3dd41dfeee3bacf6d68286dd47c3ec6550cc71034c468d00dbcb4b05b549a"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/quantization/fp8_scaled_mm.py",
+        "size": 7076,
+        "sha256": "7ba65cc70cf22b61aec905efa5a38636e66b898ad27836350f416e958d6e5ed4"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/quantization/policy.py",
+        "size": 1394,
+        "sha256": "3bc710654017eafb83174460e410caee0600bb424f599b2e135d0d249f55ca65"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/__init__.py",
+        "size": 42,
+        "sha256": "c2d22b6df4c2298cdd872ded0636c4c710e7b52a638eac7df4bee330c085cc16"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/__init__.py",
+        "size": 951,
+        "sha256": "bd71e87ee57ba89ecaa1c9434a640ac49f8ca9db1886f182119d62fcb97e54ce"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/config.py",
+        "size": 2319,
+        "sha256": "872886f10c0314ad7872c16b9c1a5df048589fa28b8937b5e32e2c1376963fef"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/embeddings_connector.py",
+        "size": 11369,
+        "sha256": "e86b0dd3b09b391eb3aee6629c85c3494d54758513cae9e9faf0d31b02317839"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/embeddings_processor.py",
+        "size": 3931,
+        "sha256": "9353e27d3e70d30b1686096ba95ecc42a2eac3c354a2b561ee34f710f8412c8c"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/encoders/base_encoder.py",
+        "size": 7679,
+        "sha256": "be97c98ff8ff59b29e6fd9e272c0ae6543fdc2e545613a33fe5f8096df479dc5"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/encoders/encoder_configurator.py",
+        "size": 9448,
+        "sha256": "82911c6e32eec38cb231aa90583486bd14a7a7948d5176c81a0dab0d8a0450d3"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/encoders/prompts/gemma_i2v_system_prompt.txt",
+        "size": 3817,
+        "sha256": "dbba877a41e60f9a3de152be953164b7611d7951c19713022e64d6c08e7c8766"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/encoders/prompts/gemma_t2v_system_prompt.txt",
+        "size": 4182,
+        "sha256": "0f98f02f9fffae27ee3f576685d6d9f9ef13194a0c2068aacdd97f86ea96efd2"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/feature_extractor.py",
+        "size": 5432,
+        "sha256": "57f05094914c43134314f7c509e0b041d321fac39b04c24ce7a956a2e21b1543"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/text_encoders/gemma/tokenizer.py",
+        "size": 2849,
+        "sha256": "a571a44241f0826c5646ba0ed1504937cded0e73892e707770dfd832c2441457"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/tiling.py",
+        "size": 17977,
+        "sha256": "2acd4b57523d3bd06c83aea3ebbf6b01fc5a0892db3e2825952bfb2df8a33af8"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/tools.py",
+        "size": 6406,
+        "sha256": "af125b03a369db2e04e6eb5a4ab62806c8d4da2d98376da9c4a41dd1c5ab3831"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/types.py",
+        "size": 6486,
+        "sha256": "9ffe53c83caff7c401f958ea773d19610143b587dd1887d270b4efdafba28ff4"
+      },
+      {
+        "path": "ltx_vendor/ltx_core/utils.py",
+        "size": 2018,
+        "sha256": "d4acb090aa380165e47739ec5c9dc89d58e9ab2b20e7db06c45c1c7554ab4810"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/__init__.py",
+        "size": 1322,
+        "sha256": "472936969b756eff193b3a9ff5adec31579e69513ae10500ad252682a5588c64"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/a2vid_two_stage.py",
+        "size": 11642,
+        "sha256": "a60a57f899d7b11cf635653450840f07a46fa8de95ab14be958ce4dc1d944884"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/distilled.py",
+        "size": 7677,
+        "sha256": "9bbdf4a19bf3e4cad8329400bc7ef926578b57da0711588a696b15f0b62a03a9"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/ic_lora.py",
+        "size": 23414,
+        "sha256": "4caefd652b751b4625fb3b8bb8a8e008382f828d828bbb692490b93a1009d2bf"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/keyframe_interpolation.py",
+        "size": 10736,
+        "sha256": "14c10f2c5ab70c9436972e78dc992160c6f9f74ebf421d767aa10331602e239a"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/retake.py",
+        "size": 12747,
+        "sha256": "3b2f65773fcf3aac43ff3a54936a0d2498dd47d0163d72aa867b507790e1d01c"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/ti2vid_one_stage.py",
+        "size": 8067,
+        "sha256": "b840dbce3395987d053f1c2a648d0626ab758dfc19f4ccfb318e27dd3b780021"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/ti2vid_two_stages.py",
+        "size": 10235,
+        "sha256": "44c4efedaf9403487d0b067e3f316f34145e247f714ad3aae3a58a2240db56dd"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/ti2vid_two_stages_hq.py",
+        "size": 11612,
+        "sha256": "ae57ef7475aefca5ac4c3bea1a561ec59d09b4d5ef665fef9f2bed1663a93f54"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/__init__.py",
+        "size": 1227,
+        "sha256": "6e98b2dab044086ec297e8a94d6285090acba7aff9d2dd14b577cd9ab6fcdc8a"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/args.py",
+        "size": 21822,
+        "sha256": "cb0568fc1b18e4ef6bfd96a410625a71654607c6ec367afbf6c128b6bf901604"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/blocks.py",
+        "size": 22144,
+        "sha256": "f9e6230a9c6fe80b10c61113d6bc450a98065f1f429d33c1ad57c9b426a493e5"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/constants.py",
+        "size": 5420,
+        "sha256": "8ceb5be5df621a6c61d9229ffc8b1024d9d9035efbf2ae3b9b2424c8744e7cbd"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/denoisers.py",
+        "size": 12744,
+        "sha256": "0998f4e863ecd87159dd0e4b1e9ca8864850b3f1adfc57ce04070ac19acceb33"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/gpu_model.py",
+        "size": 999,
+        "sha256": "4e050a52bd224097c45d9e89d3a651f46ed6cacc022ec40fb087a40d22e97090"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/helpers.py",
+        "size": 12539,
+        "sha256": "3a32a1fbdf4a1459339734af38dc6017e6263f5f4f02cefe8c2df03ed4d633a1"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/media_io.py",
+        "size": 17587,
+        "sha256": "830175e9fd1d1942a82defd13c0d4acbc06c862a9be8b6293240fed82de80f05"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/res2s.py",
+        "size": 1998,
+        "sha256": "c4c17d9a3fb9c656977c8610447eddf2a456692c8a1cac345c2547de1e5dd419"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/samplers.py",
+        "size": 19459,
+        "sha256": "7cb9d2035b3dd7517f29177e529f61d754ef89f070e32cd23626310c0bc4a31c"
+      },
+      {
+        "path": "ltx_vendor/ltx_pipelines/utils/types.py",
+        "size": 2928,
+        "sha256": "ab4c512c96bc848ba3d0ddf390112068aad3c76959b86adfb5dd0e1c919052e5"
+      },
+      {
+        "path": "requirements.txt",
+        "size": 1578,
+        "sha256": "2270fb5dc564cd5746f75e25683ed3397007d7d0b489420614d8da5638d8ae08"
+      },
+      {
+        "path": "run_pipeline.py",
+        "size": 31489,
+        "sha256": "f889ff58f54026c5fad01147c7e656f4d97b475ee5d53905737b204b30d1a843"
+      }
+    ]
+  },
+  "repositories": [
+    {
+      "repository": "joyfox/LTX2.3-ICEdit-Insight",
+      "revision": "4e81eeb7b3d5addf773668b7c3911f0a30ee891d"
+    },
+    {
+      "repository": "OpenPipe/gemma-3-12b-it-text-only",
+      "revision": "e126b86196be54bd1cffb09e40c48edbbe81bc29"
+    },
+    {
+      "repository": "Lightricks/gemma-3-12b-it-qat-q4_0-unquantized",
+      "revision": "d62fe4f1995ade703b49a0f3c0d0f161237ef437"
+    }
+  ],
+  "environment": {
+    "python_min": "3.10",
+    "python_max": "3.13",
+    "torch": "2.8.0",
+    "torchvision": "0.23.0",
+    "torchaudio": "2.8.0",
+    "transformers": "4.57.6",
+    "default_torch_index": "https://download.pytorch.org/whl/cu128"
+  },
+  "inference": {
+    "single_stage": true,
+    "notes": "Single-stage Web inference constructs lazy upsampler builders but never calls them. Restoration, HD LoRAs and spatial upsampler are excluded. OpenPipe Gemma text-only uses model.* keys required by GEMMA_HF_TEXT_ONLY_KEY_OPS. The image processor configuration is still required by module_ops_from_gemma_root."
+  },
+  "assets": [
+    {
+      "path": "models/checkpoints/ltx-2.3-edit-insight-dev-fp8.safetensors",
+      "size": 29135982126,
+      "sha256": "b729383403480fa8faabbbe3d8aa78109e0d5ecc15d80e3de5dc51fdcbc755bf",
+      "urls": [
+        "https://huggingface.co/joyfox/LTX2.3-ICEdit-Insight/resolve/4e81eeb7b3d5addf773668b7c3911f0a30ee891d/ltx-2.3-edit-insight-dev-fp8.safetensors"
+      ],
+      "task": "shared",
+      "role": "checkpoint"
+    },
+    {
+      "path": "models/loras/ltx2.3-train/ltx2.3-ic-subtitles-remove-general.safetensors",
+      "size": 327287384,
+      "sha256": "b3d73d7bf737dcfeba6bfa310105532f8f34aa23a3f9e01cb9f873341b8ef88f",
+      "urls": [
+        "https://huggingface.co/joyfox/LTX2.3-ICEdit-Insight/resolve/4e81eeb7b3d5addf773668b7c3911f0a30ee891d/ltx2.3-ic-subtitles-remove-general.safetensors"
+      ],
+      "task": "subtitle",
+      "role": "lora"
+    },
+    {
+      "path": "models/loras/ltx2.3-train/ltx2.3-ic-watermark-remove-general.safetensors",
+      "size": 327287384,
+      "sha256": "f935996f9725a452a45b5e553b8cc0142b64c11d332792f5866295adc5aa7fb1",
+      "urls": [
+        "https://huggingface.co/joyfox/LTX2.3-ICEdit-Insight/resolve/4e81eeb7b3d5addf773668b7c3911f0a30ee891d/ltx2.3-ic-watermark-remove-general.safetensors"
+      ],
+      "task": "watermark",
+      "role": "lora"
+    },
+    {
+      "path": "models/gemma_configs/added_tokens.json",
+      "size": 35,
+      "sha256": "50b2f405ba56a26d4913fd772089992252d7f942123cc0a034d96424221ba946",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/added_tokens.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/chat_template.json",
+      "size": 1615,
+      "sha256": "fe16baf728db49457cde32802cd7efc0ac8a7a9877dbe22fe3322b2d9dc6ccd9",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/chat_template.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/config.json",
+      "size": 934,
+      "sha256": "4686bc22c78112718ffab6b200295a02903b6ad48d7c56f95813e2b8194a8688",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/config.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/generation_config.json",
+      "size": 192,
+      "sha256": "e04ecb65db447404710114fb282baaac482d22a95e2244ecaab428b81672ba78",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/generation_config.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/model-00001-of-00005.safetensors",
+      "size": 4915892992,
+      "sha256": "1a4c14f38ffc9e23d873fa999eea1fc965dcedcec267e7a99f07c6fdbe8760d8",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/model-00001-of-00005.safetensors"
+      ],
+      "task": "shared",
+      "role": "gemma_weights"
+    },
+    {
+      "path": "models/gemma_configs/model-00002-of-00005.safetensors",
+      "size": 4931294472,
+      "sha256": "0335ce336b31e38c581326acb77ff28330c2073764b1924ad7108d788b56ba68",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/model-00002-of-00005.safetensors"
+      ],
+      "task": "shared",
+      "role": "gemma_weights"
+    },
+    {
+      "path": "models/gemma_configs/model-00003-of-00005.safetensors",
+      "size": 4931294528,
+      "sha256": "e0d6a60cf6a1708be0613ab7c4d10457ad99b98c02e40ebd5f320fe02aa0d50c",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/model-00003-of-00005.safetensors"
+      ],
+      "task": "shared",
+      "role": "gemma_weights"
+    },
+    {
+      "path": "models/gemma_configs/model-00004-of-00005.safetensors",
+      "size": 4931294528,
+      "sha256": "b8b76dd5c3b1bb971354de059db455aac1c59fea624bf8a0289e37557ff43261",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/model-00004-of-00005.safetensors"
+      ],
+      "task": "shared",
+      "role": "gemma_weights"
+    },
+    {
+      "path": "models/gemma_configs/model-00005-of-00005.safetensors",
+      "size": 3822364808,
+      "sha256": "6d9c549d5bc84e50ecc0c62c8bf5edebd5036ac83bceabccf75b83689f58f370",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/model-00005-of-00005.safetensors"
+      ],
+      "task": "shared",
+      "role": "gemma_weights"
+    },
+    {
+      "path": "models/gemma_configs/model.safetensors.index.json",
+      "size": 52588,
+      "sha256": "a523856badee97de852b2d7cc85e5690a7080fadf6b6710d8b91566ffa45adbf",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/model.safetensors.index.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/special_tokens_map.json",
+      "size": 670,
+      "sha256": "45a857d8a2495d0be30a5d2d6de03278195eb028b6e0b8efc248bfa697d65f05",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/special_tokens_map.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/tokenizer.json",
+      "size": 33384568,
+      "sha256": "4667f2089529e8e7657cfb6d1c19910ae71ff5f28aa7ab2ff2763330affad795",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/tokenizer.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/tokenizer.model",
+      "size": 4689074,
+      "sha256": "1299c11d7cf632ef3b4e11937501358ada021bbdf7c47638d13c0ee982f2e79c",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/tokenizer.model"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/tokenizer_config.json",
+      "size": 1157012,
+      "sha256": "7b8baa29718b0946727c3fc70b53280882efdb3905971070f4e4861919202689",
+      "urls": [
+        "https://huggingface.co/OpenPipe/gemma-3-12b-it-text-only/resolve/e126b86196be54bd1cffb09e40c48edbbe81bc29/tokenizer_config.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    },
+    {
+      "path": "models/gemma_configs/preprocessor_config.json",
+      "size": 570,
+      "sha256": "f688d6bb20c5017601c4011de7ca656da8485b540b05013efdaf986c0fcc918d",
+      "urls": [
+        "https://huggingface.co/Lightricks/gemma-3-12b-it-qat-q4_0-unquantized/resolve/d62fe4f1995ade703b49a0f3c0d0f161237ef437/preprocessor_config.json"
+      ],
+      "task": "shared",
+      "role": "gemma_config"
+    }
+  ],
+  "download_bytes": {
+    "subtitle": 53034698096,
+    "watermark": 53034698096,
+    "both": 53361985480
+  }
+}

@@ -2,6 +2,7 @@
 """Download verification and Linux service management for deploy.sh."""
 
 import argparse
+import copy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import fcntl
 import hashlib
@@ -9,12 +10,14 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import shutil
 import signal
 import socket
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -291,6 +294,341 @@ def stop_service(state):
     return True
 
 
+def drain_request(options, record, method):
+    state = options.root / '.deploy'
+    state.mkdir(parents=True, exist_ok=True)
+    token_path = state / 'maintenance.token'
+    try:
+        descriptor = os.open(token_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        pass
+    else:
+        with os.fdopen(descriptor, 'w') as output:
+            output.write(secrets.token_urlsafe(32))
+    token_path.chmod(0o600)
+    token = token_path.read_text().strip()
+    if not token:
+        raise RuntimeError(f'维护令牌为空，请检查 {token_path}。')
+    host = record.get('bind', options.bind)
+    if host in ('0.0.0.0', '::'):
+        host = '::1' if host == '::' else '127.0.0.1'
+    if ':' in host:
+        host = f'[{host}]'
+    port = record.get('port', options.port)
+    request = urllib.request.Request(
+        f'http://{host}:{port}/api/deploy/drain', method=method,
+        headers={'Host': 'localhost', 'X-Deploy-Token': token},
+    )
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(request, timeout=5) as response:
+        status = json.load(response)
+    if not isinstance(status, dict) or not isinstance(status.get('busy'), list) or not isinstance(status.get('draining'), bool):
+        raise RuntimeError('维护接口返回了无法识别的任务状态，已保留服务。')
+    return status
+
+
+def legacy_work_details(options, record):
+    busy = []
+    for status_path in sorted((options.root / 'CLEAR-web/jobs').glob('*/status.json')):
+        try:
+            status = json.loads(status_path.read_text())
+            if status.get('state') in ('running', 'queued', 'uploading'):
+                busy.append(f"{status_path.parent.name} ({status['state']})")
+        except (OSError, ValueError):
+            busy.append(f'{status_path.parent.name} (状态无法读取)')
+    descendants = {record.get('pid')}
+    processes = []
+    for process in Path('/proc').glob('[0-9]*'):
+        try:
+            fields = (process / 'stat').read_text().rsplit(')', 1)[1].split()
+            command = (process / 'cmdline').read_bytes().replace(b'\0', b' ').decode(errors='replace')
+            processes.append((int(process.name), int(fields[1]), command))
+        except (OSError, ValueError, IndexError):
+            continue
+    while True:
+        children = {pid for pid, parent, _ in processes if parent in descendants}
+        if children.issubset(descendants):
+            break
+        descendants.update(children)
+    for pid, _, command in processes:
+        if pid in descendants and any(name in command for name in ('worker.py', 'ffmpeg')):
+            busy.append(f'工作进程 {pid}')
+    return '，'.join(busy) or '未发现已保存的忙碌任务或推理子进程'
+
+
+def wait_for_idle(options, record):
+    deadline = time.monotonic() + options.wait_idle
+    try:
+        status = drain_request(options, record, 'POST')
+        while status['busy']:
+            details = ', '.join(f"{job.get('id', '?')} ({job.get('state', '?')})" for job in status['busy'])
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError(f'任务队列仍在处理 {details}。本次升级已停止，服务继续运行。完成后重试或增加 --wait-idle。')
+            print(f'等待任务完成 {details}，剩余等待约 {remaining:.0f} 秒', flush=True)
+            time.sleep(min(2, remaining))
+            status = drain_request(options, record, 'GET')
+        if not status['draining']:
+            raise RuntimeError('服务未进入维护状态，已保留服务，请重新执行 update。')
+    except Exception as error:
+        try:
+            drain_request(options, record, 'DELETE')
+        except (OSError, ValueError, RuntimeError):
+            pass
+        if isinstance(error, urllib.error.HTTPError) and error.code in (404, 405):
+            details = legacy_work_details(options, record)
+            raise RuntimeError(
+                f'旧版服务缺少安全维护接口，已检查任务文件与工作进程 {details}。'
+                '请在网页确认所有上传、排队、处理与对比任务完成，并关闭上传页面，'
+                f'再执行 bash "{options.root / "scripts/deploy.sh"}" stop --dir "{options.root}"，随后重试 update。'
+            ) from error
+        raise
+
+
+def managed_source_path(relative):
+    path = Path(relative)
+    if not path.parts or path.is_absolute() or '..' in path.parts:
+        return False
+    roots = {'CLEAR', 'CLEAR-web', 'scripts', 'tests', 'docs'}
+    files = {'README.md', 'LICENSE', 'LICENSE.md', '.gitignore', '.gitattributes', 'pyproject.toml'}
+    if path.parts[0] not in roots and str(path) not in files:
+        return False
+    protected = {'jobs', 'videos', 'models', 'weights', 'checkpoints', '.venv', 'venv', '.deploy', '.install', '__pycache__'}
+    if any(part in protected for part in path.parts):
+        return False
+    name = path.name.lower()
+    if name.endswith(('.pt', '.pth', '.safetensors', '.bin', '.whl', '.ready', '.complete', '.mp4', '.video')):
+        return False
+    return not (name.startswith(('.env', 'config.local', 'settings.local')) or name in ('config.json', 'config.sh'))
+
+
+def extract_update_source(archive, destination):
+    files = []
+    with tarfile.open(archive, 'r:gz') as source:
+        members = source.getmembers()
+        names = {member.name for member in members}
+        prefix = 0 if 'CLEAR-web/app.py' in names else 1
+        for member in members:
+            parts = Path(member.name).parts
+            if member.name.startswith('/') or '..' in parts or member.issym() or member.islnk():
+                raise ValueError('升级压缩包包含不安全路径或符号链接。')
+            if not member.isfile() or len(parts) <= prefix:
+                continue
+            relative = Path(*parts[prefix:])
+            if not managed_source_path(relative):
+                continue
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with source.extractfile(member) as incoming, target.open('wb') as output:
+                shutil.copyfileobj(incoming, output)
+            target.chmod(member.mode & 0o777)
+            files.append(str(relative))
+    required = {'CLEAR-web/app.py', 'scripts/deploy.sh', 'scripts/deploy_helper.py'}
+    if not required.issubset(files):
+        raise RuntimeError('升级源码不完整，需要 CLEAR-web/app.py 和部署脚本。')
+    return set(files)
+
+
+def update_target(root, relative):
+    target = root / relative
+    for path in (target, *target.parents):
+        if path == root:
+            break
+        if path.is_symlink():
+            raise RuntimeError(f'升级目标包含符号链接，请先检查 {path}。')
+    if target.exists() and not target.is_file():
+        raise RuntimeError(f'升级目标不是普通文件 {target}。')
+    return target
+
+
+def publish_source(source, target):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + '.deploy-pending')
+    try:
+        shutil.copy2(source, temporary)
+        os.replace(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def git_output(root, *arguments):
+    result = subprocess.run(['git', '-C', str(root), *arguments], capture_output=True, text=True)
+    if result.returncode:
+        raise RuntimeError(f'Git 操作失败 {result.stderr.strip() or result.stdout.strip()}')
+    return result.stdout.strip()
+
+
+def git_update_archive(options, archive):
+    root = options.root
+    previous = git_output(root, 'rev-parse', 'HEAD')
+    if git_output(root, 'status', '--porcelain', '--untracked-files=no'):
+        raise RuntimeError('Git 源码含有本地修改，请先保存或提交修改后重试 update。模型、任务与环境会保留。')
+    reference = options.update_ref
+    if not options.offline:
+        git_output(root, 'fetch', '--no-tags', 'origin', reference)
+        reference = 'FETCH_HEAD'
+    revision = git_output(root, 'rev-parse', '--verify', f'{reference}^{{commit}}')
+    try:
+        git_output(root, 'merge-base', '--is-ancestor', previous, revision)
+    except RuntimeError as error:
+        raise RuntimeError('升级目标与当前 Git 历史无法快进合并，请检查 --update-ref 并保留本地提交后重试。') from error
+    git_output(root, 'archive', '--format=tar.gz', f'--output={archive}', revision)
+    previous_files = set(git_output(root, 'ls-files').splitlines())
+    return previous, revision, previous_files
+
+
+def validate_updated_source(options, source):
+    code = (
+        'from pathlib import Path\n'
+        'for path in Path("..").rglob("*.py"):\n'
+        '    if not any(part in {"jobs", "__pycache__", ".venv"} for part in path.parts):\n'
+        '        compile(path.read_bytes(), str(path), "exec")\n'
+        'import app\n'
+    )
+    environment = os.environ.copy()
+    environment.update(CLEAR_WORKSPACE=str(options.root), PROPAINTER_ROOT=str(options.propainter_root),
+                       PYTHONDONTWRITEBYTECODE='1', CLEAR_PRESET=options.preset)
+    result = subprocess.run([str(options.python), '-c', code], cwd=source / 'CLEAR-web',
+                            env=environment, capture_output=True, text=True)
+    if result.returncode:
+        raise RuntimeError(f'升级环境检查失败，原源码和服务已保留。请先检查依赖并执行 env 后重试。{result.stderr.strip()}')
+
+
+def ensure_no_unmanaged_service(options):
+    host = options.bind
+    if host in ('0.0.0.0', '::'):
+        host = '::1' if host == '::' else '127.0.0.1'
+    try:
+        connection = socket.create_connection((host, options.port), timeout=.5)
+    except OSError:
+        return
+    connection.close()
+    raise RuntimeError(f'端口 {options.port} 存在未受部署脚本管理的服务。请确认任务全部完成，再通过原启动方式停止服务后重试 update。')
+
+
+def update_project(options):
+    root = options.root
+    state = root / '.deploy'
+    state.mkdir(parents=True, exist_ok=True)
+    if not (root / 'CLEAR-web/app.py').is_file():
+        raise RuntimeError('update 需要已有安装，请先执行 source 或 all。')
+    manifest = state / 'source-files.json'
+    manifest_original = manifest.read_bytes() if manifest.is_file() else None
+    previous_files = set(json.loads(manifest_original)) if manifest_original is not None else set()
+    previous = revision = None
+    with tempfile.TemporaryDirectory(prefix='update-', dir=state) as directory:
+        work = Path(directory)
+        archive = options.archive
+        if archive is None:
+            if not (root / '.git').exists():
+                raise RuntimeError('归档安装升级需要源码压缩包，请使用 deploy.sh update。')
+            archive = work / 'source.tar.gz'
+            previous, revision, previous_files = git_update_archive(options, archive)
+        elif (root / '.git').exists():
+            raise RuntimeError('Git 安装请使用 --update-ref 指定版本。--update-archive 用于归档安装。')
+        stage = work / 'source'
+        stage.mkdir()
+        incoming = extract_update_source(archive, stage)
+        changed = incoming | {name for name in previous_files if managed_source_path(name)}
+        for name in changed:
+            update_target(root, name)
+        validate_updated_source(options, stage)
+        backup = work / 'backup'
+        existed = set()
+        required = sum((root / name).stat().st_size for name in changed if (root / name).is_file())
+        if shutil.disk_usage(state).free < required + 1024 * 1024:
+            raise RuntimeError('升级备份空间不足，请释放磁盘空间后重试。')
+        for name in changed:
+            target = root / name
+            if target.is_file():
+                saved = backup / name
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(target, saved)
+                existed.add(name)
+        record = service_record(state)
+        if record:
+            wait_for_idle(options, record)
+        else:
+            ensure_no_unmanaged_service(options)
+        stopped = False
+        metadata_changed = False
+        try:
+            if record:
+                stopped = stop_service(state)
+                if not stopped:
+                    raise RuntimeError('原服务进程已变化，升级已停止，请检查 status 后重试。')
+            for name in sorted(changed):
+                target = root / name
+                if name in incoming:
+                    publish_source(stage / name, target)
+                else:
+                    target.unlink(missing_ok=True)
+            if previous:
+                git_output(root, 'read-tree', revision)
+                metadata_changed = True
+                git_output(root, 'update-ref', 'HEAD', revision, previous)
+            temporary = manifest.with_suffix('.json.tmp')
+            temporary.write_text(json.dumps(sorted(incoming), ensure_ascii=False, indent=2))
+            os.replace(temporary, manifest)
+            if record:
+                start_service(options)
+        except Exception as error:
+            restore_errors = []
+            if stopped:
+                try:
+                    stop_service(state)
+                except (OSError, RuntimeError) as stop_error:
+                    restore_errors.append(str(stop_error))
+            for name in sorted(changed):
+                try:
+                    if name in existed:
+                        publish_source(backup / name, root / name)
+                    else:
+                        (root / name).unlink(missing_ok=True)
+                except OSError as restore_error:
+                    restore_errors.append(str(restore_error))
+            if metadata_changed:
+                try:
+                    git_output(root, 'read-tree', previous)
+                    current = git_output(root, 'rev-parse', 'HEAD')
+                    if current == revision:
+                        git_output(root, 'update-ref', 'HEAD', previous, revision)
+                except RuntimeError as restore_error:
+                    restore_errors.append(str(restore_error))
+            try:
+                if manifest_original is None:
+                    manifest.unlink(missing_ok=True)
+                else:
+                    temporary = manifest.with_suffix('.json.tmp')
+                    temporary.write_bytes(manifest_original)
+                    os.replace(temporary, manifest)
+            except OSError as restore_error:
+                restore_errors.append(str(restore_error))
+            if stopped and not restore_errors:
+                original = copy.copy(options)
+                original.port = record.get('port', options.port)
+                original.bind = record.get('bind', options.bind)
+                for setting, value in record.get('settings', {}).items():
+                    setattr(original, setting, Path(value) if setting.endswith('_root') or setting == 'python' else value)
+                try:
+                    start_service(original)
+                except (OSError, RuntimeError) as restart_error:
+                    restore_errors.append(str(restart_error))
+            if restore_errors:
+                retained = state / f'update-recovery-{time.time_ns()}'
+                shutil.copytree(backup, retained, dirs_exist_ok=True)
+                raise RuntimeError(f'升级失败 {error}。恢复遇到问题 {"，".join(restore_errors)}。源码备份保留于 {retained}。') from error
+            raise RuntimeError(f'升级失败，已恢复原源码和服务状态。{error}') from error
+        finally:
+            manifest.with_suffix('.json.tmp').unlink(missing_ok=True)
+            if record and not stopped:
+                try:
+                    drain_request(options, record, 'DELETE')
+                except (OSError, ValueError, RuntimeError):
+                    pass
+    print('项目源码升级完成，模型、任务、本地配置与 Python 环境已保留。')
+
+
 def start_service(options):
     state = options.root / '.deploy'
     state.mkdir(parents=True, exist_ok=True)
@@ -306,6 +644,9 @@ def start_service(options):
             raise RuntimeError(f'端口 {options.port} 已被占用，请指定其他 --port。') from None
     environment = os.environ.copy()
     environment.update(CLEAR_WORKSPACE=str(options.root), PROPAINTER_ROOT=str(options.propainter_root), PROPAINTER_PYTHON=str(options.python), HF_HUB_OFFLINE='1', PYTHONUNBUFFERED='1')
+    environment['CLEAR_PRESET'] = options.preset
+    if options.with_ltx:
+        environment.update(LTX_ROOT=str(options.ltx_root), LTX_PYTHON=str(options.ltx_root / '.venv/bin/python'))
     hosts = ['localhost', '127.0.0.1', '[::1]']
     hosts.extend(host.strip() for host in options.public_host.split(',') if host.strip())
     environment['CLEAR_TRUSTED_HOSTS'] = ','.join(hosts)
@@ -317,6 +658,8 @@ def start_service(options):
         process = subprocess.Popen(command, cwd=options.root / 'CLEAR-web', env=environment, stdout=log, stderr=log, start_new_session=True)
     ticks = process_ticks(process.pid)
     record = {'pid': process.pid, 'start_ticks': ticks, 'port': options.port, 'bind': options.bind}
+    record['settings'] = {name: str(getattr(options, name)) if isinstance(getattr(options, name), Path) else getattr(options, name)
+                          for name in ('python', 'propainter_root', 'preset', 'with_ltx', 'ltx_root', 'port', 'bind', 'public_host', 'gpu')}
     temporary = state / 'server.json.tmp'
     temporary.write_text(json.dumps(record))
     os.replace(temporary, state / 'server.json')
@@ -347,7 +690,7 @@ def start_service(options):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['models', 'verify', 'extract-propainter', 'cuda', 'runtime', 'start', 'stop', 'status'])
+    parser.add_argument('command', choices=['models', 'verify', 'extract-propainter', 'cuda', 'runtime', 'capabilities', 'update', 'start', 'stop', 'status'])
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--propainter-root', type=Path)
     parser.add_argument('--components', choices=['clear', 'propainter', 'both'], default='both')
@@ -364,11 +707,17 @@ def main():
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--public-host', default='')
     parser.add_argument('--gpu', default='')
+    parser.add_argument('--preset', choices=['fast', 'balanced', 'quality'], default='balanced')
+    parser.add_argument('--with-ltx', action='store_true')
+    parser.add_argument('--ltx-root', type=Path)
+    parser.add_argument('--update-ref', default='main')
+    parser.add_argument('--wait-idle', type=int, default=300)
     options = parser.parse_args()
     options.root = options.root.resolve()
     options.propainter_root = (options.propainter_root or options.root / 'ProPainter').resolve()
     options.python = options.python or options.root / '.venv/bin/python'
-    if not 1 <= options.workers <= 8 or not 1 <= options.port <= 65535 or options.retries < 1 or options.timeout < 1:
+    options.ltx_root = (options.ltx_root or options.root / 'LTX2-ICEdit-Insight').resolve()
+    if not 1 <= options.workers <= 8 or not 1 <= options.port <= 65535 or options.retries < 1 or options.timeout < 1 or options.wait_idle < 0:
         parser.error('workers 必须为 1～8，port 必须为 1～65535，重试次数和超时必须为正数。')
     if options.command in ('models', 'verify'):
         models(options, options.offline or options.command == 'verify')
@@ -382,6 +731,10 @@ def main():
         extract_propainter(options.archive, options.propainter_root)
     elif options.command == 'start':
         start_service(options)
+    elif options.command == 'update':
+        update_project(options)
+    elif options.command == 'capabilities':
+        print('update-v1')
     elif options.command == 'stop':
         stop_service(options.root / '.deploy')
     else:

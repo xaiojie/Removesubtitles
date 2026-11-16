@@ -1,0 +1,13 @@
+# Compatible direct dependencies for pinned LTX2-ICEdit-Insight source.
+# torch 2.8.0, torchvision 0.23.0 and torchaudio 2.8.0 are installed separately
+# from the selected CUDA wheel index, inside LTX_ROOT/.venv.
+transformers==4.57.6
+accelerate==1.10.1
+safetensors==0.6.2
+av==15.1.0
+einops==0.8.1
+numpy==2.2.6
+scipy==1.15.3
+Pillow==11.3.0
+tqdm==4.67.1
+sentencepiece==0.2.1

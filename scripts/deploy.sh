@@ -8,10 +8,16 @@ RemoveSubtitles Linux 服务器部署
 
 用法  bash deploy.sh [命令] [选项]
 命令  menu | all | check | system | source | env | models | verify
-      start | stop | restart | status
+      update | start | stop | restart | status
 
   --dir PATH                 项目、环境和 CLEAR 模型目录
   --components both|clear|propainter
+  --preset fast|balanced|quality
+                             CLEAR 默认处理预设，首次安装默认 balanced
+  --with-ltx                 额外安装 LTX，使用独立虚拟环境
+  --ltx-root PATH            LTX 源码、环境和模型目录
+  --ltx-tasks subtitle|watermark|both
+                             LTX 模型用途，默认 subtitle
   --network auto|cn|global    网络配置，默认 auto
   --python PATH              创建环境所用的 Python 3.10～3.12
   --cuda auto|cu128|cu126     PyTorch CUDA wheel，默认 auto
@@ -28,6 +34,9 @@ RemoveSubtitles Linux 服务器部署
   --bind ADDRESS             自定义监听地址，默认 127.0.0.1
   --offline                  使用本地源码、模型和 wheel 文件
   --wheelhouse PATH          离线 Python wheel 目录
+  --update-ref REF           Git 升级目标，默认 main，仅允许快进
+  --update-archive PATH       使用本地项目源码压缩包升级
+  --wait-idle SECONDS         升级等待任务队列清空的时间，默认 300
   --skip-system              跳过系统软件包安装
   --yes                      全流程免交互执行
   --help                     显示帮助
@@ -35,6 +44,10 @@ RemoveSubtitles Linux 服务器部署
 示例  bash deploy.sh all --dir /data/Removesubtitles --network cn --yes
       bash deploy.sh models --components clear --hf-endpoint https://hf-mirror.com
       bash deploy.sh start --public-host SERVER_IP --port 8765
+      bash deploy.sh update --dir /data/Removesubtitles --wait-idle 1800
+
+update 保留模型、任务、本地配置与环境，仅更新源码。
+升级前使用已有环境检查依赖。需要新依赖时先执行 env，再重新 update。
 HELP
 }
 
@@ -64,15 +77,21 @@ COMPONENTS=both NETWORK=auto PYTHON_BIN= CUDA_WHEEL=auto
 PIP_URL=${PIP_INDEX_URL:-} TORCH_URL= HF_ENDPOINT= GITHUB_PREFIX=
 PORT=8765 BIND=127.0.0.1 PUBLIC_HOST= GPU=${CUDA_VISIBLE_DEVICES:-}
 PROPAINTER_DIR= DOWNLOAD_WORKERS=2
+PRESET=balanced WITH_LTX=0 LTX_DIR= LTX_TASKS=subtitle
 OFFLINE=0 WHEELHOUSE= SKIP_SYSTEM=0 YES=0 COMMAND=menu
+UPDATE_REF=main UPDATE_ARCHIVE= WAIT_IDLE=300
 BIND_SET=0 PUBLIC_SET=0 NETWORK_SET=0 PIP_SET=0 TORCH_SET=0 HF_SET=0 CUDA_SET=0
 if [[ -f "$STATE/config.sh" ]]; then source "$STATE/config.sh"; fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        menu|all|check|system|source|env|models|verify|start|stop|restart|status) COMMAND=$1; shift ;;
+        menu|all|check|system|source|env|models|verify|update|start|stop|restart|status) COMMAND=$1; shift ;;
         --dir) need_value "$@"; shift 2 ;;
         --components) need_value "$@"; COMPONENTS=$2; shift 2 ;;
+        --preset) need_value "$@"; PRESET=$2; shift 2 ;;
+        --with-ltx) WITH_LTX=1; shift ;;
+        --ltx-root) need_value "$@"; LTX_DIR=$2; shift 2 ;;
+        --ltx-tasks) need_value "$@"; LTX_TASKS=$2; shift 2 ;;
         --network) need_value "$@"; NETWORK=$2; NETWORK_SET=1; shift 2 ;;
         --python) need_value "$@"; PYTHON_BIN=$2; shift 2 ;;
         --cuda) need_value "$@"; CUDA_WHEEL=$2; CUDA_SET=1; shift 2 ;;
@@ -88,6 +107,9 @@ while [[ $# -gt 0 ]]; do
         --bind) need_value "$@"; BIND=$2; BIND_SET=1; shift 2 ;;
         --public-host) need_value "$@"; PUBLIC_HOST=$2; PUBLIC_SET=1; shift 2 ;;
         --wheelhouse) need_value "$@"; WHEELHOUSE=$2; shift 2 ;;
+        --update-ref) need_value "$@"; UPDATE_REF=$2; shift 2 ;;
+        --update-archive) need_value "$@"; UPDATE_ARCHIVE=$2; shift 2 ;;
+        --wait-idle) need_value "$@"; WAIT_IDLE=$2; shift 2 ;;
         --offline) OFFLINE=1; shift ;;
         --skip-system) SKIP_SYSTEM=1; shift ;;
         --yes|-y) YES=1; shift ;;
@@ -105,6 +127,10 @@ if [[ $CUDA_SET == 1 && $TORCH_SET == 0 ]]; then TORCH_URL=; fi
 [[ "$PORT" =~ ^[0-9]+$ ]] && ((PORT >= 1 && PORT <= 65535)) || bad_option '端口范围为 1～65535'
 [[ "$DOWNLOAD_WORKERS" =~ ^[0-9]+$ ]] && ((DOWNLOAD_WORKERS >= 1 && DOWNLOAD_WORKERS <= 8)) || bad_option 'workers 范围为 1～8'
 case "$COMPONENTS" in clear|propainter|both) ;; *) bad_option 'components 必须为 clear、propainter 或 both' ;; esac
+case "$PRESET" in fast|balanced|quality) ;; *) bad_option 'preset 必须为 fast、balanced 或 quality' ;; esac
+case "$LTX_TASKS" in subtitle|watermark|both) ;; *) bad_option 'ltx-tasks 必须为 subtitle、watermark 或 both' ;; esac
+[[ "$WITH_LTX" == 0 || "$WITH_LTX" == 1 ]] || bad_option 'with-ltx 配置必须为 0 或 1'
+[[ "$WAIT_IDLE" =~ ^[0-9]+$ ]] || bad_option 'wait-idle 必须为非负整数秒数'
 case "$NETWORK" in auto|cn|global) ;; *) bad_option 'network 必须为 auto、cn 或 global' ;; esac
 case "$CUDA_WHEEL" in auto|cu128|cu126) ;; *) bad_option 'cuda 必须为 auto、cu128 或 cu126' ;; esac
 [[ "$PUBLIC_HOST" != *[[:space:]/]* ]] || bad_option '--public-host 使用 IP 或域名，多个地址用逗号分隔'
@@ -121,6 +147,8 @@ if command -v getconf >/dev/null 2>&1; then
 fi
 [[ -n "$PROPAINTER_DIR" ]] || PROPAINTER_DIR="$ROOT/ProPainter"
 [[ "$PROPAINTER_DIR" == /* ]] || PROPAINTER_DIR="$PWD/$PROPAINTER_DIR"
+[[ -n "$LTX_DIR" ]] || LTX_DIR="$ROOT/LTX2-ICEdit-Insight"
+[[ "$LTX_DIR" == /* ]] || LTX_DIR="$PWD/$LTX_DIR"
 VENV="$ROOT/.venv/bin/python"
 export PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONUNBUFFERED=1
 INSTALL_LOCKED=0
@@ -137,10 +165,19 @@ acquire_install_lock() {
 save_config() {
     acquire_install_lock
     mkdir -p "$STATE"
-    local setting
+    local setting line
+    local settings=(COMPONENTS NETWORK PYTHON_BIN CUDA_WHEEL PIP_URL TORCH_URL HF_ENDPOINT GITHUB_PREFIX PORT BIND PUBLIC_HOST GPU PROPAINTER_DIR DOWNLOAD_WORKERS PRESET WITH_LTX LTX_DIR LTX_TASKS)
     umask 077
     : > "$STATE/config.sh.tmp"
-    for setting in COMPONENTS NETWORK PYTHON_BIN CUDA_WHEEL PIP_URL TORCH_URL HF_ENDPOINT GITHUB_PREFIX PORT BIND PUBLIC_HOST GPU PROPAINTER_DIR DOWNLOAD_WORKERS; do
+    if [[ -f "$STATE/config.sh" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)= ]]; then
+                case " ${settings[*]} " in *" ${BASH_REMATCH[1]} "*) continue ;; esac
+            fi
+            printf '%s\n' "$line" >> "$STATE/config.sh.tmp"
+        done < "$STATE/config.sh"
+    fi
+    for setting in "${settings[@]}"; do
         printf '%s=%q\n' "$setting" "${!setting}" >> "$STATE/config.sh.tmp"
     done
     mv "$STATE/config.sh.tmp" "$STATE/config.sh"
@@ -159,13 +196,33 @@ boot_python() {
 
 helper() {
     boot_python
-    local helper_file="$ROOT/scripts/deploy_helper.py"
+    local helper_file=${HELPER_OVERRIDE:-$ROOT/scripts/deploy_helper.py}
     [[ -f "$helper_file" ]] || helper_file="$SCRIPT_DIR/deploy_helper.py"
     [[ -f "$helper_file" ]] || fail '请先执行 source 下载项目源码。'
     local network=$NETWORK endpoint=$HF_ENDPOINT
     [[ "$network" != auto ]] || network=global
     [[ -n "$endpoint" ]] || endpoint=https://huggingface.co
-    "$BOOT_PYTHON" "$helper_file" "$@" --root "$ROOT" --components "$COMPONENTS" --propainter-root "$PROPAINTER_DIR" --network "$network" --hf-endpoint "$endpoint" --github-prefix "$GITHUB_PREFIX" --workers "$DOWNLOAD_WORKERS" --python "$VENV" --port "$PORT" --bind "$BIND" --public-host "$PUBLIC_HOST" --gpu "$GPU"
+    local optional=()
+    [[ $WITH_LTX == 0 ]] || optional+=(--with-ltx)
+    "$BOOT_PYTHON" "$helper_file" "$@" --root "$ROOT" --components "$COMPONENTS" --propainter-root "$PROPAINTER_DIR" --network "$network" --hf-endpoint "$endpoint" --github-prefix "$GITHUB_PREFIX" --workers "$DOWNLOAD_WORKERS" --python "$VENV" --port "$PORT" --bind "$BIND" --public-host "$PUBLIC_HOST" --gpu "$GPU" --preset "$PRESET" --ltx-root "$LTX_DIR" ${optional[@]+"${optional[@]}"}
+}
+
+ltx_helper() {
+    [[ $WITH_LTX == 1 ]] || return 0
+    boot_python
+    local installer="$ROOT/scripts/deploy_ltx.py"
+    [[ -f "$installer" ]] || installer="$SCRIPT_DIR/deploy_ltx.py"
+    [[ -f "$installer" ]] || fail '缺少 LTX 部署助手，请先更新项目源码。'
+    local interpreter=${PYTHON_BIN:-$BOOT_PYTHON} network=$NETWORK
+    [[ "$network" != auto ]] || network=global
+    local optional=()
+    [[ $OFFLINE == 0 ]] || optional+=(--offline)
+    [[ -z "$WHEELHOUSE" ]] || optional+=(--wheelhouse "$WHEELHOUSE")
+    [[ -z "$PIP_URL" ]] || optional+=(--pip-index "$PIP_URL")
+    local selected_torch=${LTX_TORCH_INDEX:-$TORCH_URL}
+    [[ -z "$selected_torch" ]] || optional+=(--torch-index "$selected_torch")
+    [[ -z "$GPU" ]] || optional+=(--gpu "$GPU")
+    "$BOOT_PYTHON" "$installer" "$@" --root "$LTX_DIR" --python "$interpreter" --network "$network" --hf-endpoint "${HF_ENDPOINT:-https://huggingface.co}" --github-prefix "$GITHUB_PREFIX" --workers "$DOWNLOAD_WORKERS" --tasks "$LTX_TASKS" ${optional[@]+"${optional[@]}"}
 }
 
 network_setup() {
@@ -251,6 +308,7 @@ step_source() {
         printf '%s\n' "$revision" > "$PROPAINTER_DIR/UPSTREAM-COMMIT"
         rm "$STATE/propainter.tar.gz"
     fi
+    ltx_helper source
 }
 
 select_python() {
@@ -292,7 +350,7 @@ step_env() {
         local capability driver_cuda
         local gpu_selector=()
         if [[ -n "$GPU" ]]; then gpu_selector=(-i "${GPU%%,*}"); fi
-        capability=$(nvidia-smi "${gpu_selector[@]}" --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 || true)
+        capability=$(nvidia-smi ${gpu_selector[@]+"${gpu_selector[@]}"} --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 || true)
         driver_cuda=$(nvidia-smi | sed -n 's/.*CUDA Version: *\([0-9.]*\).*/\1/p' | head -1)
         resolved_cuda=cu126
         if [[ "$capability" != 7.0 && "$capability" != 7.2 ]] && [[ "$driver_cuda" == 12.8 || "$driver_cuda" == 12.9 || "$driver_cuda" == 13.* || "$capability" == 1[0-9].* ]]; then resolved_cuda=cu128; fi
@@ -328,6 +386,7 @@ step_env() {
     "$VENV" -m pip check
     "$VENV" -c 'import sys,torch; assert torch.version.cuda == sys.argv[1], "CUDA wheel 与所选版本不一致"; assert torch.cuda.is_available(), "CUDA 不可用"; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0)); torch.ones(1,device="cuda").add_(1)' "$cuda_version"
     helper cuda
+    LTX_TORCH_INDEX=$resolved_torch ltx_helper env
     save_config
 }
 
@@ -335,6 +394,7 @@ step_models() {
     log '下载所选模型并校验 SHA-256'
     network_setup
     if [[ $OFFLINE == 1 ]]; then helper models --offline; else helper models; fi
+    ltx_helper models
 }
 
 step_verify() {
@@ -345,6 +405,7 @@ step_verify() {
     local helper_file="$ROOT/scripts/deploy_helper.py"
     [[ -z "$GPU" ]] || export CUDA_VISIBLE_DEVICES="$GPU"
     "$VENV" "$helper_file" runtime --root "$ROOT" --components "$COMPONENTS" --propainter-root "$PROPAINTER_DIR"
+    ltx_helper verify
 }
 
 step_start() {
@@ -352,8 +413,62 @@ step_start() {
     [[ -x "$VENV" ]] || fail '请先执行 env。'
     if [[ "$COMPONENTS" != propainter ]]; then [[ -f "$ROOT/CLEAR-web/models.ready" && -f "$ROOT/CLEAR-web/runtime.ready" ]] || fail 'CLEAR 尚未就绪，请执行 models 和 verify。'; fi
     if [[ "$COMPONENTS" != clear ]]; then [[ -f "$PROPAINTER_DIR/models.ready" && -f "$PROPAINTER_DIR/runtime.ready" ]] || fail 'ProPainter 尚未就绪，请执行 models 和 verify。'; fi
+    if [[ $WITH_LTX == 1 ]]; then
+        [[ -x "$LTX_DIR/.venv/bin/python" && ( -f "$LTX_DIR/.install/runtime.complete" || -f "$LTX_DIR/.install/test.complete" ) ]] || fail 'LTX 尚未就绪，请执行 source、env、models 和 verify。'
+    fi
     save_config
     helper start
+}
+
+step_update() {
+    log '升级项目源码，保留模型、任务、本地配置与环境'
+    acquire_install_lock
+    [[ -x "$VENV" ]] || fail '升级前需要已有 Python 环境，请先执行 env。'
+    boot_python
+    local optional=(--update-ref "$UPDATE_REF" --wait-idle "$WAIT_IDLE") archive=$UPDATE_ARCHIVE
+    [[ $OFFLINE == 0 ]] || optional+=(--offline)
+    if [[ -n "$UPDATE_ARCHIVE" ]]; then
+        optional+=(--archive "$UPDATE_ARCHIVE")
+    elif [[ ! -e "$ROOT/.git" ]]; then
+        [[ $OFFLINE == 0 ]] || fail '离线升级归档安装需要 --update-archive PATH。'
+        download_archive https://github.com/xaiojie/Removesubtitles/archive/refs/heads/main.tar.gz "$STATE/update-source.tar.gz"
+        archive="$STATE/update-source.tar.gz"
+        optional+=(--archive "$archive")
+    fi
+    # A freshly downloaded installer must also replace a legacy helper.
+    local capability=
+    if [[ -f "$SCRIPT_DIR/deploy_helper.py" ]]; then
+        capability=$("$BOOT_PYTHON" "$SCRIPT_DIR/deploy_helper.py" capabilities --root "$ROOT" 2>/dev/null) || capability=
+    fi
+    if [[ "$capability" == update-v1 ]]; then
+        HELPER_OVERRIDE="$SCRIPT_DIR/deploy_helper.py"
+    elif [[ -n "$archive" ]]; then
+        boot_python
+        "$BOOT_PYTHON" - "$archive" "$STATE/update-helper.py" <<'PY'
+import pathlib
+import sys
+import tarfile
+
+with tarfile.open(sys.argv[1], 'r:gz') as archive:
+    matches = [member for member in archive.getmembers()
+               if member.isfile() and not member.issym() and not member.islnk()
+               and pathlib.PurePosixPath(member.name).parts[-2:] == ('scripts', 'deploy_helper.py')
+               and '..' not in pathlib.PurePosixPath(member.name).parts]
+    if len(matches) != 1:
+        raise SystemExit('升级源码需要唯一的 scripts/deploy_helper.py。')
+    data = archive.extractfile(matches[0]).read()
+    compile(data, 'deploy_helper.py', 'exec')
+    pathlib.Path(sys.argv[2]).write_bytes(data)
+PY
+        HELPER_OVERRIDE="$STATE/update-helper.py"
+    else
+        [[ $OFFLINE == 0 ]] || fail '离线 Git 升级需要将新版 deploy_helper.py 与当前部署脚本放在同一目录。'
+        download_archive https://raw.githubusercontent.com/xaiojie/Removesubtitles/main/scripts/deploy_helper.py "$STATE/update-helper.py"
+        HELPER_OVERRIDE="$STATE/update-helper.py"
+    fi
+    helper update ${optional[@]+"${optional[@]}"}
+    unset HELPER_OVERRIDE
+    save_config
 }
 
 step_all() {
@@ -374,12 +489,13 @@ menu() {
     [[ -t 0 ]] || { usage; bad_option '非交互环境请指定命令，例如 all --yes'; }
     while true; do
         printf '\nRemoveSubtitles 部署菜单\n目录 %s\n组件 %s  网络 %s  端口 %s\n' "$ROOT" "$COMPONENTS" "$NETWORK" "$PORT"
-        printf '1 完整部署\n2 检查配置\n3 安装系统依赖\n4 准备源码\n5 安装 Python/CUDA 环境\n6 下载模型\n7 校验模型与 CUDA\n8 启动网页\n9 状态\n10 停止网页\n11 修改组件、网络和访问地址\n0 退出\n'
+        printf '1 完整部署\n2 检查配置\n3 安装系统依赖\n4 准备源码\n5 安装 Python/CUDA 环境\n6 下载模型\n7 校验模型与 CUDA\n8 启动网页\n9 状态\n10 停止网页\n11 修改组件、网络和访问地址\n12 升级已有安装\n0 退出\n'
         read -r -p '请选择 ' choice
         case "$choice" in
             1) step_all ;; 2) step_check ;; 3) step_system ;; 4) step_source ;;
             5) step_env ;; 6) step_models ;; 7) step_verify ;; 8) step_start ;;
             9) helper status ;; 10) helper stop ;;
+            12) step_update ;;
             11)
                 read -r -p '组件 clear/propainter/both [both] ' COMPONENTS
                 COMPONENTS=${COMPONENTS:-both}
@@ -400,6 +516,6 @@ menu() {
 
 case "$COMMAND" in
     menu) menu ;; all) step_all ;; check) step_check ;; system) step_system ;;
-    source) step_source ;; env) step_env ;; models) step_models ;; verify) step_verify ;;
+    source) step_source ;; env) step_env ;; models) step_models ;; verify) step_verify ;; update) step_update ;;
     start) step_start ;; stop) helper stop ;; restart) acquire_install_lock; helper stop; step_start ;; status) helper status ;;
 esac

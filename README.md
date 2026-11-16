@@ -1,13 +1,23 @@
 # RemoveSubtitles
 
-基于 CLEAR 和 ProPainter 的视频字幕与水印移除工具。网页支持视频预览、多处字幕与水印框选、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
+基于 CLEAR 和 ProPainter 的视频字幕与水印移除工具，可选安装 LTX 测试模型。网页支持视频预览、多处字幕与水印框选、逐个设置选区的批量队列、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
 
 ## Linux 服务器一键部署
 
 运行 `bash scripts/deploy.sh` 打开分步菜单，或用下面的命令完整安装所选组件。脚本支持国内及官方网络配置、代理、自定义源、断点续传、离线部署和后台服务管理。[查看 Linux 部署教程](docs/linux-deployment.md)
 
 ```bash
-bash scripts/deploy.sh all --components both --network cn --yes
+bash scripts/deploy.sh all --components both --preset balanced --network cn --yes
+```
+
+首次安装默认使用“较大上下文”。`--preset fast` 选择快速处理，`--preset quality` 选择强化修复。三档共用 CLEAR 权重。LTX 通过 `--with-ltx` 选装，独立环境和所选模型安装在项目的 `LTX2-ICEdit-Insight/` 目录。
+
+```bash
+# 安装 CLEAR、ProPainter 和 LTX 字幕模型
+bash scripts/deploy.sh all --with-ltx --ltx-tasks subtitle --network cn --yes
+
+# 已有安装升级源码，等待已接收任务完成
+bash scripts/deploy.sh update --wait-idle 1800
 ```
 
 ## Windows 手动运行
@@ -74,15 +84,31 @@ curl.exe -fS http://127.0.0.1:8765/api/jobs -F "video=@input.mp4" -F "roi=[11,10
 
 可附加名为 `inference` 的 JSON 表单字段。支持 `steps`、`cfg_scale`、`lora_scale`、`seed`、`chunk_frames`、`overlap_frames` 和 `context`。分段长度使用 5–33 范围内的 4n+1 帧，重叠帧数必须小于分段长度。参数有误时返回 HTTP 400，GPU 忙时返回 HTTP 409。
 
-默认使用整帧作为模型输入（`context=frame`），并将生成结果合成到框选区域。`context=roi` 使用围绕选区裁出的局部画面。其他默认值为 5 步、CFG 1.0、LoRA 1.0、种子 20261113、每段 33 帧及重叠 4 帧，VAE 分块默认关闭（`vae_tiled=false`）。
+新任务采用部署配置指定的预设，`CLEAR_PRESET` 默认值为 `balanced`。网页可直接切换三档，手动修改高级参数后显示“自定义”，批量队列分别保存每个视频的方案与选区。
 
-`blend_mode` 默认为 `lines`，按检测到的字幕行合成并匹配底色。可设为 `rectangle` 使用矩形选区合成。
+| 预设 | 名称 | 步数 | LoRA | 输入画面 |
+|---|---|---|---|---|
+| `fast` | 快速 | 5 | 1.2 | 字幕选区与少量周边，原像素推理 |
+| `balanced` | 较大上下文 | 5 | 1.0 | 按画面比例扩展周边，原像素推理 |
+| `quality` | 强化修复 | 12 | 1.0 | 全画面等比自动缩放，局部重建可能模糊 |
+
+三档均使用 CFG 1.0、种子 20261113、每段 33 帧、重叠 4 帧、CRF 10 和关闭 VAE 分块。`balanced` 在 1280×720 底部字幕样例中使用 1024×384 周边画面，其他画面比例、靠边选区和多选区会调整裁剪范围以覆盖所有字幕。`quality` 的同尺寸样例输入为 848×480，其中内容保持比例，剩余边缘填充。
+
+自动路由 API 可提交以下参数，显式填写的字段优先生效。
+
+```json
+{"clear": {"preset": "quality", "steps": 12}}
+```
+
+三档采用 `blend_mode=precise`，根据原图生成字形、描边或字幕底板遮罩，再回填并融合颜色。`context` 支持 `roi`、`expanded` 和 `frame`。自定义方案可设 `preset=custom`，使用 `lines` 文字行合成或 `rectangle` 矩形合成。已有任务重试继续使用保存的配置和已成功阶段。
+
+`resident_models=true` 可让足够显存的设备保留 DiT 和 VAE，减少分段之间的搬运。预设会请求这一优化，实际启用以设备容量检查为准，较小显存设备继续使用运行库的模型管理。
 
 默认的 `segment_mode=shots` 会先检测原片的切镜，再按镜头划分推理窗口。重叠只在同一镜头内使用，短镜头以本镜头末帧填充。设为 `fixed` 可使用固定帧数分段。切镜检测以选框外的画面变化为主。
 
 用 `start_seconds` 选择起点，用 `duration_seconds` 限制模型处理时长。省略时长或设为 `null` 会处理到视频结束。服务导出完整视频和音轨，时间选区之外的帧直接参与编码。
 
-`resolution` 默认使用 `native`（原像素推理），也可选择 `auto`（自动缩放）。原像素模式会在边缘填充到模型所需的尺寸倍数。`export_crf` 默认为 10，可设为 18 缩小文件，或设为 0 对转换后的 YUV 4:2:0 画面做无损 H.264 编码。
+`resolution` 由所选预设确定，支持 `native`（原像素推理）和 `auto`（自动缩放）。原像素模式会在边缘填充到模型所需的尺寸倍数。`export_crf` 默认为 10，可设为 18 缩小文件，或设为 0 对转换后的 YUV 4:2:0 画面做无损 H.264 编码。
 
 提交成功返回 HTTP 202 和任务 ID。调用 `GET /api/jobs/<id>` 查询状态、进度与生效的推理参数。状态为 `done` 时，通过 `GET /api/jobs/<id>/output` 下载 MP4。通过 `GET /api/system` 查询 GPU 利用率、显存及默认推理参数。
 
