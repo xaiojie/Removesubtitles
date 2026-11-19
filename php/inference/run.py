@@ -46,17 +46,19 @@ def standard(folder, request, fine):
     return work / 'output.mp4'
 
 
-def run(folder):
+def run(folder, mode=None):
     from regions import validate_regions
 
     request = json.loads((folder / 'request.json').read_text())
     validate_regions(request['regions'], request['dimensions'])
-    if request['mode'] == 'lite':
+    if mode is None:
+        mode = request['mode']
+    if mode == 'lite':
         from lite import run as run_lite
 
         run_lite(folder, request)
-    elif request['mode'] in ('standard', 'fine'):
-        fine = request['mode'] == 'fine'
+    elif mode in ('pro', 'max'):
+        fine = mode == 'max'
         first = standard(folder, request, fine)
         if fine:
             from fine import refine
@@ -70,7 +72,7 @@ def run(folder):
 
 if __name__ == '__main__':
     try:
-        run(Path(sys.argv[1]).resolve())
+        run(Path(sys.argv[1]).resolve(), *sys.argv[2:])
     except Exception as exc:
         print('JOB_STATUS ' + json.dumps({'error': str(exc)[:540]}, ensure_ascii=False), flush=True)
         raise

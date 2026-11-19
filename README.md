@@ -6,7 +6,7 @@
 
 主程序在 `CLEAR-web/`（默认端口 8765），处理 CLEAR 字幕、ProPainter 水印和可选 LTX。另一套 [Video Subtitle Remover](video-subtitle-remover/README.md) 保留原生 Web、CLI 和桌面端，支持 STTN、LaMa、OpenCV、ProPainter 及 PP-OCRv5。Linux Web 服务默认使用 8800 端口，单独安装依赖与模型。
 
-程序接入可使用统一的 PHP API。上传一次视频并提交所有选区，即可按快速、标准或精细档异步处理，查询进度并下载成片。默认使用标准档。[PHP 接口与启动示例](php/README.md)
+程序接入可使用统一的 PHP API。上传一次视频并提交所有选区，即可选择 Lite、Pro 或 Max 异步处理，查询进度并下载成片。默认使用 Pro。[PHP 接口与启动示例](php/README.md)
 
 ```bash
 # 从仓库根目录运行；只列清单不会下载文件

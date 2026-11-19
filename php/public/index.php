@@ -28,9 +28,9 @@ function submit(): never
     if (!is_string($tmp) || !is_uploaded_file($tmp)) {
         respond(400, ['error' => '无效上传']);
     }
-    $mode = $_POST['mode'] ?? 'standard';
+    $mode = $_POST['mode'] ?? DEFAULT_MODE;
     if (!is_string($mode) || !isset(MODES[$mode])) {
-        respond(422, ['error' => 'mode 可选 lite、standard、fine']);
+        respond(422, ['error' => 'mode 可选 ' . implode('、', array_keys(MODES))]);
     }
     $raw = $_POST['regions'] ?? '';
     if (!is_string($raw)) {
@@ -81,7 +81,7 @@ try {
         respond(401, ['error' => '需要有效的 Bearer token']);
     }
     if ($path === '/api/modes' && $method === 'GET') {
-        respond(200, ['default' => 'standard', 'modes' => MODES]);
+        respond(200, ['default' => DEFAULT_MODE, 'modes' => MODES]);
     }
     if ($path === '/api/jobs' && $method === 'POST') {
         submit();

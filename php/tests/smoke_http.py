@@ -1,9 +1,10 @@
-"""Local HTTP/queue smoke: standard & fine on blank video, optionally exercise real Lite weights."""
+"""Local HTTP/queue smoke: Pro and Max on blank video, optionally exercise real Lite weights."""
 
 import json
 import os
 import re
 import socket
+import sqlite3
 import subprocess
 import tempfile
 import time
@@ -66,7 +67,10 @@ def main():
                     break
                 except OSError:
                     time.sleep(0.05)
-            assert modes['default'] == 'standard' and len(modes['modes']) == 3
+            assert modes['default'] == 'pro'
+            assert {k: v['label'] for k, v in modes['modes'].items()} == {
+                'lite': 'Lite', 'pro': 'Pro', 'max': 'Max'
+            }
             try:
                 urllib.request.urlopen(base + '/api/modes', timeout=5)
                 raise AssertionError('unauthenticated request succeeded')
@@ -98,15 +102,17 @@ def main():
                 check=True,
             )
             assert upload(src, 'lite', 'watermark')[0] == 422
-            assert upload(src, 'unknown')[0] == 422
+            for invalid in ('standard', 'fine', 'unknown'):
+                code, error = upload(src, invalid)
+                assert code == 422 and error['error'] == 'mode 可选 lite、pro、max'
             assert upload(src, roi=[0, 0, 300, 400])[0] == 422
-            todo = [(src, None), (src, 'fine')]
+            todo = [(src, None), (src, 'max')]
             if os.getenv('LITE_TEST_VIDEO'):
                 todo.append((Path(os.environ['LITE_TEST_VIDEO']), 'lite'))
             for video, mode in todo:
                 roi = json.loads(os.environ['LITE_TEST_ROI']) if mode == 'lite' else None
                 code, job = upload(video, mode, roi=roi)
-                assert code == 202 and job['mode'] == (mode or 'standard'), (code, job)
+                assert code == 202 and job['mode'] == (mode or 'pro'), (code, job)
                 path = job['status_url']
                 try:
                     call(path + '/output')
@@ -119,7 +125,8 @@ def main():
                     raise AssertionError(
                         (status, (temp / 'queue' / job['id'] / 'worker.log').read_text()[-1800:])
                     )
-                assert status['percent'] == 100
+                assert status['percent'] == 100 and status['mode'] == job['mode']
+                assert (temp / 'queue' / job['id'] / 'review.json').is_file() == (mode == 'max')
                 if mode == 'lite':
                     log = (temp / 'queue' / job['id'] / 'worker.log').read_text()
                     detected = re.search(r'Lite: ([0-9]+)/([0-9]+)', log)
@@ -150,7 +157,7 @@ def main():
                 assert orig[0] == result[0] and any(s['codec_type'] == 'audio' for s in result)
                 print(job['mode'], len(body), 'bytes', result[0], flush=True)
             # A missing runtime must yield a retryable failure, not an empty or stale result.
-            _, retry = upload(src)
+            _, retry = upload(src, 'pro')
             subprocess.run(
                 ['php', str(PHP / 'bin/worker.php'), '--once'],
                 env={**env, 'CLEAR_PYTHON': '/missing/python'},
@@ -161,6 +168,24 @@ def main():
             assert call(path + '/retry', 'POST')[0] == 202
             work()
             assert json.loads(call(path)[1])['state'] == 'done'
+
+            # Reopen a pre-rename queue: its saved request stays usable, including on retry.
+            code, archived = upload(src, 'max')
+            assert code == 202
+            job_dir = temp / 'queue' / archived['id']
+            config = job_dir / 'request.json'
+            old_request = json.loads(config.read_text())
+            old_request['mode'] = 'fine'
+            config.write_text(json.dumps(old_request))
+            with sqlite3.connect(temp / 'queue' / 'queue.sqlite') as db:
+                db.execute("UPDATE jobs SET mode='standard' WHERE id=?", (retry['id'],))
+                db.execute("UPDATE jobs SET mode='fine', state='failed' WHERE id=?", (archived['id'],))
+                db.execute('PRAGMA user_version=0')
+            assert json.loads(call(path)[1])['mode'] == 'pro'
+            assert call(archived['status_url'] + '/retry', 'POST')[0] == 202
+            work()
+            status = json.loads(call(archived['status_url'])[1])
+            assert (status['mode'], status['state']) == ('max', 'done') and (job_dir / 'review.json').is_file()
         finally:
             srv.terminate()
             srv.wait(timeout=8)

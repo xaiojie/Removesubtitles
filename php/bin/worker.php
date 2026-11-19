@@ -17,7 +17,7 @@ function processJob(string $id, string $mode, string $folder, $lock): void
     try {
         // Keep the lock in the child as well, in case the PHP worker is restarted mid-job.
         $descriptors = [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['redirect', 1], 3 => $lock];
-        $command = [$python, '-u', dirname(__DIR__) . '/inference/run.py', $folder];
+        $command = [$python, '-u', dirname(__DIR__) . '/inference/run.py', $folder, $mode];
         $proc = proc_open($command, $descriptors, $pipes);
         if (!is_resource($proc)) {
             throw new RuntimeException('无法启动推理');

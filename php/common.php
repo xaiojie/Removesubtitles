@@ -2,10 +2,11 @@
 declare(strict_types=1);
 
 const ROOT = __DIR__ . '/..';
+const DEFAULT_MODE = 'pro';
 const MODES = [
-    'lite' => ['label' => '快速', 'subtitles' => true, 'watermarks' => false],
-    'standard' => ['label' => '标准', 'subtitles' => true, 'watermarks' => true],
-    'fine' => ['label' => '精细', 'subtitles' => true, 'watermarks' => true],
+    'lite' => ['label' => 'Lite', 'subtitles' => true, 'watermarks' => false],
+    'pro' => ['label' => 'Pro', 'subtitles' => true, 'watermarks' => true],
+    'max' => ['label' => 'Max', 'subtitles' => true, 'watermarks' => true],
 ];
 
 function dataDir(): string
@@ -29,6 +30,19 @@ function db(): PDO
         id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL, state TEXT NOT NULL,
         percent INTEGER NOT NULL DEFAULT 0, stage TEXT NOT NULL, error TEXT, created INTEGER NOT NULL
     )");
+    // Rename existing queue records once. Uploaded requests remain intact for stage resumption.
+    if ((int)$pdo->query('PRAGMA user_version')->fetchColumn() === 0) {
+        $pdo->beginTransaction();
+        try {
+            $pdo->exec("UPDATE jobs SET mode='pro' WHERE mode='standard'");
+            $pdo->exec("UPDATE jobs SET mode='max' WHERE mode='fine'");
+            $pdo->exec('PRAGMA user_version=1');
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
     return $pdo;
 }
 
@@ -58,7 +72,7 @@ function validRegions(mixed $regions, array $size, string $mode): array
             throw new InvalidArgumentException('选区超出视频显示尺寸或过小');
         }
         if ($mode === 'lite' && $type === 'watermark') {
-            throw new InvalidArgumentException('快速档只处理字幕，去水印请选择 standard 或 fine');
+            throw new InvalidArgumentException('Lite 只处理字幕，去水印请选择 Pro 或 Max');
         }
         $normalized[] = ['type' => $type, 'roi' => $box];
     }
