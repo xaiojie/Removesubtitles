@@ -38,6 +38,13 @@ git sparse-checkout set CLEAR CLEAR-web video-subtitle-remover php scripts docs 
 bash scripts/deploy.sh all --components both --preset balanced --network cn --yes
 ```
 
+同时部署三档 PHP 接口时，在仓库根目录执行以下命令。网页默认端口为 8765，API 为 8810，两个服务默认监听本机。部署菜单也可选第 13 项。
+
+```bash
+bash scripts/deploy.sh all --with-api --components both --yes
+bash scripts/deploy.sh api-status
+```
+
 首次安装默认使用“较大上下文”。`--preset fast` 选择快速处理，`--preset quality` 选择强化修复。三档共用 CLEAR 权重。LTX 通过 `--with-ltx` 选装，独立环境和所选模型安装在项目的 `LTX2-ICEdit-Insight/` 目录。
 
 ```bash

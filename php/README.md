@@ -12,44 +12,30 @@ Max 根据字形、底板和局部对比度判断残留，可能漏掉低对比�
 
 ## 在 Linux 启动
 
-从仓库根目录操作。需要 PHP 8.1 及以上、PDO SQLite、可用的 `proc_open`、FFmpeg（带 libx264）、ffprobe，以及所选档位对应的推理环境。例如在 Ubuntu 24.04 安装接口依赖：
+从仓库根目录运行下面的命令即可部署原网页、三档 PHP 接口和后台队列。需要 Linux、可用的 NVIDIA 驱动及磁盘空间。脚本安装 PHP、系统 FFmpeg 和两个独立的推理环境，下载并校验模型，启动后通过接口核对三个档位。
 
 ```bash
-sudo apt-get install php-cli php-sqlite3 ffmpeg
-php -r 'var_dump(PHP_VERSION, in_array("sqlite", PDO::getAvailableDrivers()), function_exists("proc_open"));'
+bash scripts/deploy.sh all --components both --with-api --network auto --yes
+bash scripts/deploy.sh api-status
 ```
 
-已有模型环境可直接复用。新机器按需安装，权重通过脚本下载。
+默认接口地址为 `http://127.0.0.1:8810`。首次启动会生成令牌并写入仅部署用户可读写的 `.deploy/api/api.token`，后续启动和源码升级复用该令牌。以下命令可查询已部署的档位。
 
 ```bash
-# Pro 和 Max 用的 CLEAR 和 ProPainter。已有部署可以跳过。
-bash scripts/deploy.sh all --dir "$PWD" --components both --preset balanced --yes
-
-# Lite 用的 LaMa 和 Mobile OCR
-VSR_MODEL_MODE=lama VSR_DETECTOR=mobile VSR_INSTALL_SERVICE=0 bash scripts/deploy.sh vsr-install
-# 按上述安装器提示为 video-subtitle-remover/.venv 安装与显卡驱动匹配的 PyTorch
-bash scripts/deploy.sh vsr-models --mode lama --detector mobile --verify
+export SUBTITLE_API_TOKEN="$(cat .deploy/api/api.token)"
+curl -fsS -H "Authorization: Bearer ${SUBTITLE_API_TOKEN}" http://127.0.0.1:8810/api/modes
 ```
 
-开两个终端，进入同一个仓库根目录。两个进程使用同一用户或同一可读写的任务目录。
+只管理 PHP 服务可使用 `api-start`、`api-status`、`api-stop`。后台进程支持断开 SSH 后继续运行。机器重启后执行 `api-start`。接口和队列日志分别在 `.deploy/api/http/service.log`、`.deploy/api/worker/service.log`。每个 PHP 队列逐个处理视频，原网页有独立队列，两边同时提交会共享 GPU。
 
-```bash
-# 终端一，启动队列。持续运行，每次只占用一个任务的 GPU 资源
-php php/bin/worker.php
-
-# 终端二，启动本机测试用 HTTP 接口。按素材大小调整上传限额
-php -d upload_max_filesize=2G -d post_max_size=2100M \
-  -S 127.0.0.1:8810 -t php/public php/public/index.php
-```
-
-生产环境可用 PHP-FPM，将网站根目录指向 `php/public`，让 `/api/*` 请求进入 `index.php`，放行 Authorization 请求头并设置反向代理上传限额。向公网提供服务时，为 HTTP 进程配置 `SUBTITLE_API_TOKEN` 并使用 HTTPS。通过 systemd 等进程管理工具常驻运行队列。同一任务目录的 PHP 队列串行处理，原有两个 Web 服务各自调度任务，共用一张 GPU 时应统一安排。更新 PHP 代码前应等待当前队列清空，升级后重启 PHP worker。
+一键启动使用 PHP CLI 的 HTTP 服务供测试。生产环境可用 HTTPS 反向代理和 PHP-FPM，对外站点根目录指向 `php/public`，将 `/api/*` 路由到 `index.php`。自行管理时，接口和 `php php/bin/worker.php` 应使用同一任务目录与读写权限。分步安装、离线模型、服务升级及端口设置见 [Linux 部署教程](../docs/linux-deployment.md#php-api)。
 
 | 环境变量 | 默认值或用途 |
 | --- | --- |
 | `SUBTITLE_DATA_DIR` | 默认为 `php/var/`。接口和队列须使用相同绝对路径，保存 SQLite、原片、阶段文件和结果，预留磁盘空间。 |
-| `SUBTITLE_API_TOKEN` | 接口密钥，可选。设置后所有接口都要求 `Authorization: Bearer <token>`。 |
+| `SUBTITLE_API_TOKEN` | 接口密钥。一键部署自动配置，手动启动可自设。设置后所有接口都要求 `Authorization: Bearer <token>`。 |
 | `CLEAR_PYTHON`、`CLEAR_WORKSPACE` | Pro 和 Max 使用的绝对解释器路径、模型工作目录。默认分别为仓库内的 `.venv/bin/python` 和仓库根目录。 |
-| `PROPAINTER_ROOT`、`PROPAINTER_PYTHON` | ProPainter 源码和权重目录、解释器。默认使用仓库内的 `ProPainter/` 和Pro 使用的解释器。 |
+| `PROPAINTER_ROOT`、`PROPAINTER_PYTHON` | ProPainter 源码和权重目录、解释器。默认使用仓库内的 `ProPainter/` 和 Pro 使用的解释器。 |
 | `VSR_PYTHON`、`VSR_MODEL_DIR` | 默认使用 `video-subtitle-remover/.venv/bin/python` 和 `video-subtitle-remover/backend/models/`。 |
 | `LITE_DEVICE` | 默认为 `cuda`。在无 NVIDIA 显卡的测试机上可设为 `cpu` 运行 Lite。 |
 
@@ -67,9 +53,7 @@ php -d upload_max_filesize=2G -d post_max_size=2100M \
 
 ```bash
 BASE=http://127.0.0.1:8810
-AUTH=()
-# 已配置 token 时使用下行，并让客户端的 SUBTITLE_API_TOKEN 与服务端相同
-# AUTH=(-H "Authorization: Bearer ${SUBTITLE_API_TOKEN}")
+AUTH=(-H "Authorization: Bearer ${SUBTITLE_API_TOKEN}")
 curl -sS "${AUTH[@]}" "$BASE/api/modes"
 
 curl -sS "${AUTH[@]}" "$BASE/api/jobs" \

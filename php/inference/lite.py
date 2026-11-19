@@ -70,7 +70,7 @@ def restore(frames, boxes_by_frame, lama):
     return frames
 
 
-def run(folder, request):
+def load_models():
     os.environ.setdefault('PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK', 'True')
     import torch
     from paddleocr import TextDetection
@@ -94,7 +94,11 @@ def run(folder, request):
     device = os.getenv('LITE_DEVICE', 'cuda')
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
-    lama = LamaInpaint(torch.device(device), str(weights))
+    return detector, LamaInpaint(torch.device(device), str(weights))
+
+
+def run(folder, request):
+    detector, lama = load_models()
     source = folder / 'source.video'
     rois = [r['roi'] for r in request['regions']]
     find = lambda frame: detect(frame, rois, detector)
@@ -127,3 +131,12 @@ def run(folder, request):
                 if not ok:
                     break
     print(f'Lite: {repaired_count}/{count} 帧命中字幕框并调用 LaMa', flush=True)
+
+
+if __name__ == '__main__' and sys.argv[1:] == ['--verify']:
+    detector, lama = load_models()
+    frame = np.zeros((64, 160, 3), dtype=np.uint8)
+    cv2.putText(frame, 'TEST', (12, 42), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    detect(frame, [(0, 0, 160, 64)], detector)
+    restore([frame], [[(10, 15, 95, 47)]], lama)
+    print('Lite 检测器与 LaMa 推理校验通过。')

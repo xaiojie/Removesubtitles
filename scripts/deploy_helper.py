@@ -484,6 +484,13 @@ def git_update_archive(options, archive):
 
 
 def validate_updated_source(options, source):
+    if (options.root / '.deploy/api/settings.json').is_file():
+        required = ['php/public/index.php', 'php/common.php', 'php/bin/worker.php', 'scripts/deploy_api.py']
+        if any(not (source / name).is_file() for name in required):
+            raise RuntimeError('目标版本缺少已部署的 PHP API 或管理脚本。')
+        for name in required:
+            if name.endswith('.php') and subprocess.run(['php', '-l', str(source / name)], check=False).returncode:
+                raise RuntimeError(f'PHP 语法检查失败 {name}')
     code = (
         'from pathlib import Path\n'
         'for path in Path("..").rglob("*.py"):\n'
@@ -551,11 +558,34 @@ def update_project(options):
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(target, saved)
                 existed.add(name)
+        api_state = state / 'api'
+        api_services = []
+        if (api_state / 'settings.json').is_file():
+            # A standalone update helper may be running outside the installed scripts directory.
+            sys.path.insert(0, str(root / 'scripts'))
+            import deploy_api as api
+            api_services = api.active(api_state)
+            api_settings = json.loads((api_state / 'settings.json').read_text())
         record = service_record(state)
         if record:
             wait_for_idle(options, record)
         else:
             ensure_no_unmanaged_service(options)
+        if api_services:
+            paused = []
+            try:
+                with api.drain(Path(api_settings['data']), options.wait_idle, api_services):
+                    for name in reversed(api_services):
+                        if stop_service(api_state / name):
+                            paused.append(name)
+            except Exception:
+                try:
+                    if paused:
+                        api.start(root, api_state, api_settings, paused[::-1])
+                finally:
+                    if record:
+                        drain_request(options, record, 'DELETE')
+                raise
         stopped = False
         metadata_changed = False
         try:
@@ -578,6 +608,8 @@ def update_project(options):
             os.replace(temporary, manifest)
             if record:
                 start_service(options)
+            if api_services:
+                api.start(root, api_state, api_settings, api_services)
         except Exception as error:
             restore_errors = []
             if stopped:
@@ -619,6 +651,11 @@ def update_project(options):
                 try:
                     start_service(original)
                 except (OSError, RuntimeError) as restart_error:
+                    restore_errors.append(str(restart_error))
+            if api_services and not restore_errors:
+                try:
+                    api.start(root, api_state, api_settings, api_services)
+                except (OSError, RuntimeError, ValueError) as restart_error:
                     restore_errors.append(str(restart_error))
             if restore_errors:
                 retained = state / f'update-recovery-{time.time_ns()}'

@@ -67,6 +67,45 @@ bash deploy.sh all --dir /data/Removesubtitles --network global --yes
 
 安装系统包会使用 root 或 sudo。已经准备好系统依赖的普通用户可加 `--skip-system`。建议始终用同一个部署用户管理项目，系统包安装由脚本单独调用 sudo。
 
+<a id="php-api"></a>
+
+### 同时部署 Lite、Pro、Max 的 PHP API
+
+已有完整仓库时，从根目录执行下列命令。只下载了 `deploy.sh` 时把命令里的 `scripts/deploy.sh` 换成 `deploy.sh`，并传入安装目录 `--dir /data/Removesubtitles`。交互菜单的第 13 项也可完整安装。
+
+```bash
+bash scripts/deploy.sh all --components both --with-api --api-port 8810 --network auto --yes
+bash scripts/deploy.sh api-status
+```
+
+| 部署内容 | 脚本行为 |
+| --- | --- |
+| 系统 | 安装、校验 PHP CLI 8.1+、PDO SQLite、带 libx264 的 FFmpeg 和 ffprobe。Ubuntu 22.04/24.04、Debian 12 等系统可从发行版软件源安装。在默认源缺少 PHP 8.1+ 或 FFmpeg 的系统上，需先配置相应的软件源或安装所需版本，再用 `--skip-system`。 |
+| Lite | 在 `video-subtitle-remover/.venv` 内安装 CUDA 版 PyTorch 2.7、PaddleOCR 及算法依赖，仅下载 Mobile OCR 和 LaMa。校验模型文件后，实际调用检测器和 LaMa 做短推理。 |
+| Pro / Max | 共用已有的 CLEAR、ProPainter 环境和权重，Max 的局部精修复用同一套模型。完整性校验通过的权重会直接复用。 |
+| 服务 | 网页仍由原服务提供。PHP 测试端点使用独立端口，默认 8810，接收请求后由后台队列逐个处理。PHP 接口省略 `mode` 时使用 `pro`。 |
+
+`--with-api`、`--api-port` 随安装配置保存。默认仅监听本机。测试机需要公网访问时传入 `--public-host SERVER_IP`，同时将平台的外部端口映射到 `--api-port` 指定的内部端口。公网正式服务使用 HTTPS 与 PHP-FPM，配置说明见 [PHP 接口文档](../php/README.md)。
+
+首次启动会把令牌写入安装目录的 `.deploy/api/api.token`，权限为 `0600`。也可以在首次启动前由环境变量 `SUBTITLE_API_TOKEN` 提供。以下命令在服务器本机执行：
+
+```bash
+curl -fsS -H "Authorization: Bearer $(cat .deploy/api/api.token)" http://127.0.0.1:8810/api/modes
+```
+
+已有项目先按第 13 节更新源码。已有网页追加 API 时，在任务完成后执行 `all --with-api --components both --yes`。如果两个推理环境和权重均已备好，可依次执行 `system`、`verify`、`api-start`，前两步加上 `--with-api --components both`。各阶段使用同一安装目录。若后续只使用原网页，先运行 `api-stop`，再执行 `start --without-api` 保存选择。
+
+```bash
+bash scripts/deploy.sh api-status
+bash scripts/deploy.sh api-stop --wait-idle 1800
+bash scripts/deploy.sh api-start
+bash scripts/deploy.sh update --wait-idle 1800
+```
+
+通过部署脚本启用 API 后，`start/stop/restart/status` 同时管理网页和 PHP 服务。停止或更新时，PHP 暂停接收新任务和重试请求（HTTP 503），等待已入队的任务完成。等待超时后恢复接单并保留运行中的进程。更新完成后恢复原先运行的服务。任务默认保存在 `php/var/`，首次启动前可用 `SUBTITLE_DATA_DIR` 指向数据盘的绝对路径。HTTP 和队列日志在 `.deploy/api/{http,worker}/service.log`。这些进程支持关闭 SSH 后运行，服务器重启后执行 `start`。
+
+离线部署时，除 CLEAR 和 ProPainter 外，还要预先准备 Lite 的 `requirements-headless.txt`、对应 Python/平台的 PyTorch 2.7.0 和 torchvision 0.22.0 CUDA wheels 及全部依赖，以及 `video-subtitle-remover/backend/models` 下的 Mobile OCR 与 LaMa 权重。将这些 wheels 放入 `--wheelhouse` 指定的目录。运行 `models --with-api --offline` 只校验本地模型。联网时 Lite 模型支持 `--proxy`、`--github-prefix` 或环境变量 `VSR_MODEL_BASE_URL`，自定义地址的目录结构应与上游 `backend/models` 相同。
+
 ## 4. 按步骤安装或恢复
 
 进入安装后的仓库目录，分别执行以下命令。

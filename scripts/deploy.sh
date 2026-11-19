@@ -9,6 +9,7 @@ RemoveSubtitles Linux 服务器部署
 用法  bash deploy.sh [命令] [选项]
 命令  menu | all | check | system | source | env | models | verify
       update | start | stop | restart | status
+      api-start | api-stop | api-status  单独管理三档 PHP 接口和队列
       vsr-models [--mode all|lama|sttn-auto|sttn-det|opencv|propainter] [--detector mobile|server] [--list|--verify]
       vsr-install               安装独立的 VSR Web 服务，详见 video-subtitle-remover/README.md
 
@@ -17,6 +18,9 @@ RemoveSubtitles Linux 服务器部署
   --preset fast|balanced|quality
                              CLEAR 默认处理预设，首次安装默认 balanced
   --with-ltx                 额外安装 LTX，使用独立虚拟环境
+  --with-api                 同时部署 Lite、Pro、Max 接口及串行推理队列，安装两个组件
+  --without-api              后续部署只启动原网页
+  --api-port PORT            PHP 接口端口，默认 8810；监听地址沿用 --bind/--public-host
   --ltx-root PATH            LTX 源码、环境和模型目录
   --ltx-tasks subtitle|watermark|both
                              LTX 模型用途，默认 subtitle
@@ -44,6 +48,7 @@ RemoveSubtitles Linux 服务器部署
   --help                     显示帮助
 
 示例  bash deploy.sh all --dir /data/Removesubtitles --network cn --yes
+      bash deploy.sh all --with-api --api-port 8810 --yes
       bash deploy.sh models --components clear --hf-endpoint https://hf-mirror.com
       bash deploy.sh start --public-host SERVER_IP --port 8765
       bash deploy.sh update --dir /data/Removesubtitles --wait-idle 1800
@@ -92,6 +97,7 @@ PIP_URL=${PIP_INDEX_URL:-} TORCH_URL= HF_ENDPOINT= GITHUB_PREFIX=
 PORT=8765 BIND=127.0.0.1 PUBLIC_HOST= GPU=${CUDA_VISIBLE_DEVICES:-}
 PROPAINTER_DIR= DOWNLOAD_WORKERS=2
 PRESET=balanced WITH_LTX=0 LTX_DIR= LTX_TASKS=subtitle
+WITH_API=0 API_PORT=8810
 OFFLINE=0 WHEELHOUSE= SKIP_SYSTEM=0 YES=0 COMMAND=menu
 UPDATE_REF=main UPDATE_ARCHIVE= WAIT_IDLE=300
 BIND_SET=0 PUBLIC_SET=0 NETWORK_SET=0 PIP_SET=0 TORCH_SET=0 HF_SET=0 CUDA_SET=0
@@ -99,11 +105,14 @@ if [[ -f "$STATE/config.sh" ]]; then source "$STATE/config.sh"; fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        menu|all|check|system|source|env|models|verify|update|start|stop|restart|status) COMMAND=$1; shift ;;
+        menu|all|check|system|source|env|models|verify|update|start|stop|restart|status|api-start|api-stop|api-status) COMMAND=$1; shift ;;
         --dir) need_value "$@"; shift 2 ;;
         --components) need_value "$@"; COMPONENTS=$2; shift 2 ;;
         --preset) need_value "$@"; PRESET=$2; shift 2 ;;
         --with-ltx) WITH_LTX=1; shift ;;
+        --with-api) WITH_API=1; shift ;;
+        --without-api) WITH_API=0; shift ;;
+        --api-port) need_value "$@"; API_PORT=$2; shift 2 ;;
         --ltx-root) need_value "$@"; LTX_DIR=$2; shift 2 ;;
         --ltx-tasks) need_value "$@"; LTX_TASKS=$2; shift 2 ;;
         --network) need_value "$@"; NETWORK=$2; NETWORK_SET=1; shift 2 ;;
@@ -139,6 +148,12 @@ fi
 if [[ $CUDA_SET == 1 && $TORCH_SET == 0 ]]; then TORCH_URL=; fi
 
 [[ "$PORT" =~ ^[0-9]+$ ]] && ((PORT >= 1 && PORT <= 65535)) || bad_option '端口范围为 1～65535'
+[[ "$WITH_API" == 0 || "$WITH_API" == 1 ]] || bad_option 'with-api 配置必须为 0 或 1'
+[[ "$API_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && ((API_PORT <= 65535)) || bad_option 'API 端口范围为 1～65535'
+if [[ $WITH_API == 1 ]]; then
+    ((API_PORT != PORT)) || bad_option '网页与 API 需要使用不同端口'
+    [[ "$COMPONENTS" == both ]] || bad_option '三档 API 使用 CLEAR 和 ProPainter，请加 --components both'
+fi
 [[ "$DOWNLOAD_WORKERS" =~ ^[0-9]+$ ]] && ((DOWNLOAD_WORKERS >= 1 && DOWNLOAD_WORKERS <= 8)) || bad_option 'workers 范围为 1～8'
 case "$COMPONENTS" in clear|propainter|both) ;; *) bad_option 'components 必须为 clear、propainter 或 both' ;; esac
 case "$PRESET" in fast|balanced|quality) ;; *) bad_option 'preset 必须为 fast、balanced 或 quality' ;; esac
@@ -164,6 +179,8 @@ fi
 [[ -n "$LTX_DIR" ]] || LTX_DIR="$ROOT/LTX2-ICEdit-Insight"
 [[ "$LTX_DIR" == /* ]] || LTX_DIR="$PWD/$LTX_DIR"
 VENV="$ROOT/.venv/bin/python"
+VSR_DIR="$ROOT/video-subtitle-remover"
+LITE_PYTHON="$VSR_DIR/.venv/bin/python"
 export PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONUNBUFFERED=1
 INSTALL_LOCKED=0
 
@@ -180,7 +197,7 @@ save_config() {
     acquire_install_lock
     mkdir -p "$STATE"
     local setting line
-    local settings=(COMPONENTS NETWORK PYTHON_BIN CUDA_WHEEL PIP_URL TORCH_URL HF_ENDPOINT GITHUB_PREFIX PORT BIND PUBLIC_HOST GPU PROPAINTER_DIR DOWNLOAD_WORKERS PRESET WITH_LTX LTX_DIR LTX_TASKS)
+    local settings=(COMPONENTS NETWORK PYTHON_BIN CUDA_WHEEL PIP_URL TORCH_URL HF_ENDPOINT GITHUB_PREFIX PORT BIND PUBLIC_HOST GPU PROPAINTER_DIR DOWNLOAD_WORKERS PRESET WITH_LTX LTX_DIR LTX_TASKS WITH_API API_PORT)
     umask 077
     : > "$STATE/config.sh.tmp"
     if [[ -f "$STATE/config.sh" ]]; then
@@ -219,6 +236,32 @@ helper() {
     local optional=()
     [[ $WITH_LTX == 0 ]] || optional+=(--with-ltx)
     "$BOOT_PYTHON" "$helper_file" "$@" --root "$ROOT" --components "$COMPONENTS" --propainter-root "$PROPAINTER_DIR" --network "$network" --hf-endpoint "$endpoint" --github-prefix "$GITHUB_PREFIX" --workers "$DOWNLOAD_WORKERS" --python "$VENV" --port "$PORT" --bind "$BIND" --public-host "$PUBLIC_HOST" --gpu "$GPU" --preset "$PRESET" --ltx-root "$LTX_DIR" ${optional[@]+"${optional[@]}"}
+}
+
+api_service() {
+    boot_python
+    "$BOOT_PYTHON" "$ROOT/scripts/deploy_api.py" "$1" --root "$ROOT" --bind "$BIND" --port "$API_PORT" --propainter-root "$PROPAINTER_DIR" --gpu "$GPU" --wait "$WAIT_IDLE"
+}
+
+api_dependencies() {
+    php -r 'exit(PHP_VERSION_ID >= 80100 && extension_loaded("pdo_sqlite") && function_exists("proc_open") ? 0 : 1);' || fail '三档 API 需要 PHP 8.1+、PDO SQLite 和 proc_open。'
+    command -v ffprobe >/dev/null && command -v ffmpeg >/dev/null || fail '三档 API 需要系统 FFmpeg 和 ffprobe。'
+    local encoders
+    encoders=$(ffmpeg -hide_banner -encoders 2>/dev/null)
+    [[ "$encoders" == *libx264* ]] || fail '系统 FFmpeg 需要包含 libx264 编码器。'
+}
+
+lite_models() {
+    boot_python
+    local args=(--mode lama --detector mobile --model-dir "$VSR_DIR/backend/models")
+    if [[ ${1:-} == verify || $OFFLINE == 1 ]]; then args+=(--verify); fi
+    if [[ -n ${VSR_MODEL_BASE_URL:-} ]]; then args+=(--base-url "$VSR_MODEL_BASE_URL")
+    elif [[ -n $GITHUB_PREFIX ]]; then
+        local upstream
+        upstream=$("$BOOT_PYTHON" -c 'import json,sys; m=json.load(open(sys.argv[1])); print("https://raw.githubusercontent.com/{repository}/{revision}/backend/models".format(**m))' "$VSR_DIR/deploy/models.json")
+        args+=(--base-url "${GITHUB_PREFIX%/}/$upstream")
+    fi
+    "$BOOT_PYTHON" "$VSR_DIR/deploy/download_models.py" "${args[@]}"
 }
 
 ltx_helper() {
@@ -286,18 +329,25 @@ step_system() {
         local program
         for program in curl tar gzip flock; do command -v "$program" >/dev/null || fail "缺少系统命令 $program，请用系统软件源预先安装。"; done
         boot_python
+        if [[ $WITH_API == 1 ]]; then api_dependencies; fi
         return
     fi
     local privilege=()
+    local apt_api=() rpm_api=()
+    if [[ $WITH_API == 1 ]]; then
+        apt_api=(php-cli php-sqlite3 ffmpeg libgl1)
+        rpm_api=(php-cli php-pdo ffmpeg mesa-libGL)
+    fi
     if [[ $EUID != 0 ]]; then command -v sudo >/dev/null || fail '安装系统软件包需要 root 或 sudo，也可使用 --skip-system。'; privilege=(sudo); fi
     if command -v apt-get >/dev/null; then
         "${privilege[@]}" apt-get update
-        "${privilege[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl tar gzip python3 python3-pip python3-venv libgomp1 util-linux
+        "${privilege[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl tar gzip python3 python3-pip python3-venv libgomp1 util-linux ${apt_api[@]+"${apt_api[@]}"}
     elif command -v dnf >/dev/null; then
-        "${privilege[@]}" dnf install -y ca-certificates curl tar gzip python3 python3-pip libgomp util-linux
+        "${privilege[@]}" dnf install -y ca-certificates curl tar gzip python3 python3-pip libgomp util-linux ${rpm_api[@]+"${rpm_api[@]}"}
     elif command -v yum >/dev/null; then
-        "${privilege[@]}" yum install -y ca-certificates curl tar gzip python3 python3-pip libgomp util-linux
+        "${privilege[@]}" yum install -y ca-certificates curl tar gzip python3 python3-pip libgomp util-linux ${rpm_api[@]+"${rpm_api[@]}"}
     else fail '未找到 apt-get、dnf 或 yum，请安装依赖后使用 --skip-system。'; fi
+    if [[ $WITH_API == 1 ]]; then api_dependencies; fi
 }
 
 step_source() {
@@ -323,6 +373,9 @@ step_source() {
         rm "$STATE/propainter.tar.gz"
     fi
     ltx_helper source
+    if [[ $WITH_API == 1 ]]; then
+        [[ -f "$ROOT/php/public/index.php" && -f "$ROOT/scripts/deploy_api.py" && -f "$VSR_DIR/deploy/models.json" ]] || fail '缺少三档 API 或 Lite 源码，请先更新仓库（稀疏检出须包含 php、scripts 和 video-subtitle-remover）。'
+    fi
 }
 
 select_python() {
@@ -400,6 +453,23 @@ step_env() {
     "$VENV" -m pip check
     "$VENV" -c 'import sys,torch; assert torch.version.cuda == sys.argv[1], "CUDA wheel 与所选版本不一致"; assert torch.cuda.is_available(), "CUDA 不可用"; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0)); torch.ones(1,device="cuda").add_(1)' "$cuda_version"
     helper cuda
+    if [[ $WITH_API == 1 ]]; then
+        rm -f "$STATE/lite.ready"
+        [[ -x "$LITE_PYTHON" ]] || "$PYTHON_BIN" -m venv "$VSR_DIR/.venv"
+        local lite_torch=("${torch_source[@]}")
+        if [[ $OFFLINE == 0 && -z "$TORCH_URL" ]]; then
+            lite_torch=(--index-url "https://download.pytorch.org/whl/$resolved_cuda" --extra-index-url "$PIP_URL")
+        fi
+        installed_cuda=$("$LITE_PYTHON" -c 'import torch; print(torch.version.cuda or "cpu")' 2>/dev/null || true)
+        if [[ -n "$installed_cuda" && "$installed_cuda" != "$cuda_version" ]]; then
+            "$LITE_PYTHON" -m pip uninstall -y torch torchvision
+        fi
+        "$LITE_PYTHON" -m pip install --upgrade pip "${pip_source[@]}"
+        "$LITE_PYTHON" -m pip install torch==2.7.0 torchvision==0.22.0 "${lite_torch[@]}"
+        "$LITE_PYTHON" -m pip install -r "$VSR_DIR/requirements-headless.txt" "${pip_source[@]}"
+        "$LITE_PYTHON" -m pip check
+        "$LITE_PYTHON" -c 'import sys,torch; assert torch.version.cuda == sys.argv[1] and torch.cuda.is_available(), "Lite CUDA 环境不可用"' "$cuda_version"
+    fi
     LTX_TORCH_INDEX=$resolved_torch ltx_helper env
     save_config
 }
@@ -409,6 +479,7 @@ step_models() {
     network_setup
     if [[ $OFFLINE == 1 ]]; then helper models --offline; else helper models; fi
     ltx_helper models
+    if [[ $WITH_API == 1 ]]; then rm -f "$STATE/lite.ready"; lite_models; fi
 }
 
 step_verify() {
@@ -420,6 +491,13 @@ step_verify() {
     [[ -z "$GPU" ]] || export CUDA_VISIBLE_DEVICES="$GPU"
     "$VENV" "$helper_file" runtime --root "$ROOT" --components "$COMPONENTS" --propainter-root "$PROPAINTER_DIR"
     ltx_helper verify
+    if [[ $WITH_API == 1 ]]; then
+        rm -f "$STATE/lite.ready"
+        api_dependencies
+        lite_models verify
+        VSR_MODEL_DIR="$VSR_DIR/backend/models" LITE_DEVICE=cuda "$LITE_PYTHON" "$ROOT/php/inference/lite.py" --verify
+        touch "$STATE/lite.ready"
+    fi
 }
 
 step_start() {
@@ -430,8 +508,31 @@ step_start() {
     if [[ $WITH_LTX == 1 ]]; then
         [[ -x "$LTX_DIR/.venv/bin/python" && ( -f "$LTX_DIR/.install/runtime.complete" || -f "$LTX_DIR/.install/test.complete" ) ]] || fail 'LTX 尚未就绪，请执行 source、env、models 和 verify。'
     fi
-    save_config
     helper start
+    if [[ $WITH_API == 1 ]]; then step_api_start; else save_config; fi
+}
+
+step_api_start() {
+    acquire_install_lock
+    ((API_PORT != PORT)) || fail '网页与 API 需要使用不同端口。'
+    [[ -x "$VENV" && -x "$LITE_PYTHON" ]] || fail '缺少推理环境，请执行 env --with-api --components both。'
+    [[ -f "$STATE/lite.ready" && -f "$ROOT/CLEAR-web/runtime.ready" && -f "$ROOT/CLEAR-web/models.ready" && -f "$PROPAINTER_DIR/runtime.ready" && -f "$PROPAINTER_DIR/models.ready" ]] || fail '三档 API 需要先运行 models --with-api 和 verify --with-api。'
+    api_dependencies
+    api_service start
+    WITH_API=1
+    COMPONENTS=both
+    save_config
+}
+
+step_stop() {
+    acquire_install_lock
+    if [[ $WITH_API == 1 || -f "$STATE/api/settings.json" ]]; then api_service stop; fi
+    helper stop
+}
+
+step_status() {
+    helper status
+    if [[ $WITH_API == 1 || -f "$STATE/api/settings.json" ]]; then api_service status; fi
 }
 
 step_update() {
@@ -503,17 +604,19 @@ menu() {
     [[ -t 0 ]] || { usage; bad_option '非交互环境请指定命令，例如 all --yes'; }
     while true; do
         printf '\nRemoveSubtitles 部署菜单\n目录 %s\n组件 %s  网络 %s  端口 %s\n' "$ROOT" "$COMPONENTS" "$NETWORK" "$PORT"
-        printf '1 完整部署\n2 检查配置\n3 安装系统依赖\n4 准备源码\n5 安装 Python/CUDA 环境\n6 下载模型\n7 校验模型与 CUDA\n8 启动网页\n9 状态\n10 停止网页\n11 修改组件、网络和访问地址\n12 升级已有安装\n0 退出\n'
+        printf '1 完整部署\n2 检查配置\n3 安装系统依赖\n4 准备源码\n5 安装 Python/CUDA 环境\n6 下载模型\n7 校验模型与 CUDA\n8 启动服务\n9 状态\n10 停止服务\n11 修改组件、网络和访问地址\n12 升级已有安装\n13 部署网页和三档 PHP API（Lite / Pro / Max）\n0 退出\n'
         read -r -p '请选择 ' choice
         case "$choice" in
             1) step_all ;; 2) step_check ;; 3) step_system ;; 4) step_source ;;
             5) step_env ;; 6) step_models ;; 7) step_verify ;; 8) step_start ;;
-            9) helper status ;; 10) helper stop ;;
+            9) step_status ;; 10) step_stop ;;
+            13) WITH_API=1; COMPONENTS=both; ((API_PORT != PORT)) || fail '网页与 API 端口重复，请用 --api-port 指定其他端口。'; step_all ;;
             12) step_update ;;
             11)
                 read -r -p '组件 clear/propainter/both [both] ' COMPONENTS
                 COMPONENTS=${COMPONENTS:-both}
                 case "$COMPONENTS" in clear|propainter|both) ;; *) fail '组件值无效。' ;; esac
+                if [[ $COMPONENTS != both ]]; then WITH_API=0; fi
                 read -r -p '网络 auto/cn/global [auto] ' NETWORK
                 NETWORK=${NETWORK:-auto}
                 case "$NETWORK" in auto|cn|global) ;; *) fail '网络值无效。' ;; esac
@@ -531,5 +634,6 @@ menu() {
 case "$COMMAND" in
     menu) menu ;; all) step_all ;; check) step_check ;; system) step_system ;;
     source) step_source ;; env) step_env ;; models) step_models ;; verify) step_verify ;; update) step_update ;;
-    start) step_start ;; stop) helper stop ;; restart) acquire_install_lock; helper stop; step_start ;; status) helper status ;;
+    start) step_start ;; stop) step_stop ;; restart) step_stop; step_start ;; status) step_status ;;
+    api-start) step_api_start ;; api-stop) acquire_install_lock; api_service stop ;; api-status) api_service status ;;
 esac

@@ -83,6 +83,16 @@ try {
     if ($path === '/api/modes' && $method === 'GET') {
         respond(200, ['default' => DEFAULT_MODE, 'modes' => MODES]);
     }
+    if ($method === 'POST' && ($path === '/api/jobs' || str_ends_with($path, '/retry'))) {
+        // Hold until submission commits. Maintenance takes the exclusive lock before draining.
+        $submission = fopen(dataDir() . '/submissions.lock', 'c');
+        if (!$submission) {
+            throw new RuntimeException('无法打开队列提交锁');
+        }
+        if (!flock($submission, LOCK_SH | LOCK_NB)) {
+            respond(503, ['error' => '服务正在维护，请稍后重新提交']);
+        }
+    }
     if ($path === '/api/jobs' && $method === 'POST') {
         submit();
     }
