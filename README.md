@@ -24,6 +24,10 @@ cd Removesubtitles
 git sparse-checkout set CLEAR CLEAR-web video-subtitle-remover scripts docs tests
 ```
 
+## 处理速度与画质实测
+
+[下载 Excel 对比表](docs/L20与A100_参数速度效果汇总.xlsx) · [查看三档质量方案建议](docs/quality-modes.md)
+
 ## Linux 服务器一键部署
 
 运行 `bash scripts/deploy.sh` 打开分步菜单，或用下面的命令完整安装所选组件。脚本支持国内及官方网络配置、代理、自定义源、断点续传、离线部署和后台服务管理。[查看 Linux 部署教程](docs/linux-deployment.md)
