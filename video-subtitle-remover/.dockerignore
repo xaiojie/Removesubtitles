@@ -1,0 +1,5 @@
+backend/models/
+backend/ffmpeg/
+.venv*/
+vsr-data/
+**/__pycache__/

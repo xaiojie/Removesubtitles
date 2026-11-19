@@ -9,6 +9,8 @@ RemoveSubtitles Linux 服务器部署
 用法  bash deploy.sh [命令] [选项]
 命令  menu | all | check | system | source | env | models | verify
       update | start | stop | restart | status
+      vsr-models [--mode all|lama|sttn-auto|sttn-det|opencv|propainter] [--detector mobile|server] [--list|--verify]
+      vsr-install               安装独立的 VSR Web 服务，详见 video-subtitle-remover/README.md
 
   --dir PATH                 项目、环境和 CLEAR 模型目录
   --components both|clear|propainter
@@ -55,6 +57,18 @@ fail() { printf '错误 %s\n' "$*" >&2; exit 1; }
 bad_option() { printf '参数错误 %s\n' "$*" >&2; exit 2; }
 log() { printf '\n[%s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
 need_value() { [[ $# -ge 2 && -n "$2" ]] || bad_option "$1 需要一个值"; }
+
+case "${1:-}" in
+    vsr-models|vsr-install)
+        vsr_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)/video-subtitle-remover"
+        vsr_command=$1
+        shift
+        if [[ $vsr_command == vsr-models ]]; then
+            exec python3 "$vsr_dir/deploy/download_models.py" "$@"
+        fi
+        exec bash "$vsr_dir/deploy/install.sh" "$@"
+        ;;
+esac
 
 for argument in "$@"; do
     if [[ "$argument" == --help || "$argument" == -h ]]; then usage; exit 0; fi

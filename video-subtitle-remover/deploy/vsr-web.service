@@ -1,0 +1,26 @@
+[Unit]
+Description=Video Subtitle Remover Web UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 按实际情况修改下面三行（README「方式一」里有自动生成命令）
+WorkingDirectory=__REPO_DIR__/web
+Environment=VSR_PORTS=8800
+Environment="VSR_PYTHON=__ALGO_VENV__/bin/python"
+Environment="VSR_MODEL_DIR=__MODEL_DIR__"
+Environment="VSR_FFMPEG=__FFMPEG__"
+Environment=VSR_CONFIG_MODE=headless
+Environment=VSR_DATA_DIR=__DATA_DIR__
+Environment=PYTHONUNBUFFERED=1
+ExecStart="__WEB_VENV__/bin/python" "__REPO_DIR__/web/serve.py"
+Restart=always
+RestartSec=3
+StandardOutput=append:__DATA_DIR__/vsr-web.log
+StandardError=append:__DATA_DIR__/vsr-web.log
+LimitNOFILE=65535
+TimeoutStopSec=25
+
+[Install]
+WantedBy=multi-user.target

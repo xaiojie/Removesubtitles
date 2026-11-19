@@ -1,0 +1,139 @@
+{
+  "repository": "YaoFANGUK/video-subtitle-remover",
+  "revision": "d95f4f4632ff961d5fe194f43cbfeb1315c182d5",
+  "files": {
+    "V5/ch_det/config.json": [
+      {
+        "path": "V5/ch_det/config.json",
+        "size": 2871,
+        "git_blob": "5d2c6fed3aaf956367278c018e6d04b05fbd3eea"
+      }
+    ],
+    "V5/ch_det/inference.json": [
+      {
+        "path": "V5/ch_det/inference.json",
+        "size": 402480,
+        "git_blob": "7b582d63397b09eea2b3ee8c7c7e4efae5d0ccff"
+      }
+    ],
+    "V5/ch_det/inference.pdiparams": [
+      {
+        "path": "V5/ch_det/inference.pdiparams",
+        "size": 87932887,
+        "git_blob": "51d1e18f79cd0125d08c17c38f7cdca9c022afa8"
+      }
+    ],
+    "V5/ch_det/inference.yml": [
+      {
+        "path": "V5/ch_det/inference.yml",
+        "size": 903,
+        "git_blob": "c4f16313e7e2c567da8e9fa8f4aeba14a307786e"
+      }
+    ],
+    "V5/ch_det_fast/config.json": [
+      {
+        "path": "V5/ch_det_fast/config.json",
+        "size": 2871,
+        "git_blob": "4fc190d78e4425094b31a2d3a4744a3623d00b50"
+      }
+    ],
+    "V5/ch_det_fast/inference.json": [
+      {
+        "path": "V5/ch_det_fast/inference.json",
+        "size": 229777,
+        "git_blob": "6cd678f39460a27372f8fe570e4e12e7a383418f"
+      }
+    ],
+    "V5/ch_det_fast/inference.pdiparams": [
+      {
+        "path": "V5/ch_det_fast/inference.pdiparams",
+        "size": 4692937,
+        "git_blob": "f59956ded9545b20ce055c6bf4e23414401201e1"
+      }
+    ],
+    "V5/ch_det_fast/inference.yml": [
+      {
+        "path": "V5/ch_det_fast/inference.yml",
+        "size": 903,
+        "git_blob": "579d10695d2dd6e85c5ecba02d151ae5c077aa49"
+      }
+    ],
+    "big-lama/big-lama.pt": [
+      {
+        "path": "big-lama/big-lama_1.pt",
+        "size": 50000000,
+        "git_blob": "00851904b2a962f345adc2efbf9b5284c74e2fcd"
+      },
+      {
+        "path": "big-lama/big-lama_2.pt",
+        "size": 50000000,
+        "git_blob": "ca8e0ad2cd4d632507f5b058d7add3bd50860258"
+      },
+      {
+        "path": "big-lama/big-lama_3.pt",
+        "size": 50000000,
+        "git_blob": "063c1fb7b5f792c675dedd3460b44ab1f450736a"
+      },
+      {
+        "path": "big-lama/big-lama_4.pt",
+        "size": 50000000,
+        "git_blob": "7e8fdcc6cd35047e6b4733358c9f59d35ff92ad9"
+      },
+      {
+        "path": "big-lama/big-lama_5.pt",
+        "size": 5803670,
+        "git_blob": "9198d0b5947f314d55d711d86838222c5141db6c"
+      }
+    ],
+    "propainter/ProPainter.pth": [
+      {
+        "path": "propainter/ProPainter_1.pth",
+        "size": 50000000,
+        "git_blob": "0a85ad6c75722dcbdbfb36503d71879a0094a7e7"
+      },
+      {
+        "path": "propainter/ProPainter_2.pth",
+        "size": 50000000,
+        "git_blob": "948aebc0a4b40a3292b663f1e86e5a10fa7dd64e"
+      },
+      {
+        "path": "propainter/ProPainter_3.pth",
+        "size": 50000000,
+        "git_blob": "cc3586ee07055120466a18310f03d28a4b481723"
+      },
+      {
+        "path": "propainter/ProPainter_4.pth",
+        "size": 7780510,
+        "git_blob": "aff41a08552c472a88d278361472b24a07cf2bee"
+      }
+    ],
+    "propainter/raft-things.pth": [
+      {
+        "path": "propainter/raft-things.pth",
+        "size": 21108000,
+        "git_blob": "dbe6f9ffb66f7479f3c6ca2111484670dc6bdc54"
+      }
+    ],
+    "propainter/recurrent_flow_completion.pth": [
+      {
+        "path": "propainter/recurrent_flow_completion.pth",
+        "size": 20348681,
+        "git_blob": "28d11eaa68d65880ccae01c1bf9a9d6fe40490ed"
+      }
+    ],
+    "sttn-auto/infer_model.pth": [
+      {
+        "path": "sttn-auto/infer_model.pth",
+        "size": 66271967,
+        "git_blob": "4d06d0c45383554c002040f7e73e69cc21d99620"
+      }
+    ],
+    "sttn-det/sttn.pth": [
+      {
+        "path": "sttn-det/sttn.pth",
+        "size": 66252587,
+        "git_blob": "4b9c2458591463af28c8f5b7044a09f8689f87c1"
+      }
+    ]
+  }
+}

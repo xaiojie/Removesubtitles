@@ -15,3 +15,20 @@ __pycache__/
 /.test-env/
 /ProPainter/
 /LTX2-ICEdit-Insight/
+
+# Downloaded weights and model packages (model implementation source is tracked).
+*.ckpt
+*.bin
+*.onnx
+*.pdmodel
+*.pdiparams
+*.gguf
+*.tflite
+*.h5
+*.npz
+*.part
+/video-subtitle-remover/backend/models/
+/video-subtitle-remover/backend/ffmpeg/
+/video-subtitle-remover/.venv-web/
+/video-subtitle-remover/.venv/
+/video-subtitle-remover/vsr-data/

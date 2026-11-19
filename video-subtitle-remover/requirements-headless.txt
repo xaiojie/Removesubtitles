@@ -1,0 +1,16 @@
+# 无图形界面环境（服务器 / Docker）的算法依赖
+# 与 requirements.txt 的区别：去掉了 PySide6、qfluentwidgets、darkdetect 等 GUI 包
+# 注意：torch / torchvision 需按显卡与 CUDA 版本单独安装，见 README
+filesplit==3.0.2
+opencv-python==4.11.0.86
+scikit-image==0.25.2
+tqdm==4.67.1
+numpy==2.2.5
+av==17.0.0
+einops==0.8.1
+paddleocr==3.4.0
+paddlepaddle==3.0.0
+matplotlib
+Pillow
+scipy
+requests

@@ -1,0 +1,5 @@
+# Web 界面服务端依赖（体积很小，可单独建一个 venv，与算法环境隔离）
+# 用法：python -m venv .venv-web && .venv-web/bin/pip install -r requirements-web.txt
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20

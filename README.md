@@ -2,6 +2,28 @@
 
 基于 CLEAR 和 ProPainter 的视频字幕与水印移除工具，可选安装 LTX 测试模型。网页支持视频预览、多处字幕与水印框选、逐个设置选区的批量队列、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
 
+## 一个仓库，两套处理入口
+
+主程序在 `CLEAR-web/`（默认端口 8765），处理 CLEAR 字幕、ProPainter 水印和可选 LTX。另一套 [Video Subtitle Remover](video-subtitle-remover/README.md) 保留原生 Web、CLI 和桌面端，支持 STTN、LaMa、OpenCV、ProPainter 及 PP-OCRv5。Linux Web 服务默认使用 8800 端口，单独安装依赖与模型。
+
+```bash
+# 从仓库根目录运行；只列清单不会下载文件
+bash scripts/deploy.sh vsr-models --list
+bash scripts/deploy.sh vsr-models --mode lama --detector mobile
+bash scripts/deploy.sh vsr-models --mode lama --detector mobile --verify
+
+# 安装 VSR Web 服务并下载对应模型（Linux 需系统 FFmpeg）
+VSR_MODEL_MODE=lama VSR_DETECTOR=mobile bash scripts/deploy.sh vsr-install
+```
+
+安装全部 VSR 模式可直接运行 `bash scripts/deploy.sh vsr-install`。首次部署需按安装提示给算法环境安装匹配 CUDA 的 PyTorch。模型按脚本固定的版本和校验值下载，部署时无需克隆第二个仓库。只想取代码时，可在新目录运行以下命令跳过历史参考视频：
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/xaiojie/Removesubtitles.git
+cd Removesubtitles
+git sparse-checkout set CLEAR CLEAR-web video-subtitle-remover scripts docs tests
+```
+
 ## Linux 服务器一键部署
 
 运行 `bash scripts/deploy.sh` 打开分步菜单，或用下面的命令完整安装所选组件。脚本支持国内及官方网络配置、代理、自定义源、断点续传、离线部署和后台服务管理。[查看 Linux 部署教程](docs/linux-deployment.md)
