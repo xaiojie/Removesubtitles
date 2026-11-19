@@ -389,9 +389,11 @@ def managed_source_path(relative):
     path = Path(relative)
     if not path.parts or path.is_absolute() or '..' in path.parts:
         return False
-    roots = {'CLEAR', 'CLEAR-web', 'scripts', 'tests', 'docs', 'video-subtitle-remover'}
+    roots = {'CLEAR', 'CLEAR-web', 'scripts', 'tests', 'docs', 'video-subtitle-remover', 'php'}
     files = {'README.md', 'LICENSE', 'LICENSE.md', '.gitignore', '.gitattributes', 'pyproject.toml'}
     if path.parts[0] not in roots and str(path) not in files:
+        return False
+    if path.parts[:2] == ('php', 'var'):
         return False
     if path.parts[0] == 'video-subtitle-remover' and any(
         part in {'.venv-web', 'vsr-data', 'config', 'ffmpeg'} for part in path.parts[1:]

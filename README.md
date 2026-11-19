@@ -2,9 +2,11 @@
 
 基于 CLEAR 和 ProPainter 的视频字幕与水印移除工具，可选安装 LTX 测试模型。网页支持视频预览、多处字幕与水印框选、逐个设置选区的批量队列、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
 
-## 一个仓库，两套处理入口
+## 处理入口
 
 主程序在 `CLEAR-web/`（默认端口 8765），处理 CLEAR 字幕、ProPainter 水印和可选 LTX。另一套 [Video Subtitle Remover](video-subtitle-remover/README.md) 保留原生 Web、CLI 和桌面端，支持 STTN、LaMa、OpenCV、ProPainter 及 PP-OCRv5。Linux Web 服务默认使用 8800 端口，单独安装依赖与模型。
+
+程序接入可使用统一的 PHP API。上传一次视频并提交所有选区，即可按快速、标准或精细档异步处理，查询进度并下载成片。默认使用标准档。[PHP 接口与启动示例](php/README.md)
 
 ```bash
 # 从仓库根目录运行；只列清单不会下载文件
@@ -21,7 +23,7 @@ VSR_MODEL_MODE=lama VSR_DETECTOR=mobile bash scripts/deploy.sh vsr-install
 ```bash
 git clone --filter=blob:none --sparse https://github.com/xaiojie/Removesubtitles.git
 cd Removesubtitles
-git sparse-checkout set CLEAR CLEAR-web video-subtitle-remover scripts docs tests
+git sparse-checkout set CLEAR CLEAR-web video-subtitle-remover php scripts docs tests
 ```
 
 ## 处理速度与画质实测

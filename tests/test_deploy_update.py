@@ -176,6 +176,7 @@ class DeploymentUpgradeTests(unittest.TestCase):
             root = Path(directory)
             retained = {'CLEAR-web/jobs/a/source.video': 'video', 'CLEAR-models/model.bin': 'weights',
                         '.venv/bin/python': 'environment', '.deploy/config.sh': 'PORT=9001',
+                        'php/var/queue.sqlite': 'queue', 'php/var/a/request.json': 'task',
                         'CLEAR-web/config.local.json': 'local', 'CLEAR-web/custom.py': 'local source'}
             for name, value in retained.items():
                 path = root / name
@@ -183,12 +184,14 @@ class DeploymentUpgradeTests(unittest.TestCase):
                 path.write_text(value)
             (root / 'CLEAR-web/app.py').write_text('VALUE = "old"\n')
             incoming = source_files()
+            incoming['php/public/index.php'] = '<?php'
             incoming.update({name: 'must stay local' for name in retained if name != 'CLEAR-web/custom.py'})
             opts = options(root)
             archive_at(opts.archive, incoming)
             with patch.object(helper, 'service_record', return_value=None):
                 helper.update_project(opts)
             self.assertEqual((root / 'CLEAR-web/app.py').read_text(), 'VALUE = "new"\n')
+            self.assertEqual((root / 'php/public/index.php').read_text(), '<?php')
             for name, value in retained.items():
                 self.assertEqual((root / name).read_text(), value, name)
 

@@ -52,7 +52,7 @@ def validate_assets(source):
 
 
 def run_upstream(source, frames_dir, masks_dir, result_dir, options, size, progress):
-    command = [sys.executable, '-u', str(source / 'inference_propainter.py'),
+    command = [os.environ.get('PROPAINTER_PYTHON') or sys.executable, '-u', str(source / 'inference_propainter.py'),
                '--video', str(frames_dir), '--mask', str(masks_dir), '--output', str(result_dir),
                '--width', str(size[0]), '--height', str(size[1]), '--save_frames',
                '--mask_dilation', str(options.mask_dilation),
