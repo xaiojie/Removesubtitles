@@ -10,7 +10,14 @@
 <script type="module" src="/static/app.mjs"></script>
 </head>
 <body>
-<header class="top"><div class="brand"><span class="mark" aria-hidden="true">C</span>CLEAR</div><span class="local"><i></i> GPU 视频工作台</span></header>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true">C</span>CLEAR</div>
+  <nav class="workbench-modes" aria-label="处理模式">
+    <a class="button quiet" href="/remove" aria-current="page">字幕与水印</a>
+    <a class="button quiet" href="/lip-sync">口型同步</a>
+  </nav>
+  <span class="local"><i></i> GPU 视频工作台</span>
+</header>
 <main>
   <div class="intro"><div><h1>字幕与水印移除</h1><p>上传视频，框选多处字幕或水印，导出处理后的 MP4。</p></div><div class="workflow" aria-label="操作流程"><span>上传视频</span><i aria-hidden="true">→</i><span>框选字幕与水印</span><i aria-hidden="true">→</i><span>处理与下载</span></div></div>
   <div class="workspace">

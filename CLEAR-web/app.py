@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 from threading import Lock, Thread
+import time
 from uuid import uuid4
 
 from flask import Flask, abort, g, jsonify, request, send_file
@@ -37,13 +38,15 @@ PROPAINTER_ROOT = Path(os.environ.get("PROPAINTER_ROOT", "/opt/propainter"))
 PROPAINTER_PYTHON = Path(os.environ.get("PROPAINTER_PYTHON", "/opt/propainter-eval/venv/bin/python"))
 LTX_ROOT = Path(os.environ.get('LTX_ROOT', '/opt/LTX2-ICEdit-Insight'))
 LTX_PYTHON = Path(os.environ.get('LTX_PYTHON', str(LTX_ROOT / '.venv/bin/python')))
+MUSE_ROOT = Path(os.environ.get('MUSE_ROOT', '/opt/MuseTalk')).resolve()
+MUSE_PYTHON = Path(os.environ.get('MUSE_PYTHON', str(MUSE_ROOT / '.venv/bin/python')))
 PROPAINTER_WEIGHTS = {
     "ProPainter.pth": 157780510,
     "raft-things.pth": 21108000,
     "recurrent_flow_completion.pth": 20348681,
 }
-DATA = ROOT / 'jobs'
-DATA.mkdir(exist_ok=True)
+DATA = Path(os.environ.get('CLEAR_DATA_DIR', ROOT / 'jobs')).resolve()
+DATA.mkdir(parents=True, exist_ok=True)
 tempfile.tempdir = str(DATA)
 HIDE = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 app = Flask(__name__)
@@ -57,6 +60,19 @@ comparisons = {}
 lock = Lock()
 draining = False
 active_requests = {}
+
+
+@app.before_request
+def check_web_auth():
+    username, password = os.environ.get('MUSE_USER'), os.environ.get('MUSE_PASSWORD')
+    if not (username or password):
+        return
+    credentials = request.authorization
+    if (username and password and credentials and credentials.type == 'basic'
+            and secrets.compare_digest((credentials.username or '').encode(), username.encode())
+            and secrets.compare_digest((credentials.password or '').encode(), password.encode())):
+        return
+    return '请输入网页登录凭据。', 401, {'WWW-Authenticate': 'Basic realm="Video Workbench", charset="UTF-8"'}
 
 
 @app.before_request
@@ -196,7 +212,25 @@ def ltx_status():
     return True, 'LTX 已就绪（测试）'
 
 
+def musetalk_status():
+    if not MUSE_PYTHON.is_file() or not (MUSE_ROOT / 'musetalk/utils/preprocessing.py').is_file():
+        return False, 'MuseTalk 运行环境未安装'
+    weights = ['musetalkV15/unet.pth', 'musetalkV15/musetalk.json',
+               'whisper/config.json', 'sd-vae/config.json', 'dwpose/dw-ll_ucoco_384.pth']
+    if not all((MUSE_ROOT / 'models' / name).is_file() for name in weights):
+        return False, 'MuseTalk 1.5 权重未就绪'
+    return True, 'MuseTalk 1.5 已就绪'
+
+
+def lip_sync_task(duration_mode):
+    if duration_mode not in ('preview', 'full'):
+        raise ValueError('生成范围请选择试听或完整。')
+    return dict(engine='musetalk', pipeline=['musetalk'], inference={}, duration_mode=duration_mode)
+
+
 def engine_status(engine):
+    if engine == 'musetalk':
+        return musetalk_status()
     if engine == 'ltx':
         return ltx_status()
     if engine == "propainter":
@@ -204,7 +238,9 @@ def engine_status(engine):
     return model_status()
 
 
-def worker_command(folder):
+def worker_command(folder, engine=None):
+    if engine == 'musetalk':
+        return [str(MUSE_PYTHON), '-u', str(ROOT / 'musetalk_worker.py'), str(folder)]
     return [sys.executable, "-u", str(ROOT / "pipeline_worker.py"), str(folder),
             str(SOURCE), str(PROPAINTER_ROOT), str(PROPAINTER_PYTHON)]
 
@@ -218,7 +254,19 @@ def prevent_cache(response):
 
 @app.get('/')
 def index():
+    if os.environ.get('CLEAR_HOME_MODE') == 'lip_sync':
+        return lip_sync_page()
+    return remove_page()
+
+
+@app.get('/remove')
+def remove_page():
     return app.send_static_file('index.html')
+
+
+@app.get('/lip-sync')
+def lip_sync_page():
+    return app.send_static_file('lip_sync.html')
 
 
 @app.get('/api/system')
@@ -227,10 +275,12 @@ def system():
     gpu = gpu_status()
     propainter_ready, propainter_model = propainter_status()
     ltx_ready, ltx_model = ltx_status()
+    muse_ready, muse_model = musetalk_status()
     engines = {
         "clear": dict(ready=ready and gpu is not None, model=model),
         "propainter": dict(ready=propainter_ready and gpu is not None, model=propainter_model),
         'ltx': dict(ready=ltx_ready and gpu is not None, model=ltx_model),
+        'musetalk': dict(ready=muse_ready and gpu is not None, model=muse_model),
     }
     return jsonify(ready=ready and gpu is not None, model=model, gpu=gpu,
                    inference_defaults=asdict(InferenceOptions.parse(json.dumps(profile_defaults(default_profile())))),
@@ -290,14 +340,23 @@ def dispatch_next():
 
 
 def run_job(job_id, folder):
-    set_job(job_id, stage="正在准备自动处理流程", percent=5, can_retry=False)
+    engine = jobs[job_id].get('engine')
+    is_lip_sync = engine == 'musetalk'
+    started = time.monotonic()
+    env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'HF_HUB_OFFLINE': '1',
+           'PYTHONPATH': os.pathsep.join([str(ROOT), str(WORKSPACE / 'CLEAR-runtime')])}
+    if is_lip_sync:
+        env.update(TRANSFORMERS_OFFLINE='1',
+                   PYTHONPATH=os.pathsep.join([str(MUSE_ROOT), str(MUSE_ROOT / 'musetalk/utils')]))
+        set_job(job_id, stage='正在准备口型同步', percent=5, can_retry=False, started_at=time.time())
+    else:
+        set_job(job_id, stage="正在准备自动处理流程", percent=5, can_retry=False)
     try:
         with (folder / "worker.log").open("a", encoding="utf-8") as log:
             with subprocess.Popen(
-                worker_command(folder),
-                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                env={**os.environ, "PYTHONIOENCODING": "utf-8", "HF_HUB_OFFLINE": "1",
-                     "PYTHONPATH": os.pathsep.join([str(ROOT), str(WORKSPACE / "CLEAR-runtime")])},
+                worker_command(folder, engine) if is_lip_sync else worker_command(folder),
+                cwd=MUSE_ROOT if is_lip_sync else ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                env=env,
                 encoding="utf-8", errors="replace", creationflags=HIDE,
             ) as process:
                 for line in process.stdout:
@@ -309,12 +368,15 @@ def run_job(job_id, folder):
                     raise RuntimeError("处理失败，详情见任务日志。")
         if not (folder / "output.mp4").is_file():
             raise RuntimeError("视频导出失败。")
-        set_job(job_id, state="done", percent=100, stage="处理完成", can_retry=False)
+        timing = {'elapsed_seconds': round(time.monotonic() - started, 2)} if is_lip_sync else {}
+        set_job(job_id, state="done", percent=100, stage="处理完成", can_retry=False, **timing)
     except Exception as exc:
         with lock:
             reason = jobs[job_id].get("error")
-        set_job(job_id, state="failed", stage="处理失败", error=reason or str(exc),
-                can_retry=(folder / "source.video").is_file())
+        timing = {'elapsed_seconds': round(time.monotonic() - started, 2)} if is_lip_sync else {}
+        set_job(job_id, state="failed", stage="处理失败", error=reason or str(exc), **timing,
+                can_retry=(folder / "source.video").is_file()
+                and (not is_lip_sync or (folder / 'source.audio').is_file()))
     finally:
         (folder / "partial.mp4").unlink(missing_ok=True)
         dispatch_next()
@@ -324,10 +386,18 @@ def run_job(job_id, folder):
 def submit():
     if request.headers.get("Origin", request.host_url.rstrip("/")) != request.host_url.rstrip("/"):
         abort(403)
+    audio = None
     try:
-        regions, dimensions = parse_regions(request.form.get("regions"), request.form.get("roi"), request.form.get("dimensions"))
-        task = prepare_task(regions, request.form.get("inference", "{}"), request.form.get("engine", "clear"),
-                            default_preset=default_profile())
+        if request.form.get('mode') == 'lip_sync':
+            task = lip_sync_task(request.form.get('duration_mode', 'full'))
+            regions, dimensions = [], None
+            audio = request.files.get('audio')
+            if audio is None or not audio.filename:
+                return jsonify(error='请选择配音文件。'), 400
+        else:
+            regions, dimensions = parse_regions(request.form.get("regions"), request.form.get("roi"), request.form.get("dimensions"))
+            task = prepare_task(regions, request.form.get("inference", "{}"), request.form.get("engine", "clear"),
+                                default_preset=default_profile())
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
     for engine in task["pipeline"]:
@@ -339,7 +409,7 @@ def submit():
     if video is None or not video.filename:
         return jsonify(error="请选择视频。"), 400
     job_id = uuid4().hex
-    enqueue = request.form.get('queue') == '1'
+    enqueue = audio is not None or request.form.get('queue') == '1'
     with lock:
         if not enqueue and any(job["state"] == "running" for job in jobs.values()):
             return jsonify(error="GPU 正在处理另一个视频。"), 409
@@ -349,7 +419,9 @@ def submit():
     try:
         folder.mkdir()
         video.save(folder / "source.video")
-        configuration = dict(roi=bounds(regions), regions=regions, dimensions=dimensions,
+        if audio is not None:
+            audio.save(folder / 'source.audio')
+        configuration = dict(roi=bounds(regions) if regions else None, regions=regions, dimensions=dimensions,
                              original_filename=video.filename, **task)
         save_configuration(folder, configuration)
         if enqueue:
@@ -359,6 +431,7 @@ def submit():
             Thread(target=run_job, args=(job_id, folder), daemon=True).start()
     except (OSError, RuntimeError):
         (folder / "source.video").unlink(missing_ok=True)
+        (folder / 'source.audio').unlink(missing_ok=True)
         set_job(job_id, state="failed", stage="保存失败", can_retry=False)
         dispatch_next()
         return jsonify(error="无法保存视频，请检查工作区空间。"), 500
@@ -377,7 +450,10 @@ def status(job_id):
     with lock:
         job = jobs.get(job_id)
         if job is not None:
-            return jsonify(job.copy())
+            current = job.copy()
+            if current['state'] == 'running' and 'started_at' in current:
+                current['elapsed_seconds'] = round(max(0, time.time() - current['started_at']), 2)
+            return jsonify(current)
     if not re.fullmatch(r"[0-9a-f]{32}", job_id):
         return jsonify(error="Job not found."), 404
     folder = DATA / job_id
@@ -387,16 +463,22 @@ def status(job_id):
     config = json.loads(config_path.read_text(encoding="utf-8"))
     metadata = dict(inference=config.get("inference", {}), regions=config.get("regions", []),
                     engine=config.get("engine", "clear"), pipeline=config.get("pipeline", [config.get("engine", "clear")]))
+    saved = folder / "status.json"
+    state = json.loads(saved.read_text(encoding="utf-8")) if saved.is_file() else {}
+    if config.get('engine') == 'musetalk':
+        metadata['duration_mode'] = config['duration_mode']
+        for field in ('elapsed_seconds', 'output_seconds'):
+            if field in state:
+                metadata[field] = state[field]
     if (folder / "output.mp4").is_file():
         quality_path = folder / 'quality.json'
         if quality_path.is_file():
             metadata['quality'] = json.loads(quality_path.read_text(encoding='utf-8'))
         return jsonify(state="done", percent=100, stage="处理完成", can_retry=False, **metadata)
-    saved = folder / "status.json"
-    state = json.loads(saved.read_text(encoding="utf-8")) if saved.is_file() else {}
     state.update(metadata)
     state.update(state="failed", stage=state.get("stage", "任务中断，可继续处理"),
-                 percent=state.get("percent", 4), can_retry=(folder / "source.video").is_file())
+                 percent=state.get("percent", 4), can_retry=(folder / "source.video").is_file()
+                 and (config.get('engine') != 'musetalk' or (folder / 'source.audio').is_file()))
     return jsonify(state)
 
 
@@ -416,19 +498,25 @@ def retry_job(job_id):
     if not (folder / "source.video").is_file():
         return jsonify(error="原视频已不存在，请重新上传。"), 409
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    regions = regions_from_config(config)
-    legacy = "auto" if "pipeline" in config else config.get("engine", "clear")
-    task = prepare_task(regions, json.dumps(config.get("inference", {})), legacy)
-    if config.get('pipeline') == task['pipeline'] and config.get('engine') == task['engine']:
-        task['inference'] = config['inference']
-    from pipeline_worker import completed_stages
-    completed = completed_stages(folder)
+    if config.get('engine') == 'musetalk':
+        if not (folder / 'source.audio').is_file():
+            return jsonify(error='配音文件已不存在，请重新上传。'), 409
+        regions, completed = [], []
+        task = lip_sync_task(config['duration_mode'])
+    else:
+        regions = regions_from_config(config)
+        legacy = "auto" if "pipeline" in config else config.get("engine", "clear")
+        task = prepare_task(regions, json.dumps(config.get("inference", {})), legacy)
+        if config.get('pipeline') == task['pipeline'] and config.get('engine') == task['engine']:
+            task['inference'] = config['inference']
+        from pipeline_worker import completed_stages
+        completed = completed_stages(folder)
     for engine in task["pipeline"]:
         if engine not in completed and not engine_status(engine)[0]:
             return jsonify(error=f"{engine} 模型或运行环境仍在准备。"), 503
         if engine == 'ltx' and engine not in completed and task['inference']['ltx']['mode'] not in ltx_modes():
             return jsonify(error='所选 LTX 用途的 LoRA 尚未安装，请补充对应模型。'), 503
-    enqueue = request.args.get('queue') == '1'
+    enqueue = task['engine'] == 'musetalk' or request.args.get('queue') == '1'
     with lock:
         if jobs.get(job_id, {}).get('state') in ('running', 'queued', 'uploading'):
             return jsonify(error='任务已经在处理队列中。'), 409
@@ -455,7 +543,7 @@ def output(job_id):
     path = completed_output(job_id)
     if path is None:
         abort(404)
-    return send_file(path, as_attachment=True,
+    return send_file(path, as_attachment=request.args.get('inline') != '1',
                      download_name=download_filename(path, '_处理后', 'CLEAR-processed.mp4'),
                      mimetype='video/mp4')
 

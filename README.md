@@ -8,6 +8,12 @@
 
 程序接入可使用统一的 PHP API。上传一次视频并提交所有选区，即可选择 Lite、Pro 或 Max 异步处理，查询进度并下载成片。默认使用 Pro。[PHP 接口与启动示例](php/README.md)
 
+主网页顶部可切换到「口型同步」。在已安装 [MuseTalk 1.5](https://github.com/TMElyralab/MuseTalk) 的 NVIDIA 服务器上，启动网页前将 `MUSE_ROOT` 设为 MuseTalk 的目录，将 `MUSE_PYTHON` 设为其独立环境的 Python，确保网页进程可以调用 `ffmpeg` 和 `ffprobe`。默认使用 `/opt/MuseTalk` 和其中的 `.venv/bin/python`。可以用 `CLEAR_HOME_MODE=lip_sync` 将口型同步设为首页。模型保存在 MuseTalk 运行目录。
+
+「完整」以配音时长生成视频，短视频顺序循环，长视频裁剪至配音结尾。「试听」合成视频与配音重叠的部分。原视频、配音和成片可分别预览，网页显示 GPU 使用率、显存占用和处理耗时。
+
+识别为静态的画面会在长停顿中稳定嘴周，并在接近开口时平滑过渡。网页直接访问时省略 `MUSE_USER` 和 `MUSE_PASSWORD`，需要登录时同时设置这两项。可通过 `CLEAR_DATA_DIR` 指定任务文件目录。
+
 ```bash
 # 从仓库根目录运行；只列清单不会下载文件
 bash scripts/deploy.sh vsr-models --list

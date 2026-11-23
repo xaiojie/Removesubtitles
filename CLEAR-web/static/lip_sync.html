@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLEAR · 口型同步</title>
+<meta name="theme-color" content="#101512">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+<script type="module" src="/static/lip_sync.mjs"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true">C</span>CLEAR</div>
+  <nav class="workbench-modes" aria-label="处理模式">
+    <a class="button quiet" href="/remove">字幕与水印</a>
+    <a class="button quiet" href="/lip-sync" aria-current="page">口型同步</a>
+  </nav>
+  <span class="local"><i></i> GPU 视频工作台</span>
+</header>
+<main>
+  <div class="intro"><div><h1>口型同步</h1><p>上传面部清晰的单人视频和配音，由 MuseTalk 1.5 同步口型。</p></div></div>
+  <div class="workspace">
+    <section class="panel editor" aria-labelledby="preview-title">
+      <div class="panel-head">
+        <div><h2 id="preview-title">视频预览</h2><div class="muted" id="file-name">尚未选择视频</div></div>
+        <label class="button secondary upload-button" for="file">选择视频</label>
+        <input id="file" type="file" accept="video/*,.mp4,.webm,.mov,.mkv" class="visually-hidden">
+      </div>
+      <div class="stage">
+        <label id="empty" for="file"><span class="film" aria-hidden="true">＋</span><strong>选择人物视频</strong></label>
+        <div id="lip-players" class="players lip-players" hidden>
+          <section id="source-panel" class="player" aria-labelledby="source-title" hidden>
+            <h3 id="source-title">原视频</h3>
+            <video id="source-video" controls playsinline preload="metadata"></video>
+            <small id="source-error" hidden>浏览器无法预览此视频，可以继续合成。</small>
+          </section>
+          <section id="result-panel" class="player" aria-labelledby="result-title" hidden>
+            <h3 id="result-title">成片</h3>
+            <video id="result-video" controls playsinline preload="metadata"></video>
+            <small id="result-error" hidden>无法在线播放，可以下载成片查看。</small>
+          </section>
+        </div>
+      </div>
+    </section>
+    <aside>
+      <form id="lip-form" class="panel task">
+        <h2>处理与导出</h2>
+        <dl class="details"><div><dt>模型状态</dt><dd id="model">正在检查</dd></div></dl>
+        <div class="processing-options">
+          <div class="settings-grid">
+            <label class="settings-wide">配音文件
+              <input id="voice-file" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg" required>
+            </label>
+          </div>
+          <audio id="voice-preview" controls preload="metadata" hidden></audio>
+          <label class="subtitle-model" for="duration-mode">生成范围
+            <select id="duration-mode" name="duration_mode" aria-describedby="duration-hint">
+              <option value="full" selected>完整</option>
+              <option value="preview">试听</option>
+            </select>
+          </label>
+          <p id="duration-hint" class="muted">按整段配音生成。人物视频较短时会顺序循环，较长时会按配音时长裁剪。</p>
+        </div>
+        <button id="submit" class="button primary" disabled>开始合成 <span aria-hidden="true">→</span></button>
+        <div class="metric"><span id="status" role="status">等待开始</span><b id="percent">0%</b></div>
+        <progress id="progress" max="100" value="0" aria-label="合成进度"></progress>
+        <div id="task-timing" class="task-timing" hidden><span id="output-length"></span><span id="elapsed"></span></div>
+        <p id="error" role="alert" hidden></p>
+        <button id="retry" type="button" class="button secondary" hidden>重试</button>
+        <a id="download" class="button primary" hidden download>下载成片 <span aria-hidden="true">↓</span></a>
+      </form>
+      <section class="panel gpu">
+        <h2>运行状态</h2>
+        <p class="muted" id="gpu-name">读取显卡状态…</p>
+        <div class="metric"><span>GPU 使用率</span><b id="util-value">—</b></div>
+        <progress id="util" max="100" value="0" aria-label="GPU 使用率"></progress>
+        <div class="metric"><span>显存占用</span><b id="memory-value">—</b></div>
+        <progress id="memory" max="100" value="0" aria-label="显存占用"></progress>
+      </section>
+    </aside>
+  </div>
+</main>
+</body>
+</html>
