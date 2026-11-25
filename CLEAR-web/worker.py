@@ -166,8 +166,10 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
         pixels = cv2.copyMakeBorder(np.asarray(image), 0, padded[1]-resized[1], 0, padded[0]-resized[0],
                                     cv2.BORDER_REPLICATE)
         inputs.append(Image.fromarray(pixels))
-    # Wan requires 4n+1 frames. Replicate the tail and discard only the padding.
-    inputs.extend([inputs[-1]] * (-(len(inputs) - 1) % 4))
+    # CLEAR can generate color noise for a one-frame shot. Use 4n+1 frames
+    # with at least one four-frame interval, repeating only this shot's last frame.
+    padding = 4 if len(inputs) == 1 else (1 - len(inputs)) % 4
+    inputs.extend([inputs[-1]] * padding)
     outputs = predict(inputs)
     if len(outputs) != len(inputs):
         raise RuntimeError('模型返回的帧数与输入不一致。')

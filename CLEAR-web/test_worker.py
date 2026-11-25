@@ -66,7 +66,7 @@ class ProfileGeometryTests(unittest.TestCase):
             return images
         repair_regions([frame], [dict(type='subtitle', roi=[450, 620, 800, 700])], predict,
                        context='frame', resolution='auto', blend_mode='precise')
-        self.assertEqual(calls, [1])
+        self.assertEqual(calls, [5])
 
     def test_precise_multiple_rois_process_short_text_and_leave_blank_frames_exact(self):
         from worker import repair_regions
@@ -154,17 +154,19 @@ class RegionRepairTests(unittest.TestCase):
         self.assertLess(abs(int(frame[26, 47, 0]) - 100), 5)
         self.assertEqual(frame[23, 29].tolist(), [100, 100, 100])
 
-    def test_full_frame_context_keeps_video_composition_for_model(self):
+    def test_one_frame_shot_repeats_its_own_frame_without_extending_the_video(self):
         frame = np.zeros((128, 128, 3), dtype=np.uint8)
         frame[10:12, 10:12] = 255
+        frames = [frame]
         seen = []
 
         def predict(images):
             seen.extend((image.size, image.getpixel((10, 10))) for image in images)
             return images
 
-        repair_batch([frame], [48, 48, 80, 80], predict, context="frame")
-        self.assertEqual(seen, [((128, 128), (255, 255, 255))])
+        repair_batch(frames, [48, 48, 80, 80], predict, context="frame")
+        self.assertEqual(seen, [((128, 128), (255, 255, 255))] * 5)
+        self.assertEqual(len(frames), 1)
         self.assertEqual(frame[10, 10].tolist(), [255, 255, 255])
 
     def test_native_context_pads_without_resampling(self):
@@ -286,7 +288,7 @@ class MultiRegionRepairTests(unittest.TestCase):
             {"type": "watermark", "roi": [0, 0, 32, 24]},
             {"type": "watermark", "roi": [76, 52, 112, 80]},
         ], predict, context="frame", resolution="native")
-        self.assertEqual(calls, [1])
+        self.assertEqual(calls, [5])
         self.assertLessEqual(int(np.abs(frame.astype(np.int16) - original).max()), 2)
         np.testing.assert_array_equal(frame[24:52], original[24:52])
 
