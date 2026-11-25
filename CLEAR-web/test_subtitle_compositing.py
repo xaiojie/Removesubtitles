@@ -6,6 +6,25 @@ import numpy as np
 
 
 class SubtitleCompositingTests(unittest.TestCase):
+    def test_clipped_outline_cannot_anchor_a_shadow_at_the_frame_edge(self):
+        from subtitle_compositing import composite_caption
+        # A known clean background with a diagonal gradient and an independently drawn caption.
+        y, x = np.indices((80, 140))
+        clean = np.repeat((110 + x//5 + y//8).astype(np.uint8)[:, :, None], 3, axis=2)
+        marked = clean.copy()
+        cv2.putText(marked, 'OUT', (20, 86), cv2.FONT_HERSHEY_SIMPLEX, 1.6,
+                    (5,)*3, 11, cv2.LINE_AA)
+        cv2.putText(marked, 'OUT', (20, 86), cv2.FONT_HERSHEY_SIMPLEX, 1.6,
+                    (245,)*3, 3, cv2.LINE_AA)
+        mask = cv2.dilate(np.uint8(np.any(marked != clean, axis=2))*255,
+                          np.ones((13, 13), np.uint8))
+        for turns in range(4):
+            with self.subTest(turns=turns):
+                original, restored, selected = (np.rot90(a, turns).copy() for a in (marked, clean, mask))
+                result = composite_caption(original, restored, selected)
+                np.testing.assert_array_equal(result[selected == 0], original[selected == 0])
+                self.assertLess(np.abs(result.astype(int)-restored).max(), 5)
+
     def test_thin_outlines_on_pale_scenery_keep_leading_letters_dots_and_both_lines(self):
         from subtitle_compositing import caption_mask
         for boundary in (95, 215, 310):

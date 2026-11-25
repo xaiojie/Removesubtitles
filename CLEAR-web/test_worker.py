@@ -5,6 +5,86 @@ from worker import repair_batch
 
 
 class ProfileGeometryTests(unittest.TestCase):
+    def test_fast_large_outlined_caption_gets_background_context_in_one_prediction(self):
+        import cv2
+        from PIL import Image
+        from worker import repair_regions
+
+        roi = [96, 606, 1184, 720]
+        clean = np.full((720, 1280, 3), 110, np.uint8)
+        blank, lettered = clean.copy(), clean.copy()
+        for color, thickness in ((8, 13), (245, 5)):
+            cv2.putText(lettered, 'OK', (546, 700), cv2.FONT_HERSHEY_SIMPLEX,
+                        2.5, (color,)*3, thickness, cv2.LINE_AA)
+        for preset, expected in [('fast', (640, 320)), ('custom', (1280, 176))]:
+            with self.subTest(preset=preset):
+                calls = []
+                def predict(images):
+                    calls.append((len(images), images[0].size))
+                    return [Image.new('RGB', im.size, (110,)*3) for im in images]
+                frames = [blank.copy(), lettered.copy()]
+                repair_regions(frames, [dict(type='subtitle', roi=roi)], predict,
+                               'roi', 'native', 'precise', preset=preset)
+                self.assertEqual(calls, [(5, expected)])
+                np.testing.assert_array_equal(frames[0], blank)
+                np.testing.assert_array_equal(frames[1][:606], clean[:606])
+                self.assertLess(np.abs(frames[1][635:716, 510:700].astype(int)-110).max(), 4)
+
+    def test_fast_keeps_small_text_at_native_size_with_an_isolated_bright_object(self):
+        import cv2
+        from worker import repair_regions
+        frame = np.full((720, 1280, 3), 90, np.uint8)
+        cv2.rectangle(frame, (180, 635), (242, 696), (245,)*3, -1)
+        cv2.putText(frame, 'Small caption', (480, 690), cv2.FONT_HERSHEY_SIMPLEX,
+                    .8, (245,)*3, 2, cv2.LINE_AA)
+        sizes = []
+        def predict(images):
+            sizes.append(images[0].size)
+            return images
+        repair_regions([frame], [dict(type='subtitle', roi=[96, 606, 1184, 720])],
+                       predict, 'roi', 'native', 'precise', preset='fast')
+        self.assertEqual(sizes, [(1280, 176)])
+
+    def test_fast_hides_opaque_strokes_from_the_model_and_pastes_back_detached_marks(self):
+        import cv2
+        from unittest.mock import patch
+        from worker import repair_regions
+        clean = np.full((220, 512, 3), 101, np.uint8)
+        frame = clean.copy()
+        for color, thickness in ((6, 20), (248, 11)):
+            cv2.putText(frame, 'HO', (152, 190), cv2.FONT_HERSHEY_SIMPLEX,
+                        2.2, (color,)*3, thickness, cv2.LINE_AA)
+        cv2.circle(frame, (263, 181), 7, (6,)*3, -1)
+        cv2.circle(frame, (263, 181), 4, (248,)*3, -1)
+        calls = []
+        def predict(images):
+            calls.append(len(images))
+            self.assertLess(int(np.asarray(images[0]).max()), 120)
+            return images
+        # The original component detector can miss a complete bold line or a detached stroke.
+        with patch('worker.caption_mask', return_value=np.zeros(frame.shape[:2], np.uint8)):
+            repair_regions([frame], [dict(type='subtitle', roi=[90, 105, 412, 213])],
+                           predict, 'roi', 'native', 'precise', preset='fast')
+        self.assertEqual(calls, [5])
+        self.assertLess(np.abs(frame.astype(int)-clean).max(), 7)
+
+    def test_large_caption_context_contains_multiple_edge_selections_and_caps_model_size(self):
+        from worker import context_crop, model_geometry
+        for width, height in ((721, 1281), (3840, 2160)):
+            with self.subTest(width=width):
+                rois = [[0, height//2, width//3, height//2+80],
+                        [width*2//3, height-115, width, height]]
+                regions = [dict(type='subtitle', roi=roi) for roi in rois]
+                l, t, r, b = context_crop(regions, width, height, 'roi', large_caption=True)
+                self.assertTrue(0 <= l < r <= width and 0 <= t < b <= height)
+                for x1, y1, x2, y2 in rois:
+                    self.assertTrue(l <= x1 < x2 <= r and t <= y1 < y2 <= b)
+                (w, h), (pw, ph) = model_geometry(r-l, b-t, 'native', large_caption=True)
+                self.assertLessEqual(abs(w/(r-l)-h/(b-t)), 1/min(r-l, b-t))
+                self.assertLessEqual(max(pw, ph), 1024)
+                self.assertTrue(w <= pw < w+16 and h <= ph < h+16)
+                self.assertEqual((pw % 16, ph % 16), (0, 0))
+
     def test_expanded_context_reproduces_proportional_landscape_context(self):
         from worker import context_crop
         regions = [{'type': 'subtitle', 'roi': [261, 622, 970, 718]}]

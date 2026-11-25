@@ -296,7 +296,7 @@ systemd 管理期间通过 `sudo systemctl restart removesubtitles` 重启。
 
 | 选项 | 网页名称 | CLEAR 参数与输入 |
 |---|---|---|
-| `fast` | 快速 | 5 步、LoRA 1.2、选区及周边原像素推理 |
+| `fast` | 快速 | 5 步、LoRA 1.2，普通字幕按选区原像素推理，大号描边字幕自动扩大周边并等比缩小后推理 |
 | `balanced` | 较大上下文 | 5 步、LoRA 1.0、按画面比例扩展周边原像素推理 |
 | `quality` | 强化修复 | 12 步、LoRA 1.0、全画面等比缩放与字幕遮罩融合 |
 

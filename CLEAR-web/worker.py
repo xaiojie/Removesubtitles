@@ -18,7 +18,7 @@ from inference_options import InferenceOptions
 from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
-from subtitle_compositing import caption_mask, composite_caption
+from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -102,7 +102,7 @@ def repair_batch(frames, roi, predict, context="roi", resolution="auto", blend_m
                    context, resolution, blend_mode)
 
 
-def context_crop(regions, width, height, context):
+def context_crop(regions, width, height, context, large_caption=False):
     x1, y1, x2, y2 = bounds(regions)
     if context == 'frame':
         return 0, 0, width, height
@@ -116,10 +116,20 @@ def context_crop(regions, width, height, context):
         left = max(0, min(width-crop_width, left))
         top = max(0, min(height-crop_height, (y1+y2-crop_height)//2))
         return left, top, left+crop_width, top+crop_height
-    return max(0, x1-margin_x), max(0, y1-margin_y), min(width, x2+margin_x), min(height, y2+margin_y)
+    left, right = max(0, x1-margin_x), min(width, x2+margin_x)
+    top, bottom = max(0, y1-margin_y), min(height, y2+margin_y)
+    if large_caption:
+        crop_height = min(height, max(bottom-top, round((right-left)/2)))
+        top = max(0, min(height-crop_height, (y1+y2-crop_height)//2))
+        bottom = top+crop_height
+    return left, top, right, bottom
 
 
-def model_geometry(width, height, resolution, preserve_aspect=False):
+def model_geometry(width, height, resolution, preserve_aspect=False, large_caption=False):
+    if large_caption:
+        scale = min(.5, 1024/max(width, height), math.sqrt((832*480)/(width*height)))
+        resized = tuple(max(1, round(v*scale)) for v in (width, height))
+        return resized, tuple(v+(-v % 16) for v in resized)
     if resolution == 'native':
         return (width, height), (width+(-width % 16), height+(-height % 16))
     scale = min(1, math.sqrt((832*480)/(width*height)), 1024/max(width, height))
@@ -132,16 +142,28 @@ def model_geometry(width, height, resolution, preserve_aspect=False):
 
 
 def repair_regions(frames, regions, predict, context="roi", resolution="auto", blend_mode="rectangle",
-                   adaptive_processing=False):
+                   adaptive_processing=False, preset='custom'):
     """Predict once from original frames, then composite only the selected regions."""
     precise = blend_mode == 'precise'
+    large_caption = False
+    input_hints = [[] for _ in frames]
     if precise:
+        inspect_large = preset == 'fast' and context == 'roi' and resolution == 'native'
         analyses = []
         for region in regions:
             if region['type'] != 'subtitle':
                 continue
             x1, y1, x2, y2 = region['roi']
-            masks = [caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy() for frame in frames]
+            masks = []
+            for index, frame in enumerate(frames):
+                mask = caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy()
+                if inspect_large:
+                    large, hint = large_caption_guidance(frame[y1:y2, x1:x2])
+                    large_caption |= large
+                    if hint is not None:
+                        mask |= hint
+                        input_hints[index].append((region['roi'], hint))
+                masks.append(mask)
             analyses.append(dict(region=region, masks=masks, needs_model=any(mask.any() for mask in masks)))
     else:
         analyses = prepare_subtitles(frames, regions) if adaptive_processing else []
@@ -153,17 +175,26 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
     else:
         active_regions = regions
     height, width = frames[0].shape[:2]
-    left, top, right, bottom = context_crop(active_regions, width, height, context)
+    left, top, right, bottom = context_crop(active_regions, width, height, context, large_caption)
     crop_width, crop_height = right - left, bottom - top
-    resized, padded = model_geometry(crop_width, crop_height, resolution, preserve_aspect=precise)
+    resized, padded = model_geometry(crop_width, crop_height, resolution, preserve_aspect=precise,
+                                     large_caption=large_caption)
     originals = [frame[top:bottom, left:right].copy() for frame in frames]
     inputs = []
-    for original in originals:
+    for original, hints in zip(originals, input_hints):
         pixels = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(pixels)
         if image.size != resized:
             image = image.resize(resized, Image.Resampling.LANCZOS)
-        pixels = cv2.copyMakeBorder(np.asarray(image), 0, padded[1]-resized[1], 0, padded[0]-resized[0],
+        pixels = np.asarray(image)
+        if hints:
+            hint_mask = np.zeros((crop_height, crop_width), np.uint8)
+            for (x1, y1, x2, y2), hint in hints:
+                hint_mask[y1-top:y2-top, x1-left:x2-left] |= hint
+            hint_mask = cv2.resize(hint_mask, resized, interpolation=cv2.INTER_AREA)
+            # Suppress opaque lettering in the conditioning image before the single CLEAR pass.
+            pixels = cv2.inpaint(pixels, hint_mask, 3, cv2.INPAINT_TELEA)
+        pixels = cv2.copyMakeBorder(pixels, 0, padded[1]-resized[1], 0, padded[0]-resized[0],
                                     cv2.BORDER_REPLICATE)
         inputs.append(Image.fromarray(pixels))
     # CLEAR can generate color noise for a one-frame shot. Use 4n+1 frames
@@ -397,7 +428,7 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
                                 progress_bar_cmd=progress)
 
                 methods = repair_regions(batch, regions, predict, options.context, options.resolution,
-                                         options.blend_mode, options.adaptive_processing)
+                                         options.blend_mode, options.adaptive_processing, preset=options.preset)
                 if options.adaptive_processing:
                     quality.methods.update(methods)
                     for offset, (original, repaired) in enumerate(zip(before, pending)):

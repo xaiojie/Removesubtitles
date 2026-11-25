@@ -9,7 +9,7 @@ _COMMON = dict(
     adaptive_processing=False, resident_models=True,
 )
 _PROFILES = {
-    'fast': dict(label='快速', description='局部原像素输入，适合优先处理速度。',
+    'fast': dict(label='快速', description='普通字幕按原像素处理，识别到大号描边字幕时自动扩大周边并缩放。',
                  options=dict(context='roi', lora_scale=1.2)),
     'balanced': dict(label='较大上下文', description='按画面比例扩展字幕周边，兼顾速度与背景衔接。',
                      options=dict(context='expanded')),

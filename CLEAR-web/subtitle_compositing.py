@@ -3,6 +3,52 @@ import cv2
 import numpy as np
 
 
+def large_caption_guidance(crop):
+    """Find tall aligned glyphs and a fill mask for opaque strokes that CLEAR tends to copy."""
+    if min(crop.shape[:2]) < 40:
+        return False, None
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    nearby = cv2.erode(gray, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (17, 17)))
+    bright = cv2.inRange(crop, (180, 180, 180), (255, 255, 255))
+    bright |= cv2.inRange(crop, (0, 145, 180), (130, 255, 255))
+    strokes = ((bright > 0) & (cv2.subtract(gray, nearby) >= 90)).astype(np.uint8)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(strokes, connectivity=8)
+    glyphs = []
+    pairs = []
+    for label, (x, y, w, h, area) in enumerate(stats[1:], 1):
+        if h < 40 or not .2*h <= w <= 1.7*h or area < 1.6*h:
+            continue
+        for other in glyphs:
+            ox, oy, ow, oh = stats[other, :4]
+            if (.75*h <= oh <= 1.33*h and abs(y+h/2-oy-oh/2) <= .25*min(h, oh)
+                    and .8*h <= abs(x+w/2-ox-ow/2) <= 2.8*h):
+                pairs.append((other, label))
+        glyphs.append(label)
+    if not pairs:
+        return False, None
+    depth = cv2.distanceTransform(strokes, cv2.DIST_L2, 3)
+    thick_pixels = np.bincount(labels[depth >= 3.5], minlength=count)
+    bold = thick_pixels >= .18*stats[:, cv2.CC_STAT_AREA]
+    bold_pairs = [(a, b) for a, b in pairs if bold[a] and bold[b]]
+    if not bold_pairs:
+        return True, None
+    # Include short detached strokes and punctuation beside the supporting pair.
+    # The mask remains confined to bright, locally contrasted strokes and their outlines.
+    mask = np.zeros_like(strokes)
+    for a, b in bold_pairs:
+        x, y, w, h = stats[a, :4]
+        ox, oy, ow, oh = stats[b, :4]
+        reach = max(h, oh)
+        left, right = max(0, min(x, ox)-reach), min(mask.shape[1], max(x+w, ox+ow)+reach)
+        top, bottom = max(0, min(y, oy)-reach//6), min(mask.shape[0], max(y+h, oy+oh)+reach//6)
+        mask[top:bottom, left:right] = strokes[top:bottom, left:right]*255
+    anchors = list({label for pair in bold_pairs for label in pair})
+    # Leave clean pixels outside the outline for seamlessClone's inner boundary.
+    radius = max(6, min(18, round(float(np.median(stats[anchors, cv2.CC_STAT_HEIGHT]))*.16)))+3
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
+    return True, cv2.dilate(mask, kernel)
+
+
 def _glyph_components(candidates, minimum_height, vertical=3):
     connected = cv2.morphologyEx(candidates.astype(np.uint8), cv2.MORPH_CLOSE,
                                  np.ones((vertical, 3), np.uint8))
@@ -241,12 +287,22 @@ def composite_caption(original, restored, mask):
     x, y, width, height = cv2.boundingRect(mask)
     fused = restored
     if min(width, height) >= 5:
-        destination = cv2.copyMakeBorder(original, 1, 1, 1, 1, cv2.BORDER_REPLICATE)
-        source = cv2.copyMakeBorder(restored, 1, 1, 1, 1, cv2.BORDER_REPLICATE)
-        padded_mask = cv2.copyMakeBorder(mask, 1, 1, 1, 1, cv2.BORDER_CONSTANT)
-        center = (x+1+width//2, y+1+height//2)
+        touches_edge = x == 0 or y == 0 or x+width == mask.shape[1] or y+height == mask.shape[0]
+        pad = 16 if touches_edge else 1
+        # Continue selected pixels beyond the frame using the reconstruction.
+        # Replicating the original subtitle here would pull its shadow back into the solve.
+        continuation = np.where(selected[:, :, None], restored, original) if touches_edge else original
+        destination = cv2.copyMakeBorder(continuation, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+        source = cv2.copyMakeBorder(restored, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+        padded_mask = cv2.copyMakeBorder(mask, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+        if touches_edge:
+            destination[pad:-pad, pad:-pad] = original
+            padded_mask[[0, -1], :] = 0
+            padded_mask[:, [0, -1]] = 0
+        x, y, width, height = cv2.boundingRect(padded_mask)
+        center = (x+width//2, y+height//2)
         # seamlessClone mutates its mask. Keep the selection and caller's mask intact.
-        fused = cv2.seamlessClone(source, destination, padded_mask.copy(), center,
-                                  cv2.NORMAL_CLONE)[1:-1, 1:-1]
+        fused = cv2.seamlessClone(source, destination, padded_mask, center,
+                                  cv2.NORMAL_CLONE)[pad:-pad, pad:-pad]
     result[selected] = fused[selected]
     return result
