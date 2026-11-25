@@ -6,6 +6,45 @@ import numpy as np
 
 
 class SubtitleCompositingTests(unittest.TestCase):
+    def test_thin_outlines_on_pale_scenery_keep_leading_letters_dots_and_both_lines(self):
+        from subtitle_compositing import caption_mask
+        for boundary in (95, 215, 310):
+            with self.subTest(background_edge=boundary):
+                frame = np.full((188, 580, 3), (221, 230, 237), np.uint8)
+                frame[:, boundary:] = (48, 68, 113)
+                lettering = np.zeros(frame.shape[:2], np.uint8)
+                for word, origin in [('A', (40, 72)), ('pale coat...', (99, 72)),
+                                     ('end.', (220, 142))]:
+                    cv2.putText(frame, word, origin, cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+                                (45, 50, 57), 5, cv2.LINE_AA)
+                    cv2.putText(frame, word, origin, cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+                                (248, 249, 251), 3, cv2.LINE_AA)
+                    cv2.putText(lettering, word, origin, cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+                                255, 5, cv2.LINE_AA)
+                mask = caption_mask(frame, (15, 12, 565, 176))
+                self.assertTrue(np.all(mask[lettering > 16] == 255))
+                self.assertFalse(mask[:, :15].any())
+                self.assertFalse(mask[100:115, :175].any())
+                self.assertFalse(mask[:, 450:].any())
+
+    def test_close_vertical_strokes_and_separate_ellipsis_on_light_scene(self):
+        from subtitle_compositing import caption_mask
+        frame = np.full((120, 390, 3), 230, np.uint8)
+        ink = np.zeros(frame.shape[:2], np.uint8)
+        for x in range(87, 143, 7):
+            cv2.rectangle(frame, (x-1, 46), (x+5, 67), (55, 55, 55), -1)
+            cv2.rectangle(frame, (x, 47), (x+4, 66), (250, 250, 250), -1)
+            cv2.rectangle(ink, (x, 47), (x+4, 66), 255, -1)
+        for x in (170, 180, 190):
+            cv2.circle(frame, (x, 65), 3, (45, 45, 45), -1)
+            cv2.circle(frame, (x, 65), 2, (250, 250, 250), -1)
+            cv2.circle(ink, (x, 65), 2, 255, -1)
+        cv2.circle(frame, (301, 30), 3, (45, 45, 45), -1)
+        cv2.circle(frame, (301, 30), 2, (250, 250, 250), -1)
+        mask = caption_mask(frame, (0, 0, 390, 120))
+        self.assertTrue(np.all(mask[ink > 0] == 255))
+        self.assertFalse(mask[:, 220:].any())
+
     def test_one_roi_covers_orange_upper_line_and_plain_lower_line(self):
         from subtitle_compositing import caption_mask
         for color in ((245, 245, 245), (20, 220, 245)):

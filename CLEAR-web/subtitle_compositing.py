@@ -87,6 +87,47 @@ def _line_plates(candidates, dark):
     return plates
 
 
+def _paired_stroke_mask(crop, candidates):
+    """Find bright pen strokes bounded on both sides, even on a similarly bright background."""
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    height, width = gray.shape
+    reach = max(5, min(12, round(min(height, width)*.055)))
+    contrast = np.zeros_like(gray)
+    for dx, dy in ((reach, 0), (0, reach)):
+        kernel = np.ones((dy+1, dx+1), np.uint8)
+        before = cv2.erode(gray, kernel, anchor=(dx, dy))
+        after = cv2.erode(gray, kernel, anchor=(0, 0))
+        contrast = np.maximum(contrast, cv2.subtract(gray, np.maximum(before, after)))
+    strokes = (candidates & (contrast >= 40)).astype(np.uint8)
+    # Keep adjacent glyphs separate until their shared line has been located.
+    _, _, stats, _ = cv2.connectedComponentsWithStats(strokes, connectivity=8)
+    anchors = []
+    centers = np.zeros_like(gray)
+    for x, y, w, h, area in stats[1:]:
+        if h < 4 or h > height*.9 or w > 3*h or area < max(8, h):
+            continue
+        x, y, w, h = map(int, (x, y, w, h))
+        centers[y+h//2, x+w//2] = 1
+        anchors.append((x, y, w, h))
+
+    # Require another letter on the same line. Its neighborhood can then
+    # admit small detached dots, accents and outlines without filling the line.
+    counts = cv2.integral(centers)
+    supported = np.zeros_like(gray)
+    for x, y, w, h in anchors:
+        middle = y+h//2
+        left, right = max(0, x-3*h), min(width, x+w+3*h)
+        top, bottom = max(0, middle-h//3), min(height, middle+h//3+1)
+        neighbors = counts[bottom, right]-counts[top, right]-counts[bottom, left]+counts[top, left]
+        if neighbors >= 2:
+            supported[max(0, y-h//3):min(height, y+h+h//3), left:right] = 1
+    # Once a line is supported, include faint punctuation and antialiased strokes.
+    strokes = candidates & (contrast >= 24) & (supported != 0)
+    # Include the outline and leave clean pixels for the Poisson boundary.
+    padding = reach+2
+    return cv2.dilate(strokes.astype(np.uint8)*255, np.ones((2*padding+1, 2*padding+1), np.uint8))
+
+
 def caption_mask(frame, roi):
     """Cover light/colored glyphs, their outlines and rectangular dark caption plates.
 
@@ -173,7 +214,9 @@ def caption_mask(frame, roi):
         if contrast >= 24 and (dark_outline or stroke_shape):
             glyphs[labels == label] = 255
             heights.append(glyph_height)
+    stroke_mask = _paired_stroke_mask(crop, candidates)
     if not heights:
+        full_mask[top:bottom, left:right] = stroke_mask
         return full_mask
     # Leave clean boundary pixels beyond the outline/shadow for the Poisson solve.
     radius = max(4, min(32, int(np.ceil(float(np.median(heights))*.6))+4))
@@ -184,7 +227,7 @@ def caption_mask(frame, roi):
     mask = cv2.dilate(glyphs, kernel)
     padding = max(2, round(radius*.5))
     plates = cv2.dilate(plates, np.ones((2*padding+1, 2*padding+1), np.uint8))
-    mask |= plates
+    mask |= plates | stroke_mask
     full_mask[top:bottom, left:right] = mask
     return full_mask
 
