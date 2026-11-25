@@ -11,6 +11,7 @@ const overlay = $('overlay');
 const box = $('box');
 const timeline = $('timeline');
 const fileInput = $('file');
+const copyFallback = $('copy-fallback');
 const settings = $('processing-options');
 const exportQuality = $('export-crf');
 const startTime = $('start-seconds');
@@ -475,6 +476,8 @@ function updateRegions() {
   const watermarks = regions.length - subtitles;
   $('roi').textContent = regions.length ? subtitles + ' 处字幕 · ' + watermarks + ' 处水印' : '等待框选';
   $('copy-status').textContent = '';
+  copyFallback.hidden = true;
+  copyFallback.value = '';
   showSelection(null);
   renderRegions();
   refreshRoutingState();
@@ -913,12 +916,32 @@ $('copy-settings').onclick = async () => {
     subtitles: regions.filter(region => region.type === 'subtitle').map(region => region.roi.slice()),
     watermarks: regions.filter(region => region.type === 'watermark').map(region => region.roi.slice()),
   };
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(configuration, null, 2));
-    $('copy-status').textContent = '选区参数已复制。';
-  } catch {
-    $('copy-status').textContent = '复制未完成，请允许浏览器访问剪贴板后重试。';
+  const text = JSON.stringify(configuration, null, 2);
+  copyFallback.value = text;
+  let copied = false;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch { /* Some browsers deny clipboard access even on HTTPS. */ }
+    // The user may have edited the regions while the permission prompt was open.
+    if (copyFallback.value !== text) return;
   }
+  if (!copied) {
+    copyFallback.hidden = false;
+    copyFallback.focus({ preventScroll: true });
+    copyFallback.select();
+    try {
+      copied = document.execCommand('copy');
+    } catch { /* Keep the selected parameters available for manual copy. */ }
+    if (copied) $('copy-settings').focus({ preventScroll: true });
+  }
+  if (copied) {
+    copyFallback.hidden = true;
+    copyFallback.value = '';
+  }
+  $('copy-status').textContent = copied ? '选区参数已复制。'
+    : '选区参数已选中，按 Ctrl+C 或 ⌘C 复制，手机可长按选择“复制”。';
 };
 
 $('submit').onclick = () => {
