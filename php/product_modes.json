@@ -40,7 +40,7 @@
       "chunk_frames": 33, "overlap_frames": 4, "context": "expanded", "start_seconds": 0,
       "duration_seconds": null, "resolution": "native", "export_crf": 10, "blend_mode": "precise",
       "segment_mode": "shots", "vae_tiled": false, "adaptive_processing": false, "resident_models": true,
-      "subtitle_guidance": "preset"
+      "subtitle_guidance": "preset", "share_prompt_embedding": false
     },
     "propainter": {
       "start_seconds": 0, "duration_seconds": null, "segment_mode": "shots", "resolution": "native",

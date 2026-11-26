@@ -20,7 +20,7 @@ from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from job_trace import span
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
-from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance, visible_background
+from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance, light_caption_cards, visible_background
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -47,7 +47,7 @@ def configure_model_residency(pipe, enabled, device_memory_bytes):
     return True
 
 
-def load_model(source, lora_scale=1.0, resident_models=False):
+def load_model(source, lora_scale=1.0, resident_models=False, cached_prompt=None):
     import torch
 
     sys.path.insert(0, str(source))
@@ -58,6 +58,17 @@ def load_model(source, lora_scale=1.0, resident_models=False):
     if not torch.cuda.is_available():
         raise RuntimeError('CUDA 不可用。')
     encoder_path = WAN / 'models_t5_umt5-xxl-enc-bf16.pth'
+    stored_embedding = None
+    cache_file = None
+    if cached_prompt is not None:
+        from prompt_cache import embedding_file, read_embedding
+        cache_file = embedding_file(WORKSPACE / '.deploy' / 'prompt-cache', encoder_path,
+                                    WAN / 'google/umt5-xxl', cached_prompt,
+                                    (torch.cuda.get_device_name(0), torch.version.cuda))
+        stored_embedding = read_embedding(cache_file)
+    model_files = [WAN / 'fun-control.safetensors', WAN / 'Wan2.1_VAE.pth']
+    if stored_embedding is None:
+        model_files.append(encoder_path)
     original_loader = model_manager.load_state_dict
 
     def load_weights(path):
@@ -73,13 +84,13 @@ def load_model(source, lora_scale=1.0, resident_models=False):
             device='cuda:0',
             model_configs=[
                 ModelConfig(path=str(path), skip_download=True, offload_device='cpu')
-                for path in (WAN / 'fun-control.safetensors', WAN / 'Wan2.1_VAE.pth', encoder_path)
+                for path in model_files
             ],
             tokenizer_config=ModelConfig(path=str(WAN / 'google/umt5-xxl'), skip_download=True),
         )
     finally:
         model_manager.load_state_dict = original_loader
-    if pipe.dit is None or pipe.dit.in_dim < 32 or pipe.vae is None or pipe.text_encoder is None:
+    if pipe.dit is None or pipe.dit.in_dim < 32 or pipe.vae is None or (pipe.text_encoder is None and stored_embedding is None):
         raise RuntimeError('Wan Control、VAE 或文本编码器加载失败。')
     # Reuse CLEAR's adapter loader and keep the large text encoder offloaded.
     adapter = Wan21InferencePipeline.__new__(Wan21InferencePipeline)
@@ -111,7 +122,22 @@ def load_model(source, lora_scale=1.0, resident_models=False):
     pipe.enable_vram_management(num_persistent_param_in_dit=1_700_000_000)
     if resident_models:
         configure_model_residency(pipe, True, torch.cuda.get_device_properties(0).total_memory)
-    pipe.prompter.encode_prompt = lru_cache(maxsize=2)(pipe.prompter.encode_prompt)
+    encoder = pipe.prompter.encode_prompt
+    if cache_file is not None:
+        def encode_fixed(prompt, positive=True, device='cuda'):
+            # Only single-prompt CFG 1 jobs call this path. Their embedding is independent of video and LoRA.
+            if prompt != cached_prompt:
+                raise ValueError('当前任务的 CLEAR 提示词已更改')
+            with span('clear_prompt_embedding', device=str(device), cache_hit=stored_embedding is not None):
+                if stored_embedding is not None:
+                    return stored_embedding.to(device)
+                from prompt_cache import save_embedding
+                value = encoder(prompt, positive=positive, device=device)
+                save_embedding(cache_file, value)
+                return value
+        pipe.prompter.encode_prompt = lru_cache(maxsize=2)(encode_fixed)
+    else:
+        pipe.prompter.encode_prompt = lru_cache(maxsize=2)(encoder)
     return pipe
 
 
@@ -179,7 +205,13 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
             for index, frame in enumerate(frames):
                 mask = caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy()
                 if inspect_large:
-                    large, hint = large_caption_guidance(frame[y1:y2, x1:x2])
+                    crop = frame[y1:y2, x1:x2]
+                    temporal = subtitle_guidance == 'temporal'
+                    large, hint = large_caption_guidance(crop, include_outlined=temporal)
+                    if temporal:
+                        cards = light_caption_cards(crop)
+                        if cards is not None:
+                            hint = cards if hint is None else cv2.bitwise_or(hint, cards)
                     large_caption |= large and fast_geometry
                     region_hints.append(hint)
                     if hint is not None:
@@ -389,7 +421,8 @@ def run(folder, source):
             if loaded_model is None:
                 report(stage='正在加载 CLEAR，修复复杂背景字幕')
                 with span('clear_model_load', device='cuda', phase='first'):
-                    loaded_model = load_model(source, options.lora_scale, options.resident_models)
+                    prompt = arguments['prompt'] if options.share_prompt_embedding and options.cfg_scale == 1 else None
+                    loaded_model = load_model(source, options.lora_scale, options.resident_models, cached_prompt=prompt)
             with span('clear_inference', device='cuda', phase='first', frames=arguments['num_frames'],
                       steps=arguments['num_inference_steps']):
                 return loaded_model(**arguments)

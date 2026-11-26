@@ -7,7 +7,7 @@ _COMMON = dict(
     chunk_frames=33, overlap_frames=4, resolution='native', export_crf=10,
     blend_mode='precise', segment_mode='shots', vae_tiled=False,
     adaptive_processing=False, resident_models=True,
-    subtitle_guidance='preset',
+    subtitle_guidance='preset', share_prompt_embedding=False,
 )
 _PROFILES = {
     'fast': dict(label='快速', description='普通字幕按原像素处理，识别到大号描边字幕时自动扩大周边并缩放。',

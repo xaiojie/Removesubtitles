@@ -20,6 +20,7 @@ def standard_task(request):
     if 'clear' in groups:
         # Earlier plan snapshots used the preset's conditioning rules.
         groups['clear'].setdefault('subtitle_guidance', 'preset')
+        groups['clear'].setdefault('share_prompt_embedding', False)
     if not groups:
         raise ValueError('处理方案缺少首遍参数')
     first = next(iter(groups.values()))

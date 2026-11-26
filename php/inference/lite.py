@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
-from subtitle_compositing import large_caption_guidance
+from subtitle_compositing import large_caption_guidance, light_caption_cards
 
 
 @dataclass(frozen=True)
@@ -151,6 +151,9 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options):
                 if x < r and y < b:
                     local.append((x - left, y - top, r - left, b - top))
             mask = caption_plates(crop, local)
+            cards = light_caption_cards(crop)
+            if cards is not None:
+                mask |= cards
             _, outline = large_caption_guidance(crop)
             if outline is not None:
                 mask |= outline

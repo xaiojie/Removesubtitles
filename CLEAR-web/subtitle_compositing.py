@@ -33,7 +33,7 @@ def visible_background(crops, masks, hints):
     return result
 
 
-def large_caption_guidance(crop):
+def large_caption_guidance(crop, include_outlined=False):
     """Find tall aligned glyphs and a fill mask for opaque strokes that CLEAR tends to copy."""
     if min(crop.shape[:2]) < 40:
         return False, None
@@ -60,23 +60,50 @@ def large_caption_guidance(crop):
     thick_pixels = np.bincount(labels[depth >= 3.5], minlength=count)
     bold = thick_pixels >= .18*stats[:, cv2.CC_STAT_AREA]
     bold_pairs = [(a, b) for a, b in pairs if bold[a] and bold[b]]
-    if not bold_pairs:
+    if not bold_pairs and not include_outlined:
         return True, None
+    supported = bold_pairs or pairs
     # Include short detached strokes and punctuation beside the supporting pair.
     # The mask remains confined to bright, locally contrasted strokes and their outlines.
     mask = np.zeros_like(strokes)
-    for a, b in bold_pairs:
+    for a, b in supported:
         x, y, w, h = stats[a, :4]
         ox, oy, ow, oh = stats[b, :4]
         reach = max(h, oh)
         left, right = max(0, min(x, ox)-reach), min(mask.shape[1], max(x+w, ox+ow)+reach)
         top, bottom = max(0, min(y, oy)-reach//6), min(mask.shape[0], max(y+h, oy+oh)+reach//6)
         mask[top:bottom, left:right] = strokes[top:bottom, left:right]*255
-    anchors = list({label for pair in bold_pairs for label in pair})
+    anchors = list({label for pair in supported for label in pair})
     # Leave clean pixels outside the outline for seamlessClone's inner boundary.
     radius = max(6, min(18, round(float(np.median(stats[anchors, cv2.CC_STAT_HEIGHT]))*.16)))+3
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
     return True, cv2.dilate(mask, kernel)
+
+
+def light_caption_cards(crop):
+    """Locate bounded light cards containing an aligned row of dark lettering."""
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    light = cv2.inRange(crop, (230, 230, 230), (255, 255, 255))
+    contours, _ = cv2.findContours(light, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    mask = None
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        if h < 14 or h > gray.shape[0] * .85 or w < 1.8 * h or cv2.contourArea(contour) < .66 * w * h:
+            continue
+        inside = gray[y:y+h, x:x+w]
+        ink = (inside < 105).astype(np.uint8)
+        if not .07 <= np.mean(ink) <= .57:
+            continue
+        count, _, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
+        glyphs = [int(gy + gh) for gx, gy, gw, gh, area in stats[1:count]
+                  if gx > 0 and gx + gw < w and gy > 0 and gy + gh < h
+                  and .16 * h < gh < .93 * h and .05 * gh < gw < 3.2 * gh and area >= gh]
+        if not any(sum(abs(base - other) <= .16 * h for other in glyphs) >= 3 for base in glyphs):
+            continue
+        if mask is None:
+            mask = np.zeros_like(gray)
+        cv2.drawContours(mask, [contour], -1, 255, cv2.FILLED)
+    return cv2.dilate(mask, np.ones((5, 5), np.uint8)) if mask is not None else None
 
 
 def _glyph_components(candidates, minimum_height, vertical=3):

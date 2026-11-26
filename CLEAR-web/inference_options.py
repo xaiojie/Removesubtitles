@@ -27,6 +27,7 @@ class InferenceOptions:
     preset: str = 'custom'
     resident_models: bool = False
     subtitle_guidance: str = 'preset'
+    share_prompt_embedding: bool = False
 
     def frame_range(self, fps, total):
         first = math.ceil(self.start_seconds * fps - 1e-8)
@@ -68,6 +69,8 @@ class InferenceOptions:
                 raise ValueError(f'{name} 必须在 {low} 到 {high} 之间。')
         if options.chunk_frames % 4 != 1 or options.overlap_frames >= options.chunk_frames:
             raise ValueError('chunk_frames 必须符合 4n+1，overlap_frames 必须小于 chunk_frames。')
+        if type(options.share_prompt_embedding) is not bool:
+            raise ValueError('share_prompt_embedding 必须为布尔值')
         if options.context not in ("roi", "expanded", "frame"):
             raise ValueError('context 必须是 roi、expanded 或 frame。')
         if options.resolution not in ("auto", "native"):
