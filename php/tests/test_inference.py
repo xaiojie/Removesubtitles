@@ -10,8 +10,8 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'inference'))
-from fine import review, run_pass, suspect
-from lite import restore, sample_block
+from fine import ReviewOptions, review, run_pass, suspect
+from lite import LiteOptions, detect, restore, sample_block
 from media import capture, encode
 
 
@@ -43,6 +43,24 @@ class InferenceTests(unittest.TestCase):
         self.assertTrue(suspect(img, img, region))
         self.assertFalse(suspect(img, np.zeros_like(img), region))
 
+    def test_lite_uses_selected_detection_size_box_context_and_batch(self):
+        options = LiteOptions(detector_max_side=50, box_padding=2, context_padding=3, batch_size=2)
+        seen = []
+
+        def predict(image):
+            self.assertEqual(image.shape[:2], (20, 50))
+            return [{'dt_polys': [np.asarray([[5, 5], [12, 5], [12, 10], [5, 10]])]}]
+
+        def inpaint(batch, masks):
+            seen.append((len(batch), batch[0].shape[:2]))
+            return batch
+
+        frames = [np.zeros((60, 120, 3), np.uint8) for _ in range(3)]
+        boxes = detect(frames[0], [(10, 10, 110, 50)], SimpleNamespace(predict=predict), options)
+        self.assertEqual(boxes, ((18, 18, 37, 33),))
+        restore(frames, [boxes] * 3, SimpleNamespace(_inpaint_batch=inpaint), options)
+        self.assertEqual(seen, [(2, (21, 25)), (1, (21, 25))])
+
     def test_review_pads_suspect_intervals_per_region_and_clips_to_end(self):
         blank = np.zeros((64, 96, 3), np.uint8)
         text = blank.copy()
@@ -60,6 +78,8 @@ class InferenceTests(unittest.TestCase):
         ]
         with patch('fine.capture', open_frames), patch('fine.geometry', return_value=(24, 10)):
             self.assertEqual(review('input', 'first', regions), ([[[0, 3], [6, 10]], []], 10))
+            actual = review('input', 'first', regions, ReviewOptions(frame_padding=0))
+            self.assertEqual(actual, ([[[0, 1], [8, 10]], []], 10))
 
     def test_fine_only_reprocesses_selected_frames_and_roi(self):
         # Use the production compositor/encoder, substituting only the diffusion prediction.
@@ -99,9 +119,10 @@ class InferenceTests(unittest.TestCase):
 
             with patch('worker.load_model', return_value=predict), patch('fine.encode', record_encode):
                 run_pass(
-                    folder, src, src, folder / 'out.mp4', [96, 64], [(region, [[2, 6]])], 8, 'subtitle', 85
+                    folder, src, src, folder / 'out.mp4', [96, 64], [(region, [[2, 6]])], 8, 'subtitle', 85,
+                    ReviewOptions(steps=7, subtitle_window=2),
                 )
-            self.assertEqual(options, [12])
+            self.assertEqual(options, [7, 7])
             with capture(src) as a, capture(folder / 'out.mp4') as b:
                 for i in range(8):
                     left, original = a.read()

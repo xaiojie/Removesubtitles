@@ -4,6 +4,7 @@ import math
 import os
 import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
@@ -12,11 +13,28 @@ from media import ROOT, capture, encode, geometry, report
 from job_trace import span
 
 
-def detect(frame, rois, detector):
+@dataclass(frozen=True)
+class LiteOptions:
+    # Jobs created before product plans were persisted used these settings.
+    sample_stride: int = 6
+    detector_max_side: int = 720
+    box_padding: int = 5
+    context_padding: int = 28
+    batch_size: int = 4
+    export_crf: int = 18
+
+    def __post_init__(self):
+        if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
+            raise ValueError('Lite 检测间隔、检测尺寸和批量大小须大于零')
+        if min(self.box_padding, self.context_padding) < 0 or not 0 <= self.export_crf <= 51:
+            raise ValueError('Lite 扩框或编码参数无效')
+
+
+def detect(frame, rois, detector, options=LiteOptions()):
     boxes = []
     for x, y, r, b in rois:
         crop = frame[y:b, x:r]
-        scale = min(1.0, 720 / max(crop.shape[:2]))
+        scale = min(1.0, options.detector_max_side / max(crop.shape[:2]))
         if scale < 1:
             crop = cv2.resize(crop, (max(1, round((r - x) * scale)), max(1, round((b - y) * scale))))
         sx, sy = (r - x) / crop.shape[1], (b - y) / crop.shape[0]
@@ -28,10 +46,10 @@ def detect(frame, rois, detector):
                 left, top = pts.min(axis=0)
                 right, bottom = pts.max(axis=0)
                 rect = (
-                    max(x, x + math.floor(left * sx) - 5),
-                    max(y, y + math.floor(top * sy) - 5),
-                    min(r, x + math.ceil(right * sx) + 6),
-                    min(b, y + math.ceil(bottom * sy) + 6),
+                    max(x, x + math.floor(left * sx) - options.box_padding),
+                    max(y, y + math.floor(top * sy) - options.box_padding),
+                    min(r, x + math.ceil(right * sx) + options.box_padding + 1),
+                    min(b, y + math.ceil(bottom * sy) + options.box_padding + 1),
                 )
                 if rect[0] < rect[2] and rect[1] < rect[3]:
                     boxes.append(rect)
@@ -54,19 +72,20 @@ def sample_block(frames, start_boxes, find):
     return [start_boxes, *(find(f) for f in frames[1:-1])], end_boxes
 
 
-def restore(frames, boxes_by_frame, lama):
+def restore(frames, boxes_by_frame, lama, options=LiteOptions()):
     h, w = frames[0].shape[:2]
     by_rect = defaultdict(list)
     for i, boxes in enumerate(boxes_by_frame):
         for box in boxes:
             by_rect[box].append(i)
     for (x, y, r, b), indices in by_rect.items():
-        l, t, rr, bb = max(0, x - 28), max(0, y - 28), min(w, r + 28), min(h, b + 28)
+        pad = options.context_padding
+        l, t, rr, bb = max(0, x - pad), max(0, y - pad), min(w, r + pad), min(h, b + pad)
         area = np.s_[y - t : b - t, x - l : r - l]
         mask = np.zeros((bb - t, rr - l), np.uint8)
         mask[area] = 255
-        for start in range(0, len(indices), 4):
-            batch = indices[start : start + 4]
+        for start in range(0, len(indices), options.batch_size):
+            batch = indices[start : start + options.batch_size]
             crops = [cv2.cvtColor(frames[i][t:bb, l:rr], cv2.COLOR_BGR2RGB) for i in batch]
             with span('lite_lama', device=str(getattr(lama, 'device', 'unknown')), frames=len(crops)):
                 repairs = lama._inpaint_batch(crops, [mask] * len(crops))
@@ -106,10 +125,12 @@ def load_models():
 
 
 def run(folder, request):
+    plan = request.get('resolved_plan')
+    options = LiteOptions(**plan['parameters']['lite']) if plan else LiteOptions()
     detector, lama = load_models()
     source = folder / 'source.video'
     rois = [r['roi'] for r in request['regions']]
-    find = lambda frame: detect(frame, rois, detector)
+    find = lambda frame: detect(frame, rois, detector, options)
     with capture(source) as video:
         fps, total = geometry(video)
         ok, first = video.read()
@@ -118,10 +139,10 @@ def run(folder, request):
         anchor = find(first)
         count = 0
         repaired_count = 0
-        with encode(folder / 'result.mp4', source, request['dimensions'], fps, 18) as writer:
+        with encode(folder / 'result.mp4', source, request['dimensions'], fps, options.export_crf) as writer:
             while True:
                 frames = [first]
-                for _ in range(6):
+                for _ in range(options.sample_stride):
                     ok, frame = video.read()
                     if not ok:
                         break
@@ -131,7 +152,7 @@ def run(folder, request):
                     first = frames.pop()
                 else:
                     boxes.append(anchor)
-                for frame in restore(frames, boxes, lama):
+                for frame in restore(frames, boxes, lama, options):
                     writer.write(frame.tobytes())
                 repaired_count += sum(bool(selection) for selection in boxes)
                 count += len(frames)

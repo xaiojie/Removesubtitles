@@ -1,5 +1,6 @@
 from functools import lru_cache
 from itertools import chain, islice
+import hashlib
 import json
 import math
 import os
@@ -86,7 +87,23 @@ def load_model(source, lora_scale=1.0, resident_models=False):
     adapter.lora_rank = 64
     adapter.lora_scale = lora_scale
     adapter.lora_target_modules = ['q', 'k', 'v', 'o', 'ffn.0', 'ffn.2']
-    adapter.load_lora(str(MODELS / 'CLEAR-mask-free-subtitle-removal.pt'))
+    checkpoint = MODELS / 'CLEAR-mask-free-subtitle-removal.pt'
+    variant = os.environ.get('CLEAR_BENCH_LORA')
+    checksum = None
+    if variant:
+        checkpoint = Path(variant).resolve(strict=True)
+        if checkpoint.suffix != '.safetensors':
+            raise ValueError('独立试验权重须为 safetensors')
+        with checkpoint.open('rb') as stream:
+            digest = hashlib.sha256()
+            for block in iter(lambda: stream.read(1024 * 1024), b''):
+                digest.update(block)
+            checksum = digest.hexdigest()
+        if checksum != os.environ.get('CLEAR_BENCH_LORA_SHA256'):
+            raise ValueError('CLEAR 试验权重与本次实验的 SHA-256 不一致')
+    with span('clear_adapter_load', device='cpu', checkpoint=checkpoint.name,
+              checkpoint_sha256=checksum, lora_scale=lora_scale):
+        adapter.load_lora(str(checkpoint))
     lora_b = [value for name, value in pipe.dit.named_parameters() if '.lora_B.' in name]
     if not lora_b or not all(torch.count_nonzero(value).item() for value in lora_b):
         raise RuntimeError('CLEAR LoRA 权重没有匹配到模型。')
