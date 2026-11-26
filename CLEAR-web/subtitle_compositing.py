@@ -153,6 +153,56 @@ def light_caption_cards(crop):
     return cv2.dilate(mask, np.ones((5, 5), np.uint8)) if mask is not None else None
 
 
+def colored_caption_cards(crop):
+    """Find wide colored backplates with a straight boundary and a co-located row of glyphs."""
+    height, width = crop.shape[:2]
+    if min(width, height) < 16:
+        return None
+    sample = crop[::2, ::2]
+    bins = sample.astype(np.uint16) // 24
+    codes = bins[:, :, 0] * 121 + bins[:, :, 1] * 11 + bins[:, :, 2]
+    counts = np.bincount(codes.ravel(), minlength=1331)
+    saturation = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)[:, :, 1]
+    result = np.zeros((height, width), np.uint8)
+    light_ink = (crop.min(axis=2) >= 165) & (saturation <= 65)
+    for index in np.argsort(counts)[-4:]:
+        if counts[index] < .035 * codes.size:
+            continue
+        color = np.median(sample[codes == index], axis=0).astype(int)
+        if color.max() - color.min() < 24:
+            continue
+        similar = cv2.inRange(crop, tuple(map(int, np.maximum(0, color-25))),
+                             tuple(map(int, np.minimum(255, color+25)))) != 0
+        dots = cv2.morphologyEx(similar.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 11), np.uint8))
+        dots = cv2.morphologyEx(dots, cv2.MORPH_CLOSE, np.ones((5, 17), np.uint8))
+        contours, _ = cv2.findContours(dots, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            if y < 2 or y+h > height-2 or h < 12 or h > height * .9 or w < max(2.25 * h, .18 * width):
+                continue
+            if cv2.contourArea(contour) < .45 * w * h:
+                continue
+            edge = max(2, h // 12)
+            top_edge = float(np.max(similar[y:y+edge, x:x+w], axis=0).mean())
+            low_edge = float(np.max(similar[y+h-edge:y+h, x:x+w], axis=0).mean())
+            if max(top_edge, low_edge) < (.58 if w > 5*h else .75) or min(top_edge, low_edge) < .15:
+                continue
+            # Compare the panel boundary to its surroundings so a continuous background stays untouched.
+            bands = [similar[lo:hi, x:x+w] for lo, hi in (
+                (max(0, y-2*edge), y), (y+h, min(height, y+h+2*edge))) if hi > lo]
+            if not bands or min(band.mean() for band in bands) > .39:
+                continue
+            top, bottom = max(0, y - h // 2), min(height, y + h + h // 4)
+            ink = (light_ink & ~similar)[top:bottom, x:x+w].astype(np.uint8)
+            count, _, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
+            bases = [gy+gh for gx, gy, gw, gh, area in stats[1:count]
+                     if .17*h <= gh <= 1.4*h and .12*gh <= gw <= 3.5*gh and area > gh]
+            if not any(sum(abs(base - v) <= .23*h for v in bases) >= 3 for base in bases):
+                continue
+            cv2.drawContours(result, [cv2.convexHull(contour)], -1, 255, cv2.FILLED)
+    return result if result.any() else None
+
+
 def _glyph_components(candidates, minimum_height, vertical=3):
     connected = cv2.morphologyEx(candidates.astype(np.uint8), cv2.MORPH_CLOSE,
                                  np.ones((vertical, 3), np.uint8))

@@ -20,7 +20,7 @@ from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from job_trace import span
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
-from subtitle_compositing import camera_path, caption_mask, composite_caption, large_caption_guidance, light_caption_cards, visible_background
+from subtitle_compositing import camera_path, caption_mask, colored_caption_cards, composite_caption, large_caption_guidance, light_caption_cards, visible_background
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -211,7 +211,14 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                     large, hint = large_caption_guidance(crop, include_outlined=temporal)
                     if temporal:
                         cards = light_caption_cards(crop)
+                        colored = colored_caption_cards(crop)
+                        if colored is not None:
+                            cards = colored if cards is None else cv2.bitwise_or(cards, colored)
                         if cards is not None:
+                            # The Poisson boundary needs clean pixels beyond the plate and its drop shadow.
+                            cards = cv2.dilate(cards, np.ones((13, 13), np.uint8))
+                            vicinity = cv2.dilate(cards, np.ones((31, 9), np.uint8))
+                            cards |= mask & vicinity
                             hint = cards if hint is None else cv2.bitwise_or(hint, cards)
                     large_caption |= large and fast_geometry
                     region_hints.append(hint)
