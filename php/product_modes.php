@@ -39,7 +39,7 @@ function resolveProductPlan(string $mode, array $regionTypes): array
         if (array_intersect($stage['region_types'], $regionTypes)) {
             $stages[] = $id;
             $key = $stage['parameters'];
-            $parameters[$key] = $catalog['parameters'][$key];
+            $parameters[$key] = array_replace($catalog['parameters'][$key], $product['overrides'][$key] ?? []);
         }
     }
     return ['catalog_version' => $catalog['catalog_version'], 'catalog_sha256' => $catalog['catalog_sha256'],

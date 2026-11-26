@@ -32,11 +32,16 @@ def standard_task(request):
     return task
 
 
+def needs_review(request, mode):
+    plan = request.get('resolved_plan')
+    return mode == 'max' and (plan is None or 'selective_review' in plan['stages'])
+
+
 def record_execution(folder, request, mode, task):
     if mode == 'lite':
         stages = ['ocr_lama']
     else:
-        stages = task['pipeline'] + (['selective_review'] if mode == 'max' else [])
+        stages = task['pipeline'] + (['selective_review'] if needs_review(request, mode) else [])
     plan = request.get('resolved_plan')
     if plan is not None and (mode != plan['mode'] or stages != plan['stages']):
         raise ValueError('档位快照与任务模式或选区不一致')
@@ -112,7 +117,7 @@ def run(folder, mode=None):
 
         run_lite(folder, request)
     else:
-        fine = mode == 'max'
+        fine = needs_review(request, mode)
         first = standard(folder, request, fine, task)
         if fine:
             from fine import refine

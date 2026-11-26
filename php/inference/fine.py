@@ -29,8 +29,11 @@ class ReviewOptions:
     subtitle_window: int = 17
     watermark_window: int = 10
     export_crf: int = 10
+    region_types: tuple = ('subtitle', 'watermark')
 
     def __post_init__(self):
+        if not self.region_types or set(self.region_types) - {'subtitle', 'watermark'}:
+            raise ValueError('未知的精修选区类型')
         if min(self.steps, self.subtitle_window, self.watermark_window) < 1:
             raise ValueError('精修步数与帧窗口须大于零')
         if min(self.frame_padding, self.mask_dilation) < 0 or not 0 <= self.export_crf <= 51:
@@ -97,9 +100,9 @@ def review(source, standard, regions, options=ReviewOptions()):
 
 def refine(folder, request, first):
     source = folder / 'source.video'
-    regions = request['regions']
     plan = request.get('resolved_plan')
     options = ReviewOptions(**plan['parameters']['review']) if plan else ReviewOptions()
+    regions = [r for r in request['regions'] if r['type'] in options.region_types]
     with span('max_review', device='cpu'):
         spans, count = review(source, first, regions, options)
     (folder / 'review.json').write_text(
