@@ -102,7 +102,16 @@ class DeploymentTests(unittest.TestCase):
         (root / 'scripts/requirements-propainter.txt').touch()
         python = root / '.venv/bin/python'
         python.parent.mkdir(parents=True)
-        python.write_text('#!/bin/sh\nprintf "%s\\037" "$@" >> "$TEST_COMMAND_LOG"\nprintf "\\n" >> "$TEST_COMMAND_LOG"\ncase "$*" in *"print(torch.version.cuda or"*) echo 12.8;; esac\nexit 0\n')
+        python.write_text(
+            '#!/bin/sh\n'
+            'printf "%s\\037" "$@" >> "$TEST_COMMAND_LOG"\n'
+            'printf "\\n" >> "$TEST_COMMAND_LOG"\n'
+            'case "$*" in *"print(torch.version.cuda or"*) echo 12.8;; esac\n'
+            'if [ "$1" = -m ] && [ "$2" = venv ]; then\n'
+            '    mkdir -p "$3/bin" && cp "$0" "$3/bin/python"\n'
+            'fi\n'
+            'exit 0\n'
+        )
         python.chmod(0o755)
         return python, {**os.environ, 'PATH': str(tools) + os.pathsep + os.environ['PATH'], 'TEST_COMMAND_LOG': str(root / 'commands.log')}
 

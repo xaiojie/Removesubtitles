@@ -18,8 +18,8 @@ RemoveSubtitles Linux 服务器部署
   --preset fast|balanced|quality
                              CLEAR 默认处理预设，首次安装默认 balanced
   --with-ltx                 额外安装 LTX，使用独立虚拟环境
-  --with-api                 同时部署 Lite、Pro、Max 接口及串行推理队列，安装两个组件
-  --without-api              后续部署只启动原网页
+  --with-api                 部署网页与 API 共用的三档推理队列，完整安装默认启用
+  --without-api              仅部署自定义模型和实验功能所用的网页服务
   --api-port PORT            PHP 接口端口，默认 8810；监听地址沿用 --bind/--public-host
   --ltx-root PATH            LTX 源码、环境和模型目录
   --ltx-tasks subtitle|watermark|both
@@ -97,11 +97,14 @@ PIP_URL=${PIP_INDEX_URL:-} TORCH_URL= HF_ENDPOINT= GITHUB_PREFIX=
 PORT=8765 BIND=127.0.0.1 PUBLIC_HOST= GPU=${CUDA_VISIBLE_DEVICES:-}
 PROPAINTER_DIR= DOWNLOAD_WORKERS=2
 PRESET=balanced WITH_LTX=0 LTX_DIR= LTX_TASKS=subtitle
-WITH_API=0 API_PORT=8810
+WITH_API=auto API_PORT=8810
 OFFLINE=0 WHEELHOUSE= SKIP_SYSTEM=0 YES=0 COMMAND=menu
 UPDATE_REF=main UPDATE_ARCHIVE= WAIT_IDLE=300
 BIND_SET=0 PUBLIC_SET=0 NETWORK_SET=0 PIP_SET=0 TORCH_SET=0 HF_SET=0 CUDA_SET=0
-if [[ -f "$STATE/config.sh" ]]; then source "$STATE/config.sh"; fi
+if [[ -f "$STATE/config.sh" ]]; then
+    WITH_API=0
+    source "$STATE/config.sh"
+fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -148,6 +151,9 @@ fi
 if [[ $CUDA_SET == 1 && $TORCH_SET == 0 ]]; then TORCH_URL=; fi
 
 [[ "$PORT" =~ ^[0-9]+$ ]] && ((PORT >= 1 && PORT <= 65535)) || bad_option '端口范围为 1～65535'
+if [[ $WITH_API == auto ]]; then
+    if [[ $COMPONENTS == both ]]; then WITH_API=1; else WITH_API=0; fi
+fi
 [[ "$WITH_API" == 0 || "$WITH_API" == 1 ]] || bad_option 'with-api 配置必须为 0 或 1'
 [[ "$API_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && ((API_PORT <= 65535)) || bad_option 'API 端口范围为 1～65535'
 if [[ $WITH_API == 1 ]]; then

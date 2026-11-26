@@ -66,7 +66,6 @@ class ApiDeploymentTests(unittest.TestCase):
                     'bash',
                     str(test_deploy.SCRIPT),
                     'all',
-                    '--with-api',
                     '--skip-system',
                     '--network',
                     'global',

@@ -2,12 +2,7 @@
 declare(strict_types=1);
 
 const ROOT = __DIR__ . '/..';
-const DEFAULT_MODE = 'pro';
-const MODES = [
-    'lite' => ['label' => 'Lite', 'subtitles' => true, 'watermarks' => false],
-    'pro' => ['label' => 'Pro', 'subtitles' => true, 'watermarks' => true],
-    'max' => ['label' => 'Max', 'subtitles' => true, 'watermarks' => true],
-];
+require_once __DIR__ . '/product_modes.php';
 
 function dataDir(): string
 {
@@ -28,18 +23,28 @@ function db(): PDO
     $pdo->exec('PRAGMA busy_timeout=10000');
     $pdo->exec("CREATE TABLE IF NOT EXISTS jobs (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL, state TEXT NOT NULL,
-        percent INTEGER NOT NULL DEFAULT 0, stage TEXT NOT NULL, error TEXT, created INTEGER NOT NULL
+        percent INTEGER NOT NULL DEFAULT 0, stage TEXT NOT NULL, error TEXT, created INTEGER NOT NULL, queued_at REAL
     )");
-    // Rename existing queue records once. Uploaded requests remain intact for stage resumption.
-    if ((int)$pdo->query('PRAGMA user_version')->fetchColumn() === 0) {
-        $pdo->beginTransaction();
+    if ((int)$pdo->query('PRAGMA user_version')->fetchColumn() < 2) {
+        // Separate HTTP workers and the scheduler can open an old database at the same time.
+        $pdo->exec('BEGIN IMMEDIATE');
         try {
-            $pdo->exec("UPDATE jobs SET mode='pro' WHERE mode='standard'");
-            $pdo->exec("UPDATE jobs SET mode='max' WHERE mode='fine'");
-            $pdo->exec('PRAGMA user_version=1');
-            $pdo->commit();
+            $version = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
+            if ($version === 0) {
+                $pdo->exec("UPDATE jobs SET mode='pro' WHERE mode='standard'");
+                $pdo->exec("UPDATE jobs SET mode='max' WHERE mode='fine'");
+            }
+            if ($version < 2) {
+                $columns = $pdo->query('PRAGMA table_info(jobs)')->fetchAll(PDO::FETCH_COLUMN, 1);
+                if (!in_array('queued_at', $columns, true)) {
+                    $pdo->exec('ALTER TABLE jobs ADD COLUMN queued_at REAL');
+                }
+                $pdo->exec('UPDATE jobs SET queued_at=created WHERE queued_at IS NULL');
+                $pdo->exec('PRAGMA user_version=2');
+            }
+            $pdo->exec('COMMIT');
         } catch (Throwable $e) {
-            $pdo->rollBack();
+            $pdo->exec('ROLLBACK');
             throw $e;
         }
     }
@@ -53,7 +58,7 @@ function query(string $sql, array $values = []): PDOStatement
     return $s;
 }
 
-function validRegions(mixed $regions, array $size, string $mode): array
+function validRegions(mixed $regions, array $size): array
 {
     if (!is_array($regions) || !array_is_list($regions) || !$regions) {
         throw new InvalidArgumentException('regions 需要至少一个字幕或水印框');
@@ -70,9 +75,6 @@ function validRegions(mixed $regions, array $size, string $mode): array
         [$x, $y, $r, $b] = $box;
         if ($x < 0 || $y < 0 || $r - $x < 2 || $b - $y < 2 || $r > $size[0] || $b > $size[1]) {
             throw new InvalidArgumentException('选区超出视频显示尺寸或过小');
-        }
-        if ($mode === 'lite' && $type === 'watermark') {
-            throw new InvalidArgumentException('Lite 只处理字幕，去水印请选择 Pro 或 Max');
         }
         $normalized[] = ['type' => $type, 'roi' => $box];
     }

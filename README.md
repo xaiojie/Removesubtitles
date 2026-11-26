@@ -1,18 +1,18 @@
 # RemoveSubtitles
 
-基于 CLEAR 和 ProPainter 的视频字幕与水印移除工具，可选安装 LTX 测试模型。网页支持视频预览、多处字幕与水印框选、逐个设置选区的批量队列、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
+基于 OCR、LaMa、CLEAR 和 ProPainter 的视频字幕与水印移除工具，可选安装 LTX 测试模型。网页支持视频预览、多处字幕与水印框选、逐个设置选区的批量队列、分阶段进度、剩余时间估算、NVIDIA GPU 监控，以及带音轨的 MP4 和左右对比视频导出。
 
 ## 处理入口
 
-主程序在 `CLEAR-web/`（默认端口 8765），处理 CLEAR 字幕、ProPainter 水印和可选 LTX。另一套 [Video Subtitle Remover](video-subtitle-remover/README.md) 保留原生 Web、CLI 和桌面端，支持 STTN、LaMa、OpenCV、ProPainter 及 PP-OCRv5。Linux Web 服务默认使用 8800 端口，单独安装依赖与模型。
+主程序在 `CLEAR-web/`（默认端口 8765），可选择三档字幕与水印处理，或使用实验模型 LTX。另一套 [Video Subtitle Remover](video-subtitle-remover/README.md) 保留原生 Web、CLI 和桌面端，支持 STTN、LaMa、OpenCV、ProPainter 及 PP-OCRv5。Linux Web 服务默认使用 8800 端口，单独安装依赖与模型。
 
-程序接入可使用统一的 PHP API。上传一次视频并提交所有选区，即可选择 Lite、Pro 或 Max 异步处理，查询进度并下载成片。默认使用 Pro。[PHP 接口与启动示例](php/README.md)
+网页和 PHP API 共用同一份档位配置与 SQLite 任务队列。Lite · 快速只处理字幕，Pro · 标准（默认）同时支持字幕和水印，Max · 增加在首遍完成后复查并修补疑似残留。网页批量提交时，每个视频使用自己的档位和选区。[PHP 接口与启动示例](php/README.md)
 
 主网页顶部可切换到「口型同步」。在已安装 [MuseTalk 1.5](https://github.com/TMElyralab/MuseTalk) 的 NVIDIA 服务器上，启动网页前将 `MUSE_ROOT` 设为 MuseTalk 的目录，将 `MUSE_PYTHON` 设为其独立环境的 Python，确保网页进程可以调用 `ffmpeg` 和 `ffprobe`。默认使用 `/opt/MuseTalk` 和其中的 `.venv/bin/python`。可以用 `CLEAR_HOME_MODE=lip_sync` 将口型同步设为首页。模型保存在 MuseTalk 运行目录。
 
 「完整」以配音时长生成视频，短视频顺序循环，长视频裁剪至配音结尾。「试听」合成视频与配音重叠的部分。原视频、配音和成片可分别预览，网页显示 GPU 使用率、显存占用和处理耗时。
 
-识别为静态的画面会在长停顿中稳定嘴周，并在接近开口时平滑过渡。网页直接访问时省略 `MUSE_USER` 和 `MUSE_PASSWORD`，需要登录时同时设置这两项。可通过 `CLEAR_DATA_DIR` 指定任务文件目录。
+识别为静态的画面会在长停顿中稳定嘴周，并在接近开口时平滑过渡。网页直接访问时省略 `MUSE_USER` 和 `MUSE_PASSWORD`，需要登录时同时设置这两项。MuseTalk 与自定义模型任务使用 `CLEAR_DATA_DIR`。普通三档任务使用 `SUBTITLE_DATA_DIR`。
 
 ```bash
 # 从仓库根目录运行；只列清单不会下载文件
@@ -44,14 +44,14 @@ git sparse-checkout set CLEAR CLEAR-web video-subtitle-remover php scripts docs 
 bash scripts/deploy.sh all --components both --preset balanced --network cn --yes
 ```
 
-同时部署三档 PHP 接口时，在仓库根目录执行以下命令。网页默认端口为 8765，API 为 8810，两个服务默认监听本机。部署菜单也可选第 13 项。
+完整安装会启动三档 PHP 接口。已有安装可运行以下命令启用。网页默认端口为 8765，API 为 8810，两个服务默认监听本机。部署菜单也可选第 13 项。
 
 ```bash
 bash scripts/deploy.sh all --with-api --components both --yes
 bash scripts/deploy.sh api-status
 ```
 
-首次安装默认使用“较大上下文”。`--preset fast` 选择快速处理，`--preset quality` 选择强化修复。三档共用 CLEAR 权重。LTX 通过 `--with-ltx` 选装，独立环境和所选模型安装在项目的 `LTX2-ICEdit-Insight/` 目录。
+三档网页默认选 Pro。部署参数 `--preset` 设置旧版自定义 CLEAR 接口使用的预设。LTX 通过 `--with-ltx` 选装，独立环境和所选模型安装在项目的 `LTX2-ICEdit-Insight/` 目录。
 
 ```bash
 # 安装 CLEAR、ProPainter 和 LTX 字幕模型
@@ -90,15 +90,17 @@ CLEAR-models/
 & $python CLEAR-web/app.py
 ```
 
+网页三档功能还需要可连接的 PHP 队列和由网页进程读写的共享任务目录。手动部署可设置 `SUBTITLE_API_URL`、`SUBTITLE_API_TOKEN_FILE` 和 `SUBTITLE_DATA_DIR`。[接口与环境说明](php/README.md)
+
 浏览器访问 [http://127.0.0.1:8765/](http://127.0.0.1:8765/)。也可以双击 `CLEAR-web/start.cmd` 启动。启动脚本优先使用仓库内的 `.venv`，本机既有部署可继续使用 Q 盘的运行环境。
 
 上游源码和许可证见 [CLEAR](https://github.com/silent-commit/CLEAR) 与 [LICENSE](CLEAR/LICENSE)。
 
 ## 多区域与混合处理
 
-网页根据选区类型自动安排模型。字幕使用 CLEAR，水印使用 ProPainter，两种选区同时存在时先执行 CLEAR，再执行 ProPainter。混合任务的中间视频采用 FFV1 无损编码，水印遮罩参考原视频生成，最终封装原视频音轨。
+Pro 与 Max 根据选区类型安排首遍处理。字幕使用 CLEAR，水印使用 ProPainter，两种选区同时存在时先执行 CLEAR，再执行 ProPainter。混合任务的中间视频采用 FFV1 无损编码，水印遮罩参考原视频生成，最终封装原视频音轨。
 
-`POST /api/jobs` 可提交 `engine=auto` 和 JSON 字符串形式的 `regions`，每个区域包含 `type`（`subtitle` 或 `watermark`）及 `roi`。例如下面的字幕和水印选区。
+三档接口的 `POST /api/jobs` 接收 `mode` 和 JSON 字符串形式的 `regions`，每个区域包含 `type`（`subtitle` 或 `watermark`）及 `roi`。例如下面的字幕和水印选区。
 
 ```json
 [
@@ -107,15 +109,15 @@ CLEAR-models/
 ]
 ```
 
-自动模式下，`inference` 接收共用的 `start_seconds`、`duration_seconds`、`export_crf`，以及分别设置模型参数的 `clear` 和 `propainter` 对象。提交 `{}` 使用默认值。ProPainter 默认使用自动精细遮罩、遮罩扩展 8、相邻帧数 10、参考间隔 5、分段长度 40、RAFT 20 次和 FP16。
+旧版网页接口显式提交 `engine=auto` 时，`inference` 接收共用的 `start_seconds`、`duration_seconds`、`export_crf`，以及分别设置模型参数的 `clear` 和 `propainter` 对象。提交 `{}` 使用默认值。ProPainter 默认使用自动精细遮罩、遮罩扩展 8、相邻帧数 10、参考间隔 5、分段长度 40、RAFT 20 次和 FP16。
 
 水印处理需要独立安装 [ProPainter](https://github.com/sczhou/ProPainter) 及其模型权重。通过 `PROPAINTER_ROOT` 指定源码目录，通过 `PROPAINTER_PYTHON` 指定已安装依赖的 Python 解释器。服务会检查权重文件和该目录下的 `runtime.ready` 就绪标记，模型准备情况可通过 `/api/system` 查看。
 
 处理状态包含当前阶段、阶段进度和总体进度。失败任务通过 `POST /api/jobs/<id>/retry` 继续执行，已成功完成且配置一致的阶段会被复用。
 
-处理完成后，通过 `POST /api/jobs/<id>/comparison` 生成左侧原片、右侧处理结果的对比视频，通过同一路径的 GET 请求查询状态，再从 `/api/jobs/<id>/comparison/output` 下载。处理结果与对比文件使用原视频文件名，并分别添加 `_处理后` 和 `_处理前后对比` 后缀。
+在网页服务上，处理完成后通过 `POST /api/jobs/<id>/comparison` 生成左侧原片、右侧处理结果的对比视频，通过同一路径的 GET 请求查询状态，再从 `/api/jobs/<id>/comparison/output` 下载。处理结果与对比文件使用原视频文件名，并分别添加 `_处理后` 和 `_处理前后对比` 后缀。
 
-## API
+## 旧版自定义模型 API
 
 `POST /api/jobs` 接收 multipart 表单。坐标按原视频像素填写，右边界和下边界不包含在选区内。
 
@@ -125,7 +127,7 @@ curl.exe -fS http://127.0.0.1:8765/api/jobs -F "video=@input.mp4" -F "roi=[11,10
 
 可附加名为 `inference` 的 JSON 表单字段。支持 `steps`、`cfg_scale`、`lora_scale`、`seed`、`chunk_frames`、`overlap_frames` 和 `context`。分段长度使用 5–33 范围内的 4n+1 帧，重叠帧数必须小于分段长度。参数有误时返回 HTTP 400，GPU 忙时返回 HTTP 409。
 
-新任务采用部署配置指定的预设，`CLEAR_PRESET` 默认值为 `balanced`。网页可直接切换三档，手动修改高级参数后显示“自定义”，批量队列分别保存每个视频的方案与选区。
+旧版自定义 CLEAR 请求采用部署配置指定的预设，`CLEAR_PRESET` 默认值为 `balanced`。以下参数用于自定义模型调用。普通网页和 PHP 产品档位统一从 `GET /api/modes` 读取。
 
 | 预设 | 名称 | 步数 | LoRA | 输入画面 |
 |---|---|---|---|---|

@@ -3,9 +3,11 @@
 import json
 import os
 import re
+import shutil
 import socket
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -20,6 +22,16 @@ def main():
     with tempfile.TemporaryDirectory() as workspace, socket.socket() as sock:
         temp = Path(workspace)
         env = {**os.environ, 'SUBTITLE_DATA_DIR': str(temp / 'queue'), 'SUBTITLE_API_TOKEN': 'test-only'}
+        if not shutil.which('nvidia-smi') and not env.get('SUBTITLE_SCHEDULER_CONFIG'):
+            # This tiny blank-video smoke takes CLEAR's CPU-only no-text path. The production GPU probe stays live.
+            fixture = temp / 'smoke-capacity.json'
+            fixture.write_text(json.dumps({
+                'profiles': {stage: {'gpu_mib': 0, 'ram_mib': 256, 'cpu_cores': 1, 'disk_mib': 64}
+                             for stage in ('lite', 'clear', 'propainter')},
+                'headroom': {'gpu_mib': 0, 'ram_mib': 128, 'cpu_cores': 0, 'disk_mib': 128},
+                'poll_seconds': .2,
+            }))
+            env['SUBTITLE_SCHEDULER_CONFIG'] = str(fixture)
         sock.bind(('127.0.0.1', 0))
         host = f'127.0.0.1:{sock.getsockname()[1]}'
         sock.close()
@@ -69,7 +81,7 @@ def main():
                     time.sleep(0.05)
             assert modes['default'] == 'pro'
             assert {k: v['label'] for k, v in modes['modes'].items()} == {
-                'lite': 'Lite', 'pro': 'Pro', 'max': 'Max'
+                'lite': 'Lite · 快速', 'pro': 'Pro · 标准', 'max': 'Max · 增加'
             }
             try:
                 urllib.request.urlopen(base + '/api/modes', timeout=5)
@@ -108,7 +120,12 @@ def main():
             assert upload(src, roi=[0, 0, 300, 400])[0] == 422
             todo = [(src, None), (src, 'max')]
             if os.getenv('LITE_TEST_VIDEO'):
-                todo.append((Path(os.environ['LITE_TEST_VIDEO']), 'lite'))
+                sys.path.insert(0, str(PHP.parent / 'benchmarks/l20'))
+                from clip_limits import check_clip
+
+                clip = Path(os.environ['LITE_TEST_VIDEO'])
+                check_clip(clip)
+                todo.append((clip, 'lite'))
             for video, mode in todo:
                 roi = json.loads(os.environ['LITE_TEST_ROI']) if mode == 'lite' else None
                 code, job = upload(video, mode, roi=roi)

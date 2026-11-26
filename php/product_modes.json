@@ -1,0 +1,55 @@
+{
+  "catalog_version": "2026-11-26.1",
+  "default": "pro",
+  "modes": {
+    "lite": {
+      "label": "Lite · 快速",
+      "description": "在字幕框内检测文字，用 LaMa 修补字框，适合常规字幕和批量预览。",
+      "subtitles": true,
+      "watermarks": false,
+      "stages": ["ocr_lama"]
+    },
+    "pro": {
+      "label": "Pro · 标准",
+      "description": "字幕用 CLEAR 结合周边画面修复，水印用 ProPainter 处理。",
+      "subtitles": true,
+      "watermarks": true,
+      "stages": ["clear", "propainter"]
+    },
+    "max": {
+      "label": "Max · 增加",
+      "description": "完成标准处理后逐帧复查选区，对疑似残留的片段做局部精修。",
+      "subtitles": true,
+      "watermarks": true,
+      "stages": ["clear", "propainter", "selective_review"]
+    }
+  },
+  "stages": {
+    "ocr_lama": {"label": "OCR 定位与 LaMa 去字幕", "region_types": ["subtitle"], "parameters": "lite"},
+    "clear": {"label": "CLEAR 去字幕", "region_types": ["subtitle"], "parameters": "clear"},
+    "propainter": {"label": "ProPainter 去水印", "region_types": ["watermark"], "parameters": "propainter"},
+    "selective_review": {"label": "逐帧复查与局部精修", "region_types": ["subtitle", "watermark"], "parameters": "review"}
+  },
+  "parameters": {
+    "lite": {
+      "sample_stride": 6, "detector_max_side": 720, "box_padding": 5, "context_padding": 28,
+      "batch_size": 4, "export_crf": 18
+    },
+    "clear": {
+      "preset": "balanced", "steps": 5, "cfg_scale": 1.0, "lora_scale": 1.0, "seed": 20261113,
+      "chunk_frames": 33, "overlap_frames": 4, "context": "expanded", "start_seconds": 0,
+      "duration_seconds": null, "resolution": "native", "export_crf": 10, "blend_mode": "precise",
+      "segment_mode": "shots", "vae_tiled": false, "adaptive_processing": false, "resident_models": true
+    },
+    "propainter": {
+      "start_seconds": 0, "duration_seconds": null, "segment_mode": "shots", "resolution": "native",
+      "export_crf": 10, "mask_dilation": 8, "neighbor_length": 10, "ref_stride": 5,
+      "subvideo_length": 40, "raft_iter": 20, "fp16": true, "watermark_mask_mode": "auto",
+      "adaptive_processing": true
+    },
+    "review": {
+      "steps": 12, "context": "expanded", "resolution": "auto", "frame_padding": 2, "mask_dilation": 4,
+      "subtitle_window": 17, "watermark_window": 10, "export_crf": 10
+    }
+  }
+}

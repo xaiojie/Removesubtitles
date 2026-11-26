@@ -19,6 +19,7 @@ from propainter_options import ProPainterOptions
 from ltx_options import LTXOptions
 from regions import region, parse_regions, bounds, regions_from_config
 from task_options import prepare_task
+from subtitle_queue import QueueError, SubtitleQueue
 from processing_profiles import default_profile, profile_catalog, profile_defaults
 from comparison_video import create_comparison, validate_video_pair
 
@@ -286,12 +287,23 @@ def system():
                    inference_defaults=asdict(InferenceOptions.parse(json.dumps(profile_defaults(default_profile())))),
                    clear_presets=profile_catalog(), clear_default_preset=default_profile(),
                    draining=draining, region_types=["subtitle", "watermark"],
-                   default_engine="auto", auto_routing=True,
+                   product_modes_url="/api/modes", default_engine="auto", auto_routing=True,
                    routing={"subtitle": "clear", "watermark": "propainter"}, engines=engines,
                    propainter_defaults=asdict(ProPainterOptions()), ltx_defaults=asdict(LTXOptions()),
                    ltx_modes=ltx_modes(),
                    subtitle_models=['clear', 'ltx'], batch_queue=True,
                    clear_processing_profile='clear-presets-v2')
+
+
+@app.get('/api/modes')
+def product_modes():
+    catalog, status = SubtitleQueue(WORKSPACE).json_request('GET', '/api/modes')
+    return jsonify(catalog), status
+
+
+@app.errorhandler(QueueError)
+def queue_error(error):
+    return jsonify(error=str(error)), error.status
 
 
 @app.errorhandler(413)
@@ -386,9 +398,24 @@ def run_job(job_id, folder):
 def submit():
     if request.headers.get("Origin", request.host_url.rstrip("/")) != request.host_url.rstrip("/"):
         abort(403)
+    if (request.headers.get('X-Subtitle-Workflow') == 'product'
+            and request.mimetype == 'multipart/form-data' and request.content_length is not None):
+        result, code = SubtitleQueue(WORKSPACE).json_request('POST', '/api/jobs', body=request.stream, headers={
+            'Content-Type': request.content_type, 'Content-Length': str(request.content_length),
+        })
+        return jsonify(result), code
+    mode = request.form.get('mode')
+    # Existing custom-engine clients and the original single-roi form keep their explicit contract.
+    legacy_fields = {'roi', 'engine', 'inference'}
+    if mode != 'lip_sync' and (mode is not None or not legacy_fields.intersection(request.form)):
+        video = request.files.get('video')
+        if video is None or not video.filename:
+            return jsonify(error='请选择视频。'), 400
+        result, code = SubtitleQueue(WORKSPACE).submit(request.form, video)
+        return jsonify(result), code
     audio = None
     try:
-        if request.form.get('mode') == 'lip_sync':
+        if mode == 'lip_sync':
             task = lip_sync_task(request.form.get('duration_mode', 'full'))
             regions, dimensions = [], None
             audio = request.files.get('audio')
@@ -442,7 +469,19 @@ def completed_output(job_id):
     if not re.fullmatch(r'[0-9a-f]{32}', job_id):
         return None
     path = DATA / job_id / 'output.mp4'
-    return path if path.is_file() else None
+    if path.is_file():
+        return path
+    queue = SubtitleQueue(WORKSPACE)
+    folder = queue.data / job_id
+    if (folder / 'request.json').is_file():
+        job, _ = queue.json_request('GET', f'/api/jobs/{job_id}')
+        if job['state'] != 'done':
+            raise QueueError('成片尚未就绪', 409)
+        result = folder / 'result.mp4'
+        if not result.is_file():
+            raise QueueError('成片文件缺失', 500)
+        return result
+    return None
 
 
 @app.get("/api/jobs/<job_id>")
@@ -459,7 +498,8 @@ def status(job_id):
     folder = DATA / job_id
     config_path = folder / "config.json"
     if not config_path.is_file():
-        return jsonify(error="Job not found."), 404
+        result, code = SubtitleQueue(WORKSPACE).json_request('GET', f'/api/jobs/{job_id}')
+        return jsonify(result), code
     config = json.loads(config_path.read_text(encoding="utf-8"))
     metadata = dict(inference=config.get("inference", {}), regions=config.get("regions", []),
                     engine=config.get("engine", "clear"), pipeline=config.get("pipeline", [config.get("engine", "clear")]))
@@ -492,7 +532,8 @@ def retry_job(job_id):
     folder = DATA / job_id
     config_path = folder / "config.json"
     if not config_path.is_file():
-        return jsonify(error="任务不存在。"), 404
+        result, code = SubtitleQueue(WORKSPACE).json_request('POST', f'/api/jobs/{job_id}/retry')
+        return jsonify(result), code
     if (folder / "output.mp4").is_file():
         return jsonify(error="任务已完成。"), 409
     if not (folder / "source.video").is_file():
@@ -550,7 +591,8 @@ def output(job_id):
 
 def download_filename(path, suffix, fallback):
     try:
-        configuration = json.loads((path.parent / 'config.json').read_text(encoding='utf-8'))
+        config = 'request.json' if path.name == 'result.mp4' else 'config.json'
+        configuration = json.loads((path.parent / config).read_text(encoding='utf-8'))
     except (OSError, ValueError):
         configuration = {}
     original_filename = configuration.get('original_filename')
@@ -560,9 +602,10 @@ def download_filename(path, suffix, fallback):
     return stem + suffix + '.mp4'
 
 
-def run_comparison(job_id, folder):
+def run_comparison(job_id, processed):
+    folder = processed.parent
     try:
-        create_comparison(folder / 'source.video', folder / 'output.mp4', folder / 'comparison.mp4')
+        create_comparison(folder / 'source.video', processed, folder / 'comparison.mp4')
         with lock:
             comparisons[job_id] = dict(state='done', stage='对比视频已就绪')
     except Exception as error:
@@ -595,7 +638,7 @@ def start_comparison(job_id):
             upload.save(temporary)
             validate_video_pair(temporary, path)
             temporary.replace(original)
-        Thread(target=run_comparison, args=(job_id, folder), daemon=True).start()
+        Thread(target=run_comparison, args=(job_id, path), daemon=True).start()
     except (OSError, ValueError, RuntimeError) as error:
         temporary.unlink(missing_ok=True)
         with lock:

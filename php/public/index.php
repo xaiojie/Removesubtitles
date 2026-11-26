@@ -6,7 +6,7 @@ function respond(int $code, array $value): never
 {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    echo json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
     exit;
 }
 
@@ -28,16 +28,29 @@ function submit(): never
     if (!is_string($tmp) || !is_uploaded_file($tmp)) {
         respond(400, ['error' => '无效上传']);
     }
-    $mode = $_POST['mode'] ?? DEFAULT_MODE;
-    if (!is_string($mode) || !isset(MODES[$mode])) {
-        respond(422, ['error' => 'mode 可选 ' . implode('、', array_keys(MODES))]);
+    $catalog = productCatalog();
+    $mode = $_POST['mode'] ?? $catalog['default'];
+    if (!is_string($mode) || !isset($catalog['modes'][$mode])) {
+        respond(422, ['error' => 'mode 可选 ' . implode('、', array_keys($catalog['modes']))]);
+    }
+    if (array_key_exists('engine', $_POST) || array_key_exists('inference', $_POST)) {
+        respond(422, ['error' => '三档处理使用所选档位的固定参数']);
+    }
+    if (isset($_POST['catalog_sha256']) && $_POST['catalog_sha256'] !== $catalog['catalog_sha256']) {
+        respond(409, ['error' => '处理档位配置已更新，请刷新后重新提交']);
     }
     $raw = $_POST['regions'] ?? '';
     if (!is_string($raw)) {
         respond(422, ['error' => 'regions 需要 JSON 数组']);
     }
     $size = dimensions($tmp);
-    $regions = validRegions(json_decode($raw), $size, $mode);
+    if (isset($_POST['dimensions']) && (!is_string($_POST['dimensions'])
+        || json_decode($_POST['dimensions'], true) !== $size)) {
+        respond(422, ['error' => '选区使用的显示尺寸与视频不一致']);
+    }
+    $regions = validRegions(json_decode($raw), $size);
+    $plan = resolveProductPlan($mode, array_column($regions, 'type'));
+    $source = ($_SERVER['HTTP_X_SUBTITLE_CLIENT'] ?? '') === 'web' ? 'web' : 'api';
     $name = basename(str_replace('\\', '/', (string)$file['name']));
     $name = preg_replace('/[[:cntrl:]]/u', '', $name) ?: 'video';
     $id = bin2hex(random_bytes(16));
@@ -49,13 +62,15 @@ function submit(): never
         if (!move_uploaded_file($tmp, "$dir/source.video")) {
             throw new RuntimeException('保存上传文件失败');
         }
-        $config = ['mode' => $mode, 'dimensions' => $size, 'regions' => $regions, 'original_filename' => $name];
-        $json = json_encode($config, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        $config = ['mode' => $mode, 'dimensions' => $size, 'regions' => $regions, 'original_filename' => $name,
+            'submitted_via' => $source, 'resolved_plan' => $plan];
+        $json = json_encode($config, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION | JSON_UNESCAPED_UNICODE);
         if (file_put_contents("$dir/request.json", $json) === false) {
             throw new RuntimeException('保存任务信息失败');
         }
-        query("INSERT INTO jobs (id, name, mode, state, stage, created) VALUES (?, ?, ?, 'queued', '排队中', ?)",
-            [$id, $name, $mode, time()]);
+        $now = microtime(true);
+        query("INSERT INTO jobs (id, name, mode, state, stage, created, queued_at) VALUES (?, ?, ?, 'queued', '排队中', ?, ?)",
+            [$id, $name, $mode, (int)$now, $now]);
     } catch (Throwable $e) {
         foreach (['source.video', 'request.json'] as $f) {
             if (is_file("$dir/$f")) {
@@ -68,6 +83,7 @@ function submit(): never
     header("Location: /api/jobs/$id");
     respond(202, [
         'id' => $id, 'mode' => $mode, 'state' => 'queued', 'dimensions' => $size, 'status_url' => "/api/jobs/$id",
+        'submitted_via' => $source, 'resolved_plan' => $plan,
     ]);
 }
 
@@ -81,7 +97,7 @@ try {
         respond(401, ['error' => '需要有效的 Bearer token']);
     }
     if ($path === '/api/modes' && $method === 'GET') {
-        respond(200, ['default' => DEFAULT_MODE, 'modes' => MODES]);
+        respond(200, productCatalog());
     }
     if ($method === 'POST' && ($path === '/api/jobs' || str_ends_with($path, '/retry'))) {
         // Hold until submission commits. Maintenance takes the exclusive lock before draining.
@@ -106,11 +122,41 @@ try {
     }
     $action = $m[2] ?? '';
     if ($action === '' && $method === 'GET') {
+        $folder = dataDir() . "/$id";
+        $config = is_file("$folder/request.json") ? json_decode(file_get_contents("$folder/request.json"), true) : [];
         $job['output_url'] = $job['state'] === 'done' ? "/api/jobs/$id/output" : null;
+        $job['can_retry'] = $job['state'] === 'failed';
+        $job['submitted_via'] = $config['submitted_via'] ?? null;
+        $job['resolved_plan'] = $config['resolved_plan'] ?? null;
+        $job['regions'] = $config['regions'] ?? null;
+        $job['dimensions'] = $config['dimensions'] ?? null;
+        $job['pipeline'] = $job['resolved_plan']['stages'] ?? null;
+        if ($job['state'] === 'done' && is_file("$folder/standard/quality.json")) {
+            $job['quality'] = json_decode(file_get_contents("$folder/standard/quality.json"), true);
+        }
+        $queued = (float)($job['queued_at'] ?? $job['created']);
+        if ($job['state'] === 'queued') {
+            $job['queue_wait_seconds'] = round(max(0, microtime(true) - $queued), 2);
+        } elseif (query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='job_runs'")->fetchColumn()) {
+            $run = query('SELECT run_id, started_at, finished_at FROM job_runs WHERE job_id=? ORDER BY started_at DESC LIMIT 1',
+                [$id])->fetch(PDO::FETCH_ASSOC);
+            if ($run) {
+                $job['run_id'] = $run['run_id'];
+                $job['started_at'] = (float)$run['started_at'];
+                $job['queue_wait_seconds'] = round(max(0, $job['started_at'] - $queued), 2);
+                $job['elapsed_seconds'] = round(max(0, ($run['finished_at'] ?? microtime(true)) - $job['started_at']), 2);
+            }
+        }
+        if ($job['state'] !== 'queued' && is_file("$folder/execution.json")) {
+            $execution = json_decode(file_get_contents("$folder/execution.json"), true);
+            if (($execution['run_id'] ?? null) === ($job['run_id'] ?? null)) {
+                $job['execution'] = $execution;
+            }
+        }
         respond(200, $job);
     }
     if ($action === '/retry' && $method === 'POST') {
-        $update = query("UPDATE jobs SET state='queued', percent=0, stage='等待重试', error=NULL WHERE id=? AND state='failed'", [$id]);
+        $update = query("UPDATE jobs SET state='queued', queued_at=?, percent=0, stage='等待重试', error=NULL WHERE id=? AND state='failed'", [microtime(true), $id]);
         if (!$update->rowCount()) {
             respond(409, ['error' => '只能重试失败任务']);
         }

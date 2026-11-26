@@ -27,7 +27,7 @@ def test_accepts_and_persists_multiple_typed_regions(client):
         {'type': 'watermark', 'roi': [1000, 570, 1278, 718]},
     ]
     response = connection.post('/api/jobs', data={
-        'regions': json.dumps(regions), 'dimensions': '[1280,720]',
+        'regions': json.dumps(regions), 'dimensions': '[1280,720]', 'engine': 'auto',
         'video': (io.BytesIO(b'video'), '多处字幕水印.mov'),
     })
     assert response.status_code == 202, response.get_data(as_text=True)

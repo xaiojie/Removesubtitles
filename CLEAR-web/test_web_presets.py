@@ -61,12 +61,12 @@ def test_new_video_uses_configured_default_and_explicit_options_win(profile_clie
     assert configuration['inference']['clear']['steps'] == 7
 
 
-def test_new_post_without_engine_or_inference_uses_deployment_default(profile_client, monkeypatch):
+def test_clear_engine_without_inference_uses_deployment_default(profile_client, monkeypatch):
     client, root = profile_client
     monkeypatch.setenv('CLEAR_PRESET', 'balanced')
     response = client.post('/api/jobs', data={
         'video': (io.BytesIO(b'video'), 'test.mp4'), 'dimensions': '[300,200]',
-        'regions': json.dumps(SUBTITLES),
+        'regions': json.dumps(SUBTITLES), 'engine': 'clear',
     }, content_type='multipart/form-data')
     assert response.status_code == 202
     options = json.loads((root / response.json['id'] / 'config.json').read_text())['inference']['clear']

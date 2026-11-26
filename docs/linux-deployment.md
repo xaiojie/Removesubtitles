@@ -10,7 +10,7 @@
 
 建议为 CLEAR＋ProPainter 安装准备至少 60 GiB 磁盘和 32 GiB 系统内存，并给视频及临时帧文件留出空间。CLEAR 模型及 tokenizer 下载量约 14.2 GiB，ProPainter 权重约 190 MiB，Python/CUDA 依赖还会占用数 GiB。选装 LTX 字幕或水印用途还会下载约 49.4 GiB 模型，双用途约 49.7 GiB，并创建独立 Python/CUDA 环境。三种模型共存时建议准备 100 GiB 以上可用空间。建议使用 SSD 数据盘作为安装目录。
 
-CLEAR＋ProPainter 建议显存 24 GiB 以上。视频分辨率、选区和分段长度影响实际用量，1080p、4K 视频可能需要更多显存。LTX 使用 BF16/FP8 组件，其显存、主机内存需求随推理尺寸和流式配置变化，部署校验会检查实际 CUDA 能力。脚本默认采用“较大上下文”预设，后续可在网页中调整。
+CLEAR＋ProPainter 建议显存 24 GiB 以上。视频分辨率、选区和分段长度影响实际用量，1080p、4K 视频可能需要更多显存。LTX 使用 BF16/FP8 组件，其显存、主机内存需求随推理尺寸和流式配置变化，部署校验会检查实际 CUDA 能力。三档网页默认选择 Pro · 标准，可按每个视频切换 Lite · 快速或 Max · 增加。
 
 系统 Python 为 3.10～3.12 时直接创建虚拟环境。较旧的系统 Python 可通过 uv 准备 Python 3.11，这一步需要访问 Python 独立发行包的下载源。也可提前安装合适版本，再用 `--python /path/to/python3.11` 指定。
 
@@ -83,7 +83,7 @@ bash scripts/deploy.sh api-status
 | 系统 | 安装、校验 PHP CLI 8.1+、PDO SQLite、带 libx264 的 FFmpeg 和 ffprobe。Ubuntu 22.04/24.04、Debian 12 等系统可从发行版软件源安装。在默认源缺少 PHP 8.1+ 或 FFmpeg 的系统上，需先配置相应的软件源或安装所需版本，再用 `--skip-system`。 |
 | Lite | 在 `video-subtitle-remover/.venv` 内安装 CUDA 版 PyTorch 2.7、PaddleOCR 及算法依赖，仅下载 Mobile OCR 和 LaMa。校验模型文件后，实际调用检测器和 LaMa 做短推理。 |
 | Pro / Max | 共用已有的 CLEAR、ProPainter 环境和权重，Max 的局部精修复用同一套模型。完整性校验通过的权重会直接复用。 |
-| 服务 | 网页仍由原服务提供。PHP 测试端点使用独立端口，默认 8810，接收请求后由后台队列逐个处理。PHP 接口省略 `mode` 时使用 `pro`。 |
+| 服务 | 网页仍由原服务提供。普通三档通过网页后端转交 PHP，直接 API 请求和网页请求进入同一队列。PHP 测试端点默认端口为 8810。PHP 接口省略 `mode` 时使用 `pro`。 |
 
 `--with-api`、`--api-port` 随安装配置保存。默认仅监听本机。测试机需要公网访问时传入 `--public-host SERVER_IP`，同时将平台的外部端口映射到 `--api-port` 指定的内部端口。公网正式服务使用 HTTPS 与 PHP-FPM，配置说明见 [PHP 接口文档](../php/README.md)。
 
@@ -93,7 +93,7 @@ bash scripts/deploy.sh api-status
 curl -fsS -H "Authorization: Bearer $(cat .deploy/api/api.token)" http://127.0.0.1:8810/api/modes
 ```
 
-已有项目先按第 13 节更新源码。已有网页追加 API 时，在任务完成后执行 `all --with-api --components both --yes`。如果两个推理环境和权重均已备好，可依次执行 `system`、`verify`、`api-start`，前两步加上 `--with-api --components both`。各阶段使用同一安装目录。若后续只使用原网页，先运行 `api-stop`，再执行 `start --without-api` 保存选择。
+已有项目先按第 13 节更新源码。已有网页追加 API 时，在任务完成后执行 `all --with-api --components both --yes`。如果两个推理环境和权重均已备好，可依次执行 `system`、`verify`、`api-start`，前两步加上 `--with-api --components both`。各阶段使用同一安装目录。只启用自定义模型、LTX 或 MuseTalk 的安装可运行 `api-stop`，再执行 `start --without-api`。普通三档需要同时运行 PHP 接口和队列。
 
 ```bash
 bash scripts/deploy.sh api-status
@@ -220,7 +220,7 @@ bash scripts/deploy.sh verify --gpu 3
 bash scripts/deploy.sh start --gpu 3
 ```
 
-脚本会设置 `CUDA_VISIBLE_DEVICES`，程序里的 `cuda:0` 对应这张被选中的显卡。当前程序一个任务使用一张 GPU，网页采用单任务队列。Gunicorn 固定为一个 worker、八个线程，保证任务队列在同一进程中。八卡服务器的任务并行需要额外的调度实现。
+脚本会设置 `CUDA_VISIBLE_DEVICES`，程序里的 `cuda:0` 对应这张被选中的显卡。一个任务使用一张 GPU。网页的 Gunicorn 进程负责上传、进度、播放和对比导出，普通三档由独立 PHP 队列调度。
 
 ## 9. 反向代理与 HTTPS
 
@@ -292,23 +292,11 @@ systemd 管理期间通过 `sudo systemctl restart removesubtitles` 重启。
 
 ## 11. 三档字幕方案
 
-通过 `--preset` 设置网页新任务的默认方案，选项会写入 `.deploy/config.sh`，启动时传给 `CLEAR_PRESET`。已有安装再次运行时会读取保存的选择。
+网页和 API 从同一个 `GET /api/modes` 读取产品配置，支持 Lite · 快速、Pro · 标准（默认）、Max · 增加。网页批量提交会分别保存每个视频的档位和选区。可以通过任务状态里的 `resolved_plan` 查看该视频对应的处理阶段、参数和档位配置校验值。[三档处理与接口说明](../php/README.md)
 
-| 选项 | 网页名称 | CLEAR 参数与输入 |
-|---|---|---|
-| `fast` | 快速 | 5 步、LoRA 1.2，普通字幕按选区原像素推理，大号描边字幕自动扩大周边并等比缩小后推理 |
-| `balanced` | 较大上下文 | 5 步、LoRA 1.0、按画面比例扩展周边原像素推理 |
-| `quality` | 强化修复 | 12 步、LoRA 1.0、全画面等比缩放与字幕遮罩融合 |
+通过部署脚本启动时，网页后端自动读取 `.deploy/api/settings.json` 与 `.deploy/api/api.token`。手动部署可用 `SUBTITLE_API_URL` 指定 PHP 内网地址，`SUBTITLE_API_TOKEN_FILE` 指定服务器端密钥文件，`SUBTITLE_DATA_DIR` 指定网页、PHP 接口和队列共享的任务目录。网页需要读取原片和成片，并能在任务目录内写入对比视频。
 
-```bash
-bash scripts/deploy.sh start --preset balanced
-```
-
-服务已经运行时，可在当前任务完成后执行 `restart --preset balanced`，使新的部署默认生效。网页可为单个视频切换方案，修改高级参数后显示“自定义”。批量处理会分别保存每个视频的选区、方案与高级参数。
-
-三档共用 CLEAR 模型文件，按原图的字形、描边和字幕底板生成遮罩并匹配周围颜色。“强化修复”使用较多步骤和缩放输入，字幕被遮挡的衣物、手部等细节可能出现重建模糊。
-
-历史 A100 80GB 的同一分钟样片上，快速与较大上下文的字幕阶段分别耗时约 4 分 02 秒、7 分 21 秒，包含 ProPainter 水印阶段后约 7 分 22 秒、10 分 42 秒。另两段一分钟样片的 12 步字幕重跑及融合导出约为 16 分 26 秒、18 分 15 秒。这些记录来自当时的研究流程，当前版本已将裁剪、遮罩和配置整理为通用入口，实际耗时由素材、选区与设备共同决定。
+旧版自定义 CLEAR 接口仍支持 `--preset fast|balanced|quality` 设置模型预设，参数通过 `CLEAR_PRESET` 传给该处理路径。
 
 ## 12. 可选安装 LTX
 
