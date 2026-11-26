@@ -125,7 +125,7 @@ def run(args):
                str(prop), core]
         result = output / "output.mp4"
     else:
-        mode = {"ocr-lama": "lite", "selective": "max", "product-pro": "pro"}[args.candidate]
+        mode = {"ocr-lama": "lite", "selective": "max", "product-pro": "pro", "product-max": "max"}[args.candidate]
         request["mode"] = mode
         resolver = root / "php/product_modes.php"
         if resolver.is_file():
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     for name in ("manifest", "source", "install", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--clip", required=True)
-    parser.add_argument("--candidate", choices=[*PROFILES, "clear-custom", "ocr-lama", "selective", "product-pro"], required=True)
+    parser.add_argument("--candidate", choices=[*PROFILES, "clear-custom", "ocr-lama", "selective", "product-pro", "product-max"], required=True)
     parser.add_argument("--options", default="{}", help="CLEAR options or parameter groups for the product candidate")
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--acceptance", action="store_true")

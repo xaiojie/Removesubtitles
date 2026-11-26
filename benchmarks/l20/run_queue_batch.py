@@ -19,7 +19,7 @@ from clip_limits import check_clip
 from run_candidate import json_file, video_info
 
 
-GPU_STAGES = {"lite_lama", "clear_inference", "propainter_inference"}
+GPU_STAGES = {"lite_lama", "guide_lama", "clear_inference", "propainter_inference"}
 CPU_STAGES = {"shot_scan", "lite_ocr", "max_review", "ffmpeg_finalize"}
 
 
@@ -61,6 +61,8 @@ def peaks(samples):
     result["card_used_mib"] = max((s["gpu_total_mib"] - s["gpu_free_mib"] for s in samples
                                   if s.get("gpu_total_mib") is not None and s.get("gpu_free_mib") is not None),
                                  default=None)
+    util = [v["gpu_util_pct"] for v in samples if v.get("gpu_util_pct") is not None]
+    result["card_util_mean_pct"] = round(sum(util) / len(util), 2) if util else None
     return result
 
 
@@ -109,11 +111,18 @@ def report(data, jobs, started, limit):
             if windows:
                 overlaps.append({"jobs": [a, b], "kind": kind, "seconds": sum(y-x for x, y in windows),
                                  "intervals_unix": windows})
+    gpu_groups = []
+    for members in combinations(timelines, 3):
+        windows = merged(timelines[members[0]], GPU_STAGES)
+        for job_id in members[1:]:
+            windows = intersection(windows, merged(timelines[job_id], GPU_STAGES))
+        if windows:
+            gpu_groups.append(dict(jobs=list(members), seconds=sum(b-a for a,b in windows), intervals_unix=windows))
     ended = max((x["finished_at"] for row in rows for x in row["attempts"]), default=started)
     wall = max(0, ended - started)
     done = [x for x in rows if x["state"] == "done" and x["same_frames_and_dimensions"] and x["same_fps"]]
     return dict(capacity=limit, jobs=rows, started_at=started, finished_at=ended, batch_seconds=wall,
-                completed=len(done), failed=len(rows)-len(done), overlaps=overlaps, timelines=timelines, stage_peaks=stage_peaks,
+                completed=len(done), failed=len(rows)-len(done), overlaps=overlaps, three_gpu_jobs=gpu_groups, timelines=timelines, stage_peaks=stage_peaks,
                 completed_source_minutes_per_hour=sum(x["source_seconds"] for x in done)*60/wall if wall else 0)
 
 
@@ -148,6 +157,10 @@ def main(args):
                VSR_PYTHON=str(install / "video-subtitle-remover/.venv/bin/python"),
                VSR_MODEL_DIR=str(install / "video-subtitle-remover/backend/models"), LITE_DEVICE="cuda",
                HF_HUB_OFFLINE="1", PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK="True")
+    if args.scheduler_config:
+        settings = json.loads(args.scheduler_config.read_text())
+        json_file(output / "admission.json", settings)
+        env["SUBTITLE_SCHEDULER_CONFIG"] = str(output / "admission.json")
     # Isolate only the queue and port. Production users and their queue remain available.
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -183,9 +196,12 @@ def main(args):
                            env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
             result = report(data, jobs, started, args.limit)
             result["catalog_sha256"] = catalog["catalog_sha256"]
+            result["admission_config"] = json.loads(Path(env["SUBTITLE_SCHEDULER_CONFIG"]).read_text()) if env.get("SUBTITLE_SCHEDULER_CONFIG") else {}
             result["source_revision"] = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"],text=True).strip()
             json_file(output / "batch.json", result)
             print(f"{result['completed']}/{len(jobs)} completed in {result['batch_seconds']:.2f} s", flush=True)
+            if result['failed']:
+                raise RuntimeError(f"{result['failed']} 个并发任务未生成完整成片")
         finally:
             server.terminate()
             server.wait()
@@ -198,5 +214,6 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--limit", type=int, choices=range(1, 17), required=True)
     parser.add_argument("--acceptance", action="store_true")
+    parser.add_argument("--scheduler-config", type=Path, help="同机资源预留设置")
     parser.add_argument("jobs", nargs="+", metavar="MODE:CLIP")
     main(parser.parse_args())

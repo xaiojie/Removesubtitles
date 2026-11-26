@@ -143,7 +143,7 @@ def main():
                         (status, (temp / 'queue' / job['id'] / 'worker.log').read_text()[-1800:])
                     )
                 assert status['percent'] == 100 and status['mode'] == job['mode']
-                assert (temp / 'queue' / job['id'] / 'review.json').is_file() == (mode == 'max')
+                assert (temp / 'queue' / job['id'] / 'review.json').is_file() == ('selective_review' in job['resolved_plan']['stages'])
                 if mode == 'lite':
                     log = (temp / 'queue' / job['id'] / 'worker.log').read_text()
                     detected = re.search(r'Lite: ([0-9]+)/([0-9]+)', log)
@@ -193,6 +193,7 @@ def main():
             config = job_dir / 'request.json'
             old_request = json.loads(config.read_text())
             old_request['mode'] = 'fine'
+            old_request.pop('resolved_plan', None)
             config.write_text(json.dumps(old_request))
             with sqlite3.connect(temp / 'queue' / 'queue.sqlite') as db:
                 db.execute("UPDATE jobs SET mode='standard' WHERE id=?", (retry['id'],))

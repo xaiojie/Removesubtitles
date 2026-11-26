@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
-from subtitle_compositing import large_caption_guidance, light_caption_cards
+from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
 
 @dataclass(frozen=True)
@@ -30,7 +30,7 @@ class LiteOptions:
             raise ValueError('Lite 检测间隔、检测尺寸和批量大小须大于零')
         if min(self.box_padding, self.context_padding) < 0 or not 0 <= self.export_crf <= 51:
             raise ValueError('Lite 扩框或编码参数无效')
-        if self.mask_mode not in ('boxes', 'joint'):
+        if self.mask_mode not in ('boxes', 'joint', 'joint_cards'):
             raise ValueError('Lite 遮罩模式无效')
 
 
@@ -151,6 +151,10 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options):
                 if x < r and y < b:
                     local.append((x - left, y - top, r - left, b - top))
             mask = caption_plates(crop, local)
+            if options.mask_mode == 'joint_cards':
+                colored = colored_caption_cards(crop)
+                if colored is not None:
+                    mask |= cv2.dilate(colored, np.ones((11, 11), np.uint8))
             cards = light_caption_cards(crop)
             if cards is not None:
                 mask |= cards
@@ -243,7 +247,7 @@ def run(folder, request):
                     first = frames.pop()
                 else:
                     boxes.append(anchor)
-                repaired = (restore_joint(frames, boxes, rois, lama, options) if options.mask_mode == 'joint'
+                repaired = (restore_joint(frames, boxes, rois, lama, options) if options.mask_mode in ('joint', 'joint_cards')
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(frame.tobytes())

@@ -94,7 +94,7 @@ def test_web_and_api_resolve_identical_jobs_for_all_tiers(queue):
     assert [c['label'] for c in catalog['modes'].values()] == ['Lite · 快速', 'Pro · 标准', 'Max · 增加']
     for mode, selected, stages in [
         ('lite', [SUB], ['ocr_lama']), (None, [SUB, WM], ['clear', 'propainter']),
-        ('max', [WM], ['propainter', 'selective_review']), ('max', [SUB], ['clear', 'selective_review']),
+        ('max', [WM], ['propainter', 'selective_review']), ('max', [SUB], ['clear']),
     ]:
         direct, status = upload_php(base, source, selected, mode)
         assert status == 202

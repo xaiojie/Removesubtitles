@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2026-11-27.1",
+  "catalog_version": "2026-11-27.2",
   "default": "pro",
   "modes": {
     "lite": {
@@ -11,36 +11,37 @@
     },
     "pro": {
       "label": "Pro · 标准",
-      "description": "字幕用 CLEAR 结合周边画面修复，水印用 ProPainter 处理。",
+      "description": "字幕用 CLEAR 结合周边画面修复，遇到粗描边和底板时用 LaMa 预填。水印用 ProPainter 处理。",
       "subtitles": true,
       "watermarks": true,
       "stages": ["clear", "propainter"]
     },
     "max": {
       "label": "Max · 增加",
-      "description": "完成标准处理后逐帧复查选区，对疑似残留的片段做局部精修。",
+      "description": "字幕使用 7 步 CLEAR，并从对齐的相邻帧恢复可见背景。水印完成首遍后逐帧复查并局部精修。",
       "subtitles": true,
       "watermarks": true,
-      "stages": ["clear", "propainter", "selective_review"]
+      "stages": ["clear", "propainter", "selective_review"],
+      "overrides": {"clear": {"steps": 7, "subtitle_guidance": "motion_lama"}}
     }
   },
   "stages": {
     "ocr_lama": {"label": "OCR 定位与 LaMa 去字幕", "region_types": ["subtitle"], "parameters": "lite"},
     "clear": {"label": "CLEAR 去字幕", "region_types": ["subtitle"], "parameters": "clear"},
     "propainter": {"label": "ProPainter 去水印", "region_types": ["watermark"], "parameters": "propainter"},
-    "selective_review": {"label": "逐帧复查与局部精修", "region_types": ["subtitle", "watermark"], "parameters": "review"}
+    "selective_review": {"label": "水印复查与局部精修", "region_types": ["watermark"], "parameters": "review"}
   },
   "parameters": {
     "lite": {
       "sample_stride": 8, "detector_max_side": 720, "box_padding": 9, "context_padding": 60,
-      "batch_size": 6, "export_crf": 18, "mask_mode": "joint"
+      "batch_size": 6, "export_crf": 18, "mask_mode": "joint_cards"
     },
     "clear": {
-      "preset": "balanced", "steps": 5, "cfg_scale": 1.0, "lora_scale": 1.0, "seed": 20261113,
+      "preset": "balanced", "steps": 5, "cfg_scale": 1.0, "lora_scale": 1.15, "seed": 20261113,
       "chunk_frames": 33, "overlap_frames": 4, "context": "expanded", "start_seconds": 0,
-      "duration_seconds": null, "resolution": "native", "export_crf": 10, "blend_mode": "precise",
+      "duration_seconds": null, "resolution": "auto", "export_crf": 10, "blend_mode": "precise",
       "segment_mode": "shots", "vae_tiled": false, "adaptive_processing": false, "resident_models": true,
-      "subtitle_guidance": "preset", "share_prompt_embedding": false
+      "subtitle_guidance": "lama", "share_prompt_embedding": true
     },
     "propainter": {
       "start_seconds": 0, "duration_seconds": null, "segment_mode": "shots", "resolution": "native",
@@ -50,7 +51,7 @@
     },
     "review": {
       "steps": 12, "context": "expanded", "resolution": "auto", "frame_padding": 2, "mask_dilation": 4,
-      "subtitle_window": 17, "watermark_window": 10, "export_crf": 10
+      "subtitle_window": 17, "watermark_window": 10, "export_crf": 10, "region_types": ["watermark"]
     }
   }
 }
