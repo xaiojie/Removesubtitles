@@ -20,6 +20,19 @@ class SubtitleCompositingTests(unittest.TestCase):
         cv2.circle(crop, (155, 34), 12, (166, 160, 216), -1)
         self.assertIsNone(tinted_caption_guidance(crop))
 
+    def test_fading_text_uses_neighboring_evidence(self):
+        from subtitle_compositing import tinted_caption_guidance, tinted_caption_sequence
+
+        strong = np.full((64, 275, 3), 14, np.uint8)
+        cv2.putText(strong, 'Total 6.30', (13, 45), cv2.FONT_HERSHEY_SIMPLEX, .95, (170, 160, 222), 2)
+        faded = cv2.addWeighted(strong, .41, np.full_like(strong, 14), .59, 0)
+        self.assertIsNone(tinted_caption_guidance(faded))
+        blank = np.zeros_like(strong)
+        first, second, _, last = tinted_caption_sequence([faded, strong, faded, blank])
+        self.assertTrue(np.all(first[strong.max(axis=2) > 180] == 255))
+        self.assertIsNotNone(second)
+        self.assertIsNone(last)
+
     def test_clipped_outline_cannot_anchor_a_shadow_at_the_frame_edge(self):
         from subtitle_compositing import composite_caption
         # A known clean background with a diagonal gradient and an independently drawn caption.

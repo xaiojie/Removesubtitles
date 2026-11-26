@@ -63,6 +63,7 @@ def review(manifest, clip_id, output, folder, region_index, comparison):
     chosen.update(range(max(0, clip["frames"] - final_second), clip["frames"], max(1, round(fps / 5))))
     frames, tail, rows = {}, [], []
     previous = previous_tile = worst_tile = None
+    previous_reference_error = None
     worst = -1.
     try:
         for n in range(clip["frames"]):
@@ -83,8 +84,12 @@ def review(manifest, clip_id, output, folder, region_index, comparison):
             outer_mae = float(np.mean(cv2.mean(cv2.absdiff(values[0], values[1]), mask=outside)[:3]))
             row = {"frame": n, "source_highlight_retained": preserved, "outside_roi_mae": outer_mae}
             if has_reference:
-                row["inside_reference_mae"] = float(cv2.absdiff(repaired, crops[2]).mean())
+                reference_error = repaired.astype(np.int16) - crops[2].astype(np.int16)
+                row["inside_reference_mae"] = float(np.abs(reference_error).mean())
                 row["source_reference_mae"] = float(cv2.absdiff(orig, crops[2]).mean())
+                if previous_reference_error is not None:
+                    row["temporal_reference_mae"] = float(np.abs(reference_error - previous_reference_error).mean())
+                previous_reference_error = reference_error
             tiny = cv2.resize(values[0], (64, 36), interpolation=cv2.INTER_AREA)
             tile = preview(crops, n)
             if previous is not None and cv2.absdiff(tiny, previous).mean() > 35:

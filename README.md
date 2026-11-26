@@ -6,7 +6,7 @@
 
 主程序在 `CLEAR-web/`（默认端口 8765），可选择三档字幕与水印处理，或使用实验模型 LTX。另一套 [Video Subtitle Remover](video-subtitle-remover/README.md) 保留原生 Web、CLI 和桌面端，支持 STTN、LaMa、OpenCV、ProPainter 及 PP-OCRv5。Linux Web 服务默认使用 8800 端口，单独安装依赖与模型。
 
-网页和 PHP API 共用同一份档位配置与 SQLite 任务队列。Lite · 快速只处理字幕，Pro · 标准（默认）同时支持字幕和水印，Max · 增加在首遍完成后复查并修补疑似残留。网页批量提交时，每个视频使用自己的档位和选区。[PHP 接口与启动示例](php/README.md)
+网页和 PHP API 共用一份档位配置和一条 SQLite 任务队列。Lite · 快速使用 OCR 和 LaMa 去字幕。Pro · 标准（默认）使用 5 步 CLEAR 去字幕，有水印时调用 ProPainter。Max · 增加使用邻帧引导和 7 步 CLEAR 去字幕，有水印时还会逐帧复查水印选区并局部精修。网页批量提交时，每个视频使用自己的档位和选区。[PHP 接口与启动示例](php/README.md)
 
 主网页顶部可切换到「口型同步」。在已安装 [MuseTalk 1.5](https://github.com/TMElyralab/MuseTalk) 的 NVIDIA 服务器上，启动网页前将 `MUSE_ROOT` 设为 MuseTalk 的目录，将 `MUSE_PYTHON` 设为其独立环境的 Python，确保网页进程可以调用 `ffmpeg` 和 `ffprobe`。默认使用 `/opt/MuseTalk` 和其中的 `.venv/bin/python`。可以用 `CLEAR_HOME_MODE=lip_sync` 将口型同步设为首页。模型保存在 MuseTalk 运行目录。
 
