@@ -68,6 +68,7 @@ def report(data, jobs, started, limit):
     db = sqlite3.connect(data / "queue.sqlite")
     db.row_factory = sqlite3.Row
     timelines = {}
+    stage_peaks = {}
     rows = []
     for job in jobs:
         job_id = job["id"]
@@ -81,6 +82,11 @@ def report(data, jobs, started, limit):
             stages.extend(lines(run / "stages.jsonl"))
             samples.extend(lines(run / "metrics.jsonl"))
         timelines[job_id] = stages
+        stage_peaks[job_id] = {}
+        for stage in sorted({s["stage"] for s in stages if s.get("ok")}):
+            spans = merged(stages, {stage})
+            matching = [sample for sample in samples if any(a <= sample["ts"] <= b for a, b in spans)]
+            stage_peaks[job_id][stage] = dict(samples=len(matching), **peaks(matching))
         row = dict(job, **state, attempts=attempts, peaks=peaks(samples))
         if attempts:
             row["wait_seconds"] = sum(a["started_at"] - a["queued_at"] for a in attempts)
@@ -107,12 +113,13 @@ def report(data, jobs, started, limit):
     wall = max(0, ended - started)
     done = [x for x in rows if x["state"] == "done" and x["same_frames_and_dimensions"] and x["same_fps"]]
     return dict(capacity=limit, jobs=rows, started_at=started, finished_at=ended, batch_seconds=wall,
-                completed=len(done), failed=len(rows)-len(done), overlaps=overlaps,
+                completed=len(done), failed=len(rows)-len(done), overlaps=overlaps, timelines=timelines, stage_peaks=stage_peaks,
                 completed_source_minutes_per_hour=sum(x["source_seconds"] for x in done)*60/wall if wall else 0)
 
 
 def main(args):
     root = Path(__file__).resolve().parents[2]
+    install = (args.install or root).resolve()
     output = args.output.resolve()
     manifest = args.manifest.resolve()
     corpus = {c["id"]: c for c in json.loads(manifest.read_text())["clips"]}
@@ -136,10 +143,10 @@ def main(args):
     data.mkdir()
     token = secrets.token_urlsafe(32)
     env = dict(os.environ, SUBTITLE_API_TOKEN=token, SUBTITLE_DATA_DIR=str(data), SUBTITLE_MAX_JOBS=str(args.limit),
-               CLEAR_WORKSPACE=str(root), CLEAR_PYTHON=str(root / ".venv/bin/python"),
-               PROPAINTER_ROOT=str(root / "ProPainter"), PROPAINTER_PYTHON=str(root / ".venv/bin/python"),
-               VSR_PYTHON=str(root / "video-subtitle-remover/.venv/bin/python"),
-               VSR_MODEL_DIR=str(root / "video-subtitle-remover/backend/models"), LITE_DEVICE="cuda",
+               CLEAR_WORKSPACE=str(install), CLEAR_PYTHON=str(install / ".venv/bin/python"),
+               PROPAINTER_ROOT=str(install / "ProPainter"), PROPAINTER_PYTHON=str(install / ".venv/bin/python"),
+               VSR_PYTHON=str(install / "video-subtitle-remover/.venv/bin/python"),
+               VSR_MODEL_DIR=str(install / "video-subtitle-remover/backend/models"), LITE_DEVICE="cuda",
                HF_HUB_OFFLINE="1", PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK="True")
     # Isolate only the queue and port. Production users and their queue remain available.
     with socket.socket() as sock:
@@ -148,7 +155,7 @@ def main(args):
     base = "http://" + host
     api = root / "php/public"
     with (output / "queue.log").open("w") as log:
-        server = subprocess.Popen(["php", "-S", host, "-t", str(api), str(api / "index.php")],
+        server = subprocess.Popen(["php", "-d", "upload_max_filesize=2G", "-d", "post_max_size=2100M", "-S", host, "-t", str(api), str(api / "index.php")],
                                   env=env, stdout=log, stderr=log)
         try:
             req = urllib.request.Request(base+"/api/modes", headers={"Authorization": "Bearer "+token})
@@ -187,6 +194,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--install", type=Path, help="复用现有模型和 Python 环境的安装目录")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--limit", type=int, choices=range(1, 17), required=True)
     parser.add_argument("--acceptance", action="store_true")

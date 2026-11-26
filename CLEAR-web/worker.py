@@ -20,7 +20,7 @@ from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from job_trace import span
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
-from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance, light_caption_cards, visible_background
+from subtitle_compositing import camera_path, caption_mask, composite_caption, large_caption_guidance, light_caption_cards, visible_background
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -194,7 +194,9 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
     observed = [[] for _ in frames]
     if precise:
         fast_geometry = preset == 'fast' and context == 'roi' and resolution == 'native'
-        inspect_large = fast_geometry or subtitle_guidance == 'temporal'
+        temporal = subtitle_guidance != 'preset'
+        inspect_large = fast_geometry or temporal
+        camera = None
         analyses = []
         for region in regions:
             if region['type'] != 'subtitle':
@@ -206,7 +208,6 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                 mask = caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy()
                 if inspect_large:
                     crop = frame[y1:y2, x1:x2]
-                    temporal = subtitle_guidance == 'temporal'
                     large, hint = large_caption_guidance(crop, include_outlined=temporal)
                     if temporal:
                         cards = light_caption_cards(crop)
@@ -218,9 +219,11 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                         mask |= hint
                         input_hints[index].append((region['roi'], hint))
                 masks.append(mask)
-            if subtitle_guidance == 'temporal' and any(h is not None for h in region_hints):
+            if temporal and any(h is not None for h in region_hints):
                 crops = [frame[y1:y2, x1:x2] for frame in frames]
-                for i, borrowed in enumerate(visible_background(crops, masks, region_hints)):
+                if subtitle_guidance in ('motion', 'motion_lama') and camera is None:
+                    camera = camera_path(frames, regions)
+                for i, borrowed in enumerate(visible_background(crops, masks, region_hints, camera, (x1, y1))):
                     if borrowed is not None:
                         observed[i].append((region['roi'], *borrowed))
             analyses.append(dict(region=region, masks=masks, needs_model=any(mask.any() for mask in masks)))
@@ -239,7 +242,8 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
     resized, padded = model_geometry(crop_width, crop_height, resolution, preserve_aspect=precise,
                                      large_caption=large_caption)
     originals = [frame[top:bottom, left:right].copy() for frame in frames]
-    inputs = []
+    guidance_images, guidance_masks = [], []
+    use_lama = subtitle_guidance in ('lama', 'motion_lama')
     for original, hints, known in zip(originals, input_hints, observed):
         conditioned = original.copy() if known else original
         for (x1, y1, x2, y2), colors, valid in known:
@@ -248,7 +252,8 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
         image = Image.fromarray(pixels)
         if image.size != resized:
             image = image.resize(resized, Image.Resampling.LANCZOS)
-        pixels = np.asarray(image)
+        pixels = np.array(image)
+        hint_mask = None
         if hints:
             hint_mask = np.zeros((crop_height, crop_width), np.uint8)
             for (x1, y1, x2, y2), hint in hints:
@@ -257,7 +262,15 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                 hint_mask[y1-top:y2-top, x1-left:x2-left][valid] = 0
             hint_mask = cv2.resize(hint_mask, resized, interpolation=cv2.INTER_AREA)
             # Suppress opaque lettering in the conditioning image before the single CLEAR pass.
-            pixels = cv2.inpaint(pixels, hint_mask, 3, cv2.INPAINT_TELEA)
+            if not use_lama:
+                pixels = cv2.inpaint(pixels, hint_mask, 3, cv2.INPAINT_TELEA)
+        guidance_images.append(pixels)
+        guidance_masks.append(hint_mask)
+    if use_lama and any(mask is not None for mask in guidance_masks):
+        from lama_guidance import fill
+        fill(guidance_images, guidance_masks)
+    inputs = []
+    for pixels in guidance_images:
         pixels = cv2.copyMakeBorder(pixels, 0, padded[1]-resized[1], 0, padded[0]-resized[0],
                                     cv2.BORDER_REPLICATE)
         inputs.append(Image.fromarray(pixels))

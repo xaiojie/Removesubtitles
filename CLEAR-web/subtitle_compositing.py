@@ -3,7 +3,46 @@ import cv2
 import numpy as np
 
 
-def visible_background(crops, masks, hints):
+def camera_path(frames, regions):
+    """Estimate camera motion on visible scene features, leaving user selections out of registration."""
+    h, w = frames[0].shape[:2]
+    scale = min(1., 512 / max(w, h))
+    size = (max(1, round(w * scale)), max(1, round(h * scale)))
+    sx, sy = size[0] / w, size[1] / h
+    allowed = np.full((size[1], size[0]), 255, np.uint8)
+    for region in regions:
+        x, y, r, b = region['roi']
+        allowed[max(0, int(y*sy)-2):int(b*sy)+3, max(0, int(x*sx)-2):int(r*sx)+3] = 0
+    path = []
+    prev = None
+    group = 0
+    pose = np.eye(3)
+    scaling = np.diag([sx, sy, 1.])
+    for frame in frames:
+        gray = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), size, interpolation=cv2.INTER_AREA)
+        if prev is not None:
+            points = cv2.goodFeaturesToTrack(prev, 120, .015, 6, mask=allowed)
+            affine = None
+            if points is not None and len(points) >= 12:
+                moved, found, _ = cv2.calcOpticalFlowPyrLK(prev, gray, points, None)
+                matches = found.ravel() != 0
+                if matches.sum() >= 10:
+                    affine, inliers = cv2.estimateAffinePartial2D(points[matches], moved[matches],
+                                                                  ransacReprojThreshold=1.8)
+                    if affine is not None and (inliers.sum() < 9 or inliers.mean() < .5
+                            or not .90 < np.hypot(affine[0, 0], affine[0, 1]) < 1.11):
+                        affine = None
+            if affine is None:
+                group += 1
+                pose = np.eye(3)
+            else:
+                pose = np.linalg.inv(scaling) @ np.vstack((affine, [0, 0, 1])) @ scaling @ pose
+        path.append((group, pose))
+        prev = gray
+    return path
+
+
+def visible_background(crops, masks, hints, path=None, origin=(0, 0)):
     """Recover covered strokes from a neighbouring frame only where nearby unmasked pixels agree."""
     result = []
     for i, (source, hint) in enumerate(zip(crops, hints)):
@@ -16,10 +55,18 @@ def visible_background(crops, masks, hints):
             if j == i or j < 0 or j >= len(crops):
                 continue
             donor = crops[j]
-            eligible = (hint != 0) & (masks[j] == 0)
+            donor_mask = masks[j]
+            if path is not None and path[i][0] == path[j][0]:
+                transform = path[i][1] @ np.linalg.inv(path[j][1])
+                shift = np.asarray(origin)
+                transform[:2, 2] += transform[:2, :2] @ shift - shift
+                size = (donor.shape[1], donor.shape[0])
+                donor = cv2.warpAffine(donor, transform[:2], size)
+                donor_mask = cv2.warpAffine(donor_mask, transform[:2], size, borderValue=255)
+            eligible = (hint != 0) & (donor_mask == 0)
             if not eligible.any():
                 continue
-            shared = ((masks[i] == 0) & (masks[j] == 0)).astype(np.float32)
+            shared = ((masks[i] == 0) & (donor_mask == 0)).astype(np.float32)
             distance = cv2.absdiff(source, donor).max(axis=2).astype(np.float32)
             for window in (23, 55):
                 support = cv2.blur(shared, (window, window))
