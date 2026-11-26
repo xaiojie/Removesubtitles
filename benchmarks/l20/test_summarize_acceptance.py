@@ -3,10 +3,29 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from summarize_acceptance import batch_data
+from summarize_acceptance import batch_data, file_digest, one_clip
 
 
 class ConcurrentQualityTests(unittest.TestCase):
+    def test_an_isolated_review_matches_only_the_file_that_was_seen(self):
+        clip = dict(id='c01', style='normal', split='tune', duration_seconds=1, frames=1,
+                    width=16, height=16, fps='1/1', roi=[0, 0, 8, 8], sha256='input')
+        record = dict(status='ok', directory='trial')
+        assessment = dict(verdict='通过', note='checked', text_clean=True, quality_pass=True)
+        notes = {'c01': {'lite': assessment}}
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            result = folder / 'result.mp4'
+            result.write_bytes(b'reviewed result')
+            trial = dict(validated=True, clip='c01', input_sha256='input', elapsed_seconds=1,
+                         source_revision='test', output=result.name)
+            (folder / 'trial.json').write_text(json.dumps(trial))
+            self.assertNotIn('quality_pass', one_clip(clip, 'lite', record, folder, notes, None))
+            assessment['output_sha256'] = file_digest(result)
+            self.assertTrue(one_clip(clip, 'lite', record, folder, notes, None)['quality_pass'])
+            result.write_bytes(b'regenerated result')
+            self.assertNotIn('quality_pass', one_clip(clip, 'lite', record, folder, notes, None))
+
     def test_distinct_outputs_need_their_own_review_and_invalid_frames_never_pass(self):
         jobs = []
         for name in ('same', 'reviewed', 'unknown', 'wrong_frames'):

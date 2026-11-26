@@ -188,8 +188,10 @@ def main(args):
                              "-F", "video=@"+job["file"], "-F", "mode="+job["mode"],
                              "--form-string", "regions="+json.dumps(job["regions"]),
                              "--form-string", "catalog_sha256="+catalog["catalog_sha256"], base+"/api/jobs"]
+                upload_start = time.perf_counter()
                 response = json.loads(subprocess.check_output(args_curl))
                 job["id"] = response["id"]
+                job["upload_submit_seconds"] = round(time.perf_counter() - upload_start, 4)
             json_file(output / "inputs.json", jobs)
             started = time.time()
             subprocess.run(["php", str(root / "php/bin/worker.php"), "--drain"], check=True,

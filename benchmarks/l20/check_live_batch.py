@@ -42,7 +42,9 @@ def check(args):
     started = time.time()
     for job in jobs:
         base, headers = entries[job['entry']]
+        upload_start = time.perf_counter()
         job['id'] = submit(base, headers, job, Path(job['file']), job['mode'], catalog)
+        job['upload_submit_seconds'] = round(time.perf_counter() - upload_start, 4)
         json_file(args.output / 'inputs.json', jobs)
     for job in jobs:
         base, headers = entries[job['entry']]

@@ -80,7 +80,7 @@ def one_clip(clip, role, record, folder, notes, telemetry):
     if (folder / 'comparison.mp4').is_file():
         row['comparison'] = 'comparison.mp4'
     verdict = notes.get(clip['id'], {}).get(role)
-    if verdict:
+    if verdict and row.get('output_sha256') and verdict.get('output_sha256') == row['output_sha256']:
         row.update(visual=verdict['verdict'], observation=verdict['note'],
                    text_clean=verdict.get('text_clean'), quality_pass=verdict.get('quality_pass'))
     return row
@@ -113,6 +113,7 @@ def batch_data(path, isolated, notes):
                 basis = 'reviewed_batch_file'
         jobs.append(dict(id=job['id'], tier=job['mode'], clip=job['clip'], state=job['state'],
                          quality_pass=quality, quality_basis=basis, source_seconds=job['source_seconds'],
+                         upload_submit_seconds=job.get('upload_submit_seconds'),
                          wait_seconds=job.get('wait_seconds'), processing_seconds=job.get('processing_seconds'),
                          attempts=len(job['attempts']), peaks=job['peaks'], output_sha256=job.get('output_sha256'),
                          stage_peaks=batch.get('stage_peaks', {}).get(job['id'], {}),
@@ -166,6 +167,27 @@ def write_stage_tables(directory, records, queues):
                                         *(measurements.get(k) for k in peak_fields)))
 
 
+def write_tuning_runs(destination, trials, clips):
+    inputs = {c['id']: c['sha256'] for c in clips if c['split'] in ('tune', 'diagnostic')}
+    columns = ['trial', 'clip', 'candidate', 'source_revision', 'input_sha256', 'elapsed_seconds',
+               'job_peak_vram_mib', 'gpu_util_mean_pct', 'matched_text_frames', 'checkpoint_sha256', 'parameters']
+    with destination.open('w', encoding='utf-8-sig', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns, extrasaction='ignore')
+        writer.writeheader()
+        for path in sorted(trials.glob('*/trial.json')):
+            label = path.parent.name
+            if label.startswith(('final-', 'baseline-')):
+                continue
+            trial = load(path)
+            if not trial.get('validated') or inputs.get(trial.get('clip')) != trial['input_sha256']:
+                continue
+            request = trial['parameters']
+            parameters = request.get('resolved_plan', {}).get('parameters', request.get('inference', {}))
+            audit = load(path.with_name('ocr-review.json'))
+            writer.writerow(dict(trial, trial=label, matched_text_frames=audit.get('matched_frames'),
+                                 parameters=json.dumps(parameters, ensure_ascii=False, sort_keys=True)))
+
+
 def summarize(args):
     freeze = load(args.acceptance / 'freeze.json')
     if not freeze or freeze.get('corpus_sha256') != file_digest(args.corpus):
@@ -202,6 +224,7 @@ def summarize(args):
     args.out.mkdir(parents=True, exist_ok=True)
     save(args.out / 'summary.json', data)
     write_stage_tables(args.out, records, args.queues)
+    write_tuning_runs(args.out / 'tuning-runs.csv', args.trials, clips + extras)
     columns = ['clip','style','split','tier','status','source_seconds','width','height','fps','frames','roi',
                'input_sha256','seconds','mean_gpu_pct',
                'peak_vram_mib','peak_rss_mib','ocr_source_text_frames','ocr_matched_frames','outside_roi_mae',
