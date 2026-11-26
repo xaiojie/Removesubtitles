@@ -18,6 +18,7 @@ import imageio_ffmpeg
 from video_capture import open_video_capture
 import numpy as np
 
+from job_trace import span
 from propainter_masks import MaskBuilder
 from regions import regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
@@ -126,7 +127,8 @@ def process_window(frames, masks, source, folder, options, progress):
             if not (cv2.imwrite(str(frames_dir / f'{index:06d}.png'), pixels)
                     and cv2.imwrite(str(masks_dir / f'{index:06d}.png'), mask)):
                 raise RuntimeError('无法写入 ProPainter 临时帧。')
-        output = run_upstream(source, frames_dir, masks_dir, result_dir, options, size, progress)
+        with span('propainter_inference', frames=len(inputs), width=size[0], height=size[1]):
+            output = run_upstream(source, frames_dir, masks_dir, result_dir, options, size, progress)
         files = sorted(output.glob('*.png'))
         if len(files) != len(inputs) or [path.name for path in files] != [f'{i:04d}.png' for i in range(len(inputs))]:
             raise RuntimeError('ProPainter 返回的帧数与输入不一致。')
@@ -229,7 +231,8 @@ def encode(folder, source, options, information, frame_range, mask_reference=Non
         actual_fps = capture.get(cv2.CAP_PROP_FPS)
         if actual_size != (width, height) or not math.isfinite(actual_fps) or abs(actual_fps - fps) > 0.001:
             raise ValueError('中间视频与原视频的尺寸或帧率不一致。')
-        with subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE) as writer:
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE) as writer, span(
+                'ffmpeg_encode', interval='process_lifetime', process_pid=writer.pid):
             try:
                 for carry, pending, selected in video_batches(chain((first,), decoded_frames(capture)), frame_range, cuts, batching):
                     reference_pending = list(islice(reference_frames, len(pending))) if reference_frames is not None else pending
@@ -275,10 +278,11 @@ def encode(folder, source, options, information, frame_range, mask_reference=Non
                 if not done or written != total or done != selected_total:
                     raise RuntimeError('实际解码或修复帧数与视频时轴不一致。')
                 report(percent=97, stage='正在封装视频与音轨', completed_frames=done, total_frames=selected_total)
-                writer.stdin.close()
-                error = writer.stderr.read().decode(errors='replace')
-                if writer.wait():
-                    raise RuntimeError('FFmpeg 视频编码失败。' + error[-800:])
+                with span('ffmpeg_finalize', process_pid=writer.pid):
+                    writer.stdin.close()
+                    error = writer.stderr.read().decode(errors='replace')
+                    if writer.wait():
+                        raise RuntimeError('FFmpeg 视频编码失败。' + error[-800:])
             finally:
                 if writer.poll() is None:
                     writer.kill()
@@ -305,7 +309,8 @@ def run(folder, source):
     validate_assets(source)
     report(percent=5, stage='正在采样水印与检测切镜', completed_frames=0, total_frames=0)
     mask_reference = Path(config['mask_reference']).resolve() if config.get('mask_reference') else None
-    information = analyze_video(mask_reference or folder / 'source.video', regions, options)
+    with span('watermark_scan', device='cpu'):
+        information = analyze_video(mask_reference or folder / 'source.video', regions, options)
     width, height, fps, total, _, _ = information
     if [width, height] != config['dimensions']:
         raise ValueError('浏览器与解码器读取的画面尺寸不同。请先导出为标准 MP4。')

@@ -11,6 +11,8 @@ import sys
 
 import imageio_ffmpeg
 
+from job_trace import span
+
 ROOT = Path(__file__).resolve().parent
 WEIGHTS = {'clear': 0.6, 'ltx': 0.8, 'propainter': 0.4}
 LABELS = {'clear': '字幕修复', 'ltx': 'LTX 字幕修复（测试）', 'propainter': '水印修复'}
@@ -206,7 +208,8 @@ def run(folder, clear_source, propainter_source, propainter_python):
             previous = artifact
         report(percent=97, stage='正在封装原视频音轨', pipeline=pipeline,
                phase='finalize', phase_label='封装导出', phase_percent=0)
-        finalize_output(previous, original, folder / 'output.mp4', remux_audio=len(pipeline) > 1)
+        with span('audio_remux' if len(pipeline) > 1 else 'result_copy'):
+            finalize_output(previous, original, folder / 'output.mp4', remux_audio=len(pipeline) > 1)
         quality = collect_quality(folder, pipeline)
         atomic_json(folder / 'quality.json', quality)
         report(percent=100, stage='视频修复完成', pipeline=pipeline,

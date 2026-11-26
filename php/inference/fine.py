@@ -13,6 +13,7 @@ from media import ROOT, capture, encode, geometry, report
 # isort: split
 # Import CLEAR helpers after media has added the repository's CLEAR-web directory.
 from adaptive_processing import foreground_core
+from job_trace import span
 from propainter_masks import MaskBuilder
 from subtitle_compositing import caption_mask
 
@@ -76,7 +77,8 @@ def review(source, standard, regions):
 def refine(folder, request, first):
     source = folder / 'source.video'
     regions = request['regions']
-    spans, count = review(source, first, regions)
+    with span('max_review', device='cpu'):
+        spans, count = review(source, first, regions)
     (folder / 'review.json').write_text(
         json.dumps({'regions': regions, 'frame_intervals': spans, 'frames': count})
     )
@@ -141,20 +143,22 @@ def run_pass(folder, source, previous, destination, dimensions, selected, count,
             def predict(images):
                 nonlocal model
                 if model is None:
-                    model = load_model(Path(os.getenv('CLEAR_WORKSPACE', ROOT)) / 'CLEAR', 1.0, True)
-                return model(
-                    prompt=PROMPT,
-                    control_video=images,
-                    width=images[0].width,
-                    height=images[0].height,
-                    num_frames=len(images),
-                    num_inference_steps=12,
-                    cfg_scale=1.0,
-                    seed=20261113,
-                    tiled=False,
-                    tile_size=(30, 52),
-                    tile_stride=(15, 26),
-                )
+                    with span('clear_model_load', device='cuda', phase='refine'):
+                        model = load_model(Path(os.getenv('CLEAR_WORKSPACE', ROOT)) / 'CLEAR', 1.0, True)
+                with span('clear_inference', device='cuda', phase='refine', frames=len(images), steps=12):
+                    return model(
+                        prompt=PROMPT,
+                        control_video=images,
+                        width=images[0].width,
+                        height=images[0].height,
+                        num_frames=len(images),
+                        num_inference_steps=12,
+                        cfg_scale=1.0,
+                        seed=20261113,
+                        tiled=False,
+                        tile_size=(30, 52),
+                        tile_stride=(15, 26),
+                    )
 
             # Enlarge only the detected remnant mask, clipped to the authorized selection.
             masks = []

@@ -17,6 +17,7 @@ from PIL import Image
 from inference_options import InferenceOptions
 from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
+from job_trace import span
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
 from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance
 
@@ -346,15 +347,19 @@ def run(folder, source):
         frame_range = options.frame_range(fps, total)
         cuts = []
         if options.segment_mode == "shots":
-            cuts = scan_shots(input_file, regions, frame_range)
+            with span('shot_scan', device='cpu'):
+                cuts = scan_shots(input_file, regions, frame_range)
         loaded_model = None
 
         def pipe(**arguments):
             nonlocal loaded_model
             if loaded_model is None:
                 report(stage='正在加载 CLEAR，修复复杂背景字幕')
-                loaded_model = load_model(source, options.lora_scale, options.resident_models)
-            return loaded_model(**arguments)
+                with span('clear_model_load', device='cuda', phase='first'):
+                    loaded_model = load_model(source, options.lora_scale, options.resident_models)
+            with span('clear_inference', device='cuda', phase='first', frames=arguments['num_frames'],
+                      steps=arguments['num_inference_steps']):
+                return loaded_model(**arguments)
 
         report(percent=8, stage='正在准备首段视频')
         encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, cuts,
@@ -405,7 +410,8 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
     segment = 0
     quality = QualityReport('clear', fps)
     frames = chain((first,), decoded_frames(cap))
-    with subprocess.Popen(command, stdin=subprocess.PIPE) as writer:
+    with subprocess.Popen(command, stdin=subprocess.PIPE) as writer, span(
+            'ffmpeg_encode', interval='process_lifetime', process_pid=writer.pid):
         try:
             for carry, pending, selected in video_batches(frames, frame_range, cuts, options):
                 if not selected:
@@ -440,9 +446,10 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
             if not done:
                 raise ValueError('The selected time range contains no decoded frames.')
             report(percent=97, stage='正在封装视频与音轨')
-            writer.stdin.close()
-            if writer.wait():
-                raise RuntimeError('FFmpeg 视频编码失败。')
+            with span('ffmpeg_finalize', process_pid=writer.pid):
+                writer.stdin.close()
+                if writer.wait():
+                    raise RuntimeError('FFmpeg 视频编码失败。')
         finally:
             if writer.poll() is None:
                 writer.kill()

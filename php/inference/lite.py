@@ -9,6 +9,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
+from job_trace import span
 
 
 def detect(frame, rois, detector):
@@ -19,7 +20,9 @@ def detect(frame, rois, detector):
         if scale < 1:
             crop = cv2.resize(crop, (max(1, round((r - x) * scale)), max(1, round((b - y) * scale))))
         sx, sy = (r - x) / crop.shape[1], (b - y) / crop.shape[0]
-        for result in detector.predict(crop):
+        with span('lite_ocr', device='cpu', width=crop.shape[1], height=crop.shape[0]):
+            predictions = list(detector.predict(crop))
+        for result in predictions:
             for polygon in result['dt_polys']:
                 pts = np.asarray(polygon)
                 left, top = pts.min(axis=0)
@@ -65,7 +68,9 @@ def restore(frames, boxes_by_frame, lama):
         for start in range(0, len(indices), 4):
             batch = indices[start : start + 4]
             crops = [cv2.cvtColor(frames[i][t:bb, l:rr], cv2.COLOR_BGR2RGB) for i in batch]
-            for i, repaired in zip(batch, lama._inpaint_batch(crops, [mask] * len(crops))):
+            with span('lite_lama', device=str(getattr(lama, 'device', 'unknown')), frames=len(crops)):
+                repairs = lama._inpaint_batch(crops, [mask] * len(crops))
+            for i, repaired in zip(batch, repairs):
                 frames[i][y:b, x:r] = cv2.cvtColor(repaired[area], cv2.COLOR_RGB2BGR)
     return frames
 
@@ -84,17 +89,20 @@ def load_models():
     if not weights.is_file() or not (ocr_path / 'inference.pdiparams').is_file():
         raise ValueError('缺少 Lite 模型，请下载 LaMa 和 Mobile 检测器')
     report(2, '加载 Mobile OCR 与 LaMa')
-    detector = TextDetection(
-        model_name='PP-OCRv5_mobile_det',
-        model_dir=str(ocr_path),
-        device='cpu',
-        cpu_threads=3,
-        enable_mkldnn=False,
-    )
+    with span('lite_ocr_load', device='cpu'):
+        detector = TextDetection(
+            model_name='PP-OCRv5_mobile_det',
+            model_dir=str(ocr_path),
+            device='cpu',
+            cpu_threads=3,
+            enable_mkldnn=False,
+        )
     device = os.getenv('LITE_DEVICE', 'cuda')
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
-    return detector, LamaInpaint(torch.device(device), str(weights))
+    with span('lite_lama_load', device=device):
+        lama = LamaInpaint(torch.device(device), str(weights))
+    return detector, lama
 
 
 def run(folder, request):

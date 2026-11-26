@@ -12,6 +12,7 @@ import cv2
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'CLEAR-web'))
+from job_trace import span
 from video_capture import open_video_capture
 
 
@@ -95,12 +96,13 @@ def encode(output, audio_source, dimensions, fps, crf):
     try:
         with subprocess.Popen(
             args + ['-movflags', '+faststart', str(temporary)], stdin=subprocess.PIPE
-        ) as process:
+        ) as process, span('ffmpeg_encode', interval='process_lifetime', process_pid=process.pid):
             try:
                 yield process.stdin
-                process.stdin.close()
-                if process.wait():
-                    raise RuntimeError('视频编码失败')
+                with span('ffmpeg_finalize', process_pid=process.pid):
+                    process.stdin.close()
+                    if process.wait():
+                        raise RuntimeError('视频编码失败')
             finally:
                 if process.poll() is None:
                     process.kill()
