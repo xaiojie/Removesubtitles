@@ -1,0 +1,25 @@
+{
+  "input": "d2d3a7d0508e94c8084939866c813c85a85175c5a5b78a138cc82530e581ddf1",
+  "clip": "x01",
+  "stages": [
+    {
+      "name": "subtitle",
+      "seconds": 24.729,
+      "job_peak_vram_mib": 862,
+      "sha256": "98832c3b942188fba498569e3b219d24874f7c2a12f71c717faf1b7125c8b95a"
+    },
+    {
+      "name": "watermark",
+      "seconds": 39.63,
+      "job_peak_vram_mib": 5480,
+      "sha256": "2bb5874db7116d92d4efa0adaf997ddc20b647fd2014c8074b7bbb449f41d4de"
+    }
+  ],
+  "process_seconds": 64.35900000000001,
+  "wall_seconds": 67.03088696499981,
+  "final_sha256": "2bb5874db7116d92d4efa0adaf997ddc20b647fd2014c8074b7bbb449f41d4de",
+  "text_clean": true,
+  "watermark_clean": true,
+  "quality_pass": true,
+  "observation": "在所选区域中，“已经狂卖了645万份”、淡入的粉色“6.3亿美元”和右下三行水印均已去除。第 0 至 2 帧没有冻结 Pro 和 Max 留下的“已”字形或随后出现的白块。右下暗部、切镜后地面的细纹稍软，全画面对照和尾帧未见突出的色块，本片画质通过。"
+}

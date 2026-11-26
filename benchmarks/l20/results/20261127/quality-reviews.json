@@ -1,0 +1,535 @@
+{
+  "x01": {
+    "pro": {
+      "verdict": "有重建痕迹",
+      "note": "第 0 至 2 帧“已”的位置仍有可辨的白色字形，随后变成亮块。后一句粉色文字和右下的三行水印已擦除，水印区背景稍软。",
+      "text_clean": false,
+      "quality_pass": false,
+      "output_sha256": "6200860b02abedc8a5a6f53833918c2d5765b8aadb373b1b20de20f6fc6f7c60"
+    },
+    "max": {
+      "verdict": "有重建痕迹",
+      "note": "第 0 至 2 帧“已”的位置仍有可辨的白色字形，随后变成亮块。后一句粉色文字和右下的三行水印已擦除，水印区背景稍软。",
+      "text_clean": false,
+      "quality_pass": false,
+      "output_sha256": "c9c990bf8fda4f020a3ec1c14768c0cc8e081cf7781ec30ba779e6149914ff00"
+    }
+  },
+  "x02": {
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "output_sha256": "07c9ad5dc795d3bf5960b5ec1ac7cf331ff5c67f25820e514a4aaf5e2ac9c177",
+      "note": "20 秒的中央解说字幕和片尾文字已去除。600 帧原片均识别到文字，输出没有匹配原句。海浪和暗部略软，宽框边缘与右侧平台水印相交，部分水印笔画也被改动。"
+    }
+  },
+  "c01": {
+    "baseline": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "英文单行和末尾双行均已去除，衣料边缘略软。",
+      "output_sha256": "02e3193d12fb966260e0e2680cc60e24908bf701ed7c4ac76609cca032a61fa4"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "四次英文内容和末尾双行已去除，项链与衣纹在字幕经过处略变形。",
+      "output_sha256": "c12d8c66dfaf6e41599e091eacd1c7a43c835c5e0ff91f22f5a575027dd4e5eb"
+    },
+    "pro": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "英文逗号和双行词尾都已去除。项链和红色衣襟边线比 Lite 连贯。",
+      "output_sha256": "23b23133229b634128dc46efd846370f4343bfb449d3ef8609b26689905a3f1c"
+    },
+    "max": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "切句和真实尾帧均无可辨字幕。衣襟边界完整，这条样片上与 Pro 的差别很小。",
+      "output_sha256": "ac7e6860057e930c9341fbe36b02bdc65b52dc07f82e8d2cdc958b35a01f95b9"
+    }
+  },
+  "c02": {
+    "baseline": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "白色汉字和投影已去除。文字消失后的尾帧保留衣服和黑色边条。",
+      "output_sha256": "0b393ff337d0768b9527eea8f3d79856084bd3935f5644f263cebb35d87130e7"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "切句和尾帧无可读残字。金色饰带和发梢在原文字处略有断裂，后半段衣纹略软。",
+      "output_sha256": "f70de7e82fbd1aa0d311392209c8ea9db61bb16b5b68f3ae23edec56f9d1257f"
+    },
+    "pro": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "中文字幕和投影消失，后半段衣纹比 Lite 连贯。第 25 帧右侧白衣上有短暂小暗点。",
+      "output_sha256": "fb43b6da0d7195f483c3636f7875aed435a278c1414b3cc58baf0633c088d21f"
+    },
+    "max": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "末句与尾帧无可读字幕。白衣和发梢重建与 Pro 接近，第 25 帧仍见小暗点。",
+      "output_sha256": "fb6fa7f3d44d928648bd836926108ecbbcae2a33ea42c1a4c113e949b65b8e52"
+    }
+  },
+  "c03": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "粉色数字和“亿美元”在切镜后保留，第 119 帧仍可读。",
+      "output_sha256": "2f1ba43dfc4b89cf399e324a1eb3281bf5b383413f41fc0745882f82c7c3ba40"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "换句时的淡入字和片尾粉色“6.3亿美元”都已去除。暗部略软，第 57 至 91 帧没有其他两档出现的白块。",
+      "output_sha256": "50b47aa21d7a8d43a97371d075dfd99cac7f2b5057a13cda087d6ab835f5f2d5"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第 57、60 帧“已”的原位置保留带横画的白色字形，后续变成实心白块。末句的粉色文字与尾帧已擦净。",
+      "output_sha256": "323ee0d915b4180e8ab2e9b28a8fb9f3653a59639bd0fca890acc720384bb9f0"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第 57、60 帧“已”的原位置保留带横画的白色字形，后续变成实心白块。末句的粉色文字与尾帧已擦净。 加到 7 步后仍有同样的残留。",
+      "output_sha256": "b979c04dd841f93c95397fdd5526dbb4d09b1c75ae35c57dafb44bf58c115591"
+    }
+  },
+  "c06": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "多句原文仍可读，例如第 60 帧的“做的第一件事”。",
+      "output_sha256": "4a454ad4971db86ebab00c1bf5e67181e547c676462a7119d683a72aba1b8235"
+    },
+    "lite": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "多句粗边汉字和第 119 帧的新句都被擦掉。前段橙色线条糊开，末段浅色墙面留下随字幕长度变化的宽灰带。",
+      "output_sha256": "7daace6ac590319e427dec3158ef1a75b31ee66e6efe81d9de2dbb73a89be622"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "粗字和句尾消失。桌脚附近出现深色补块，末段平面出现斑驳纹理和可见的矩形边界。",
+      "output_sha256": "d276bf354e1d1172020e3dd45254bbb5d947d0adbf170fc98489825fe54f5c9c"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "恢复了部分橙色轮廓，切句和尾帧无字形。第 38、60 帧桌脚附近仍有块状抹痕，尾段墙面的矩形补区与 Pro 接近。",
+      "output_sha256": "2e80fa753b053d90e29e744dd743c51fa7c66cbccb80223b2cb5df6297199665"
+    }
+  },
+  "c07": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第 59 帧及尾帧的游戏解说字幕几乎完整保留。",
+      "output_sha256": "faea3ee4705f104b5a8445cad42e9758da643d22162c15372bffb9d3d950c5c3"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "游戏粗描边三句话均消失。车身边线在第 76 帧略变形，路面仍有细颗粒，末句和尾帧没有闪回。",
+      "output_sha256": "00760213547f008d8d605075fbb249e46c73ec4f457c89c34aea2b9b0d6bd58e"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "字已擦净，原字幕下的碎石与草地被抹成平滑的一条，车身边界明显软化。",
+      "output_sha256": "c02116b9e93d76b85da96baacf3e46e9a2193440c90bc9c180ddebd75ff497e6"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "能还原部分路面颗粒，后半段草地与土路之间仍有大块软化，第 107 至 119 帧最明显。",
+      "output_sha256": "d6e792d4a09c52ada5540955c9228ff13e47330359b595577101acca9b2c01e9"
+    }
+  },
+  "c08": {
+    "baseline": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "原片最后一秒和真实最后一帧的粗字已去除，格纹和人物颈部略软。",
+      "output_sha256": "7786844332a59d86dc8d1376dd81c4361fd0742851c29b76c189116b032c6b17"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "原片最后一秒和真正最后一帧都没有再出现字幕。衬衫格纹稍乱，人物轮廓仍可辨。",
+      "output_sha256": "08a8e9fbc8fa974c3112ba356e3f07f18c7f2271e2f0d4aa636ad445e1b2d662"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "第 118 和 119 帧均无闪字。末帧下颌与领口间出现明显的横向暗带，末秒格纹也一度变软。",
+      "output_sha256": "f405bc9580389f7c4d1bf843287a14d76e3b73b0521192fc5a8ffbd1835e509a"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "末秒和真实最后一帧的白字黑边完全消失。末帧下颌有与 Pro 相近的横向暗带，未见画质提升。",
+      "output_sha256": "af2ad125be48ee650b6465ead9ca81d2c6564436d98eecce696a52ebcbc9a708"
+    }
+  },
+  "c11": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "双语文字消失，尾帧手背有重建痕迹，英文底板右端仍有黑块。",
+      "output_sha256": "6f8c2495a6cee3025a5a7cf55bb7de6e596911555abfb6e91a13ae85cf656bc9"
+    },
+    "lite": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "双语字幕已消失，但本来没有字幕的第 0 帧也抹掉了衣服印花。英语黑底的部分边缘留在手边和右下。",
+      "output_sha256": "40f1f9dcf47b42b7b95add8d8428f8be3d760c02e12aad4fbfd439b0a4be2088"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "比 Lite 更好地保留了 T 恤图案。最后一帧原英文底板右端仍有黑块，手背也有小凸点。",
+      "output_sha256": "4e90c8a400c81eb8a95d5806c851b8ccfad1c900a04e4fc935b415cc29c1aa6f"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "两行文字均去除，衣物纹理优于 Lite。尾帧黑色底板和手背重建点仍在，预览可见。",
+      "output_sha256": "32ea0d437c4c36cb888d2746255e32f4a452c8225c29f9c3d5b7f1b0b36e5349"
+    }
+  },
+  "c12": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "白字黑边已消失，整条黄色背景带仍可见，到第 103 帧还在。",
+      "output_sha256": "2cb6ae25c56a1ccf71c693cc98e41b3839c6e9d585d347d971bd2ed69147eeb9"
+    },
+    "lite": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "文字已擦净。第 0、2、20 帧几乎保留整条黄底，随后底板又消失，最后仍有黄色边缘。",
+      "output_sha256": "32e085cd2e9a2f2716d2481fcff22760b50293d71c7aa6b9ccda8f554daa7e8d"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "可读文字消失，开头和第 20 帧还有黄边。人物衣料和右侧草地上反复出现连成一排的方块及暗边，尾帧仍可见。",
+      "output_sha256": "b2681c217820d424a01566d09a0b460c846fe23cda5472ff4f0bf23a3505482e"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "文字已擦净。开头的黄边与 Pro 相似，草地和衣服上的矩形拼接痕延续到尾帧，加步数没有消除。",
+      "output_sha256": "23ff8d139cf431bc2d477110e4c7ede46275a11acad5ecbe13b26eac56de3d27"
+    }
+  },
+  "c16": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "白字卡上的黑色英文大部分仍可读，切换和最后一帧均有残留。",
+      "output_sha256": "3257849722cfec867a06ad2f578580ad66a6f222f2c45d30e5d8fa30835a4d23"
+    },
+    "lite": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "字幕、白字卡和片尾英文都已消失。切到真人后，麦克风连接处的圆形旋钮被拉成片状，支架与衣领之间的形状随帧改变，末帧仍明显。",
+      "output_sha256": "076687d40fadee749f817bb2e121fde7fe9025858b0868997ed142c23d76dba1"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "片尾文字擦净，麦克风旋钮比 Lite 更接近换镜后的无遮挡画面。第 19 帧底部仍有亮白长条，后段白衣和麦克风边缘仍有明显补片。",
+      "output_sha256": "6cf4f78e3929775b9abd009ab009093888a3092bf75f8f119524006bbad3f31c"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "切句和尾帧没有可读字，旋钮较 Lite 稳定。第 19 帧同样闪出白色字卡残片，末段衣服仍有浅色方块，未达到交付要求。",
+      "output_sha256": "fa65d2dae4de2616c544118c7da5921e0d5a305b140a9811587cdc903eb89e8b"
+    }
+  },
+  "batch_outputs": {
+    "6200860b02abedc8a5a6f53833918c2d5765b8aadb373b1b20de20f6fc6f7c60": {
+      "clip": "x01",
+      "tier": "pro",
+      "basis": "identical_decoded_video",
+      "quality_pass": false,
+      "text_clean": false,
+      "note": "第 0 至 2 帧“已”的位置仍有可辨的白色字形，随后变成亮块。后一句粉色文字和右下的三行水印已擦除，水印区背景稍软。"
+    },
+    "38fd56b5f857c4b334708352afa2e6c767933c5e9e05a0fffc868ff6d84d0fce": {
+      "clip": "c01",
+      "tier": "lite",
+      "text_clean": true,
+      "quality_pass": true,
+      "basis": "reviewed_batch_file",
+      "note": "四句英文及双行词尾都去除，首句衣物花纹略软。"
+    },
+    "12aceb96b16ae33fba30ce1dde394b6e2632dc7961d056dd22368523a032f650": {
+      "clip": "c06",
+      "tier": "lite",
+      "text_clean": true,
+      "quality_pass": false,
+      "basis": "reviewed_batch_file",
+      "note": "粗边汉字和尾帧短句已消失。第 90 至 114 帧的浅色动画背景出现较宽的灰色抹痕。"
+    },
+    "ac66d796cbeb45b0502c3c426f55911c36307e1ac6789efb1aa4d62b291371cf": {
+      "clip": "c16",
+      "tier": "lite",
+      "text_clean": true,
+      "quality_pass": false,
+      "basis": "reviewed_batch_file",
+      "note": "黑字和不透明白底板都消失。后半段遮住麦克风的字卡消失后，支架被重建为明显扭曲的灰色块。"
+    },
+    "54f309a4e4644400461d6a13dadedeaf2f01351958aab5db9ebcb12505294dfe": {
+      "clip": "c06",
+      "tier": "pro",
+      "text_clean": true,
+      "quality_pass": false,
+      "basis": "reviewed_batch_file",
+      "note": "未见完整字，人物前方桌脚变形，浅色背景出现斑驳的填补纹理。"
+    },
+    "0ab380618e9173eca9c372d55e7cc126299d14fa96179cd4fa6cdd584a17fa44": {
+      "clip": "c07",
+      "tier": "max",
+      "text_clean": true,
+      "quality_pass": false,
+      "basis": "reviewed_batch_file",
+      "note": "三句解说均被擦净。路面与草地在第 89 至 119 帧之间大范围变软，原有石子纹理没有延续。"
+    },
+    "f38e3602f91b7a79584b95e2c384aeed0f2b51b843a9ff13c70b6858c87d27ad": {
+      "clip": "c03",
+      "tier": "pro",
+      "text_clean": false,
+      "quality_pass": false,
+      "basis": "reviewed_batch_file",
+      "note": "第 57、60 帧“已”的原位置保留带横画的白色字形，后续变成实心白块。末句的粉色文字与尾帧已擦净。"
+    }
+  },
+  "c04": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "黑边上的多句对白仍可读，包括开头的“向前穿越时间”和第 110 帧的“我们赢了多少次”。",
+      "output_sha256": "49f32306d21407fef34a38465a9d7405c6a1eb6c00426ace569f5fc2d2b6a721"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "黑边里的三句对白和换句处均被擦净。第 91、110 帧的黑底保持连续，尾帧也干净。",
+      "output_sha256": "a390ed2b58c5aaee333a344e8ac9be9781d3e06093c66b1316ab51efcbfd757f"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "前两句已去除。第 91 至 110 帧仍能读到末句“赢了多少次”。原片到最后一帧字幕本身已经消失。",
+      "output_sha256": "4e5b35bf513b44b3e0f9f2e96f074f15b76f14ae1d4d939191736b013fcfe7c9"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第 91、110 帧仍有“赢了多少次”的大部分笔画。7 步和邻帧引导在这个黑边案例中未消除残字。",
+      "output_sha256": "3224baab4671d1c635eded6191665fa5229b478a78a150fa32c009d508d6e7ec"
+    }
+  },
+  "c05": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第 61 至 75 帧整句“在百度网盘Mac客户端内”可读，第 84 帧仍看得到“点击进入同步空间”。",
+      "output_sha256": "081192bca49152c13a0ec505cd0d723e638219c7eb9df1b9c098ea1250724a97"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "深浅桌面和灰底界面上的三句说明都被去除，鼠标指针和灰色横线保留。尾帧白底连续。",
+      "output_sha256": "40a71a1a2f3a7a11636f8b810b24837c00a5ce0e7118518498fd951d9e66316e"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第 61 至 75 帧留下圆形笔画，第 84 帧右端仍可辨“间”字，白底尾帧有淡痕。",
+      "output_sha256": "58fdfacd0da88d9e6c14f28dc3d5bc8104d1fd8e93bf77ab593f85bb05ad8f13"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "末句切入时仍出现中文末字和轮廓，第 84 帧可辨。多两步未改善这个屏幕录制案例。",
+      "output_sha256": "4819f438e713b84e3928644428c15d58edf42abf4be4101e242b075d0217660a"
+    }
+  },
+  "c09": {
+    "baseline": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "几句白色粗字和黑描边都消失，末帧无字。挂绳细节在镜头切换时稍软。",
+      "output_sha256": "42d450f6f14029ff284a6de1bc1a92e705ed52a68e55025fc92a4866bcd93510"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "衣服前的粗白字和黑边都被擦掉。挂绳与拉链保留下来，最后一帧没有残字。",
+      "output_sha256": "1a0f81592a5669c1b9930567e3b493c5f5eafa9cdc01ec2d17afceee2b747c06"
+    },
+    "pro": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "换句时没有漏擦，衣服前两条挂绳与右侧衣边清楚，颈前小饰件略细。",
+      "output_sha256": "0344f38d70e4f577ba72f33d4c4bde7255dcad88d5a25980c08d1b02d61feb44"
+    },
+    "max": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "末句、描边和尾帧均擦净。衣物接缝和挂绳稳定，这条素材与 Pro 的差别很小。",
+      "output_sha256": "5023f881acb25c89ac379e0331c9bf9e46ad11aa1e1ac248d0021faa081d496d"
+    }
+  },
+  "c10": {
+    "baseline": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "粗描边标题在道路和深色车厢镜头均已擦净，末句没有回闪。",
+      "output_sha256": "5d110e10d9cff161e224bba062bc342fb70d1eee68c9f75f46c227c8ad68fc7d"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "粗边字幕从路面和车厢消失，切镜和尾帧无字。车厢里原来露出的细金属件只剩一个亮点。",
+      "output_sha256": "90264af47a38fdb5c5b020af3e6bfc99ee8b2da9d107ccbaece982f54bd614d2"
+    },
+    "pro": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "两种背景上的粗字均擦净。末段能接回金属件边线，切镜前后没有字幕回闪。",
+      "output_sha256": "efdf743d4619cf4d827a10d5c8d00f87be29d2e68106e04cb6578f8d7564e21d"
+    },
+    "max": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "道路与车厢的换镜干净，尾帧金属件边线连贯。此片比 Lite 保留更多边线，与 Pro 接近。",
+      "output_sha256": "46df4d17c2f2d4c45b7af7c2183587a9c50a3e793974e1a0629dbb5a888ddede"
+    }
+  },
+  "c13": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "第一页及其后的三行英文与紫底基本完整保留。最后一帧仍能读出 And it all began。",
+      "output_sha256": "feff9db7295078106aea6afc9ce46fc95cd751e7c268a84e17771704c2fecf23"
+    },
+    "lite": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "两句白字已消失。前半段把衣领抹平，换成三行字幕后的紫底整块保留到第 119 帧，手部也被抹平。",
+      "output_sha256": "34ee36085c6f0d46ace5abc28755a20d25e163f2a1b4fbc9afa9805c3c8b2618"
+    },
+    "pro": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "可读文字消失，第 44 至 60 帧仍有亮白横痕，第二句的紫色底板保留到尾帧。对照片方原片，衣领和拿棱镜的手均损失细节。",
+      "output_sha256": "f8863bd22d46833a43d840ec8a029855133ad8f1d2c06426698ec05214f2139c"
+    },
+    "max": {
+      "verdict": "未通过",
+      "text_clean": true,
+      "quality_pass": false,
+      "note": "第 44 和 60 帧比 Pro 少了一排白色残影，三行字幕的紫色底板仍存在。尾帧手指轮廓和衣领明显变软，整体未通过。",
+      "output_sha256": "4e8176c2ddf01473778fffa57795527f11e1ef335655efaada44822f6948997e"
+    }
+  },
+  "c14": {
+    "baseline": {
+      "verdict": "未通过",
+      "text_clean": false,
+      "quality_pass": false,
+      "note": "切镜前整句英文及紫色圆角底板基本保留，第 76 帧仍完整可读。",
+      "output_sha256": "76eff06a885e8b48240582d3561beed442e31ea9cf7392a8253b85a83f25ceed"
+    },
+    "lite": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "前 77 帧的两行英文、偏移阴影和紫色底板均已去除，蓝色横边和斜线接续自然。上方暗纹略软，切入星空及尾帧干净。",
+      "output_sha256": "916e68c7d5cbda9202e344ebd292b13e652a48b59ff5505dc84cff7fec53e42a"
+    },
+    "pro": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "英文、粗暗边和底板均擦掉，接回蓝色边线。与干净原片相比暗部斑点稍淡，第 77 帧切镜和最后一帧均自然。",
+      "output_sha256": "2ab0311c4136242a104cb18ac99d66aba81bc0626ad5042edfe522d4fd02b140"
+    },
+    "max": {
+      "verdict": "通过",
+      "text_clean": true,
+      "quality_pass": true,
+      "note": "底板与阴影已消失，保留蓝色斜线和横边。上方颗粒纹理略有改动，切镜和尾帧稳定，整体与 Pro 接近。",
+      "output_sha256": "e3595f414641c04c8c4e48a26d715c3fb0da084a942d63c6871a0b91eb1adabf"
+    }
+  }
+}
