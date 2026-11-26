@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "max_clip_seconds": 120,
+  "coordinate_system": "[x0,y0,x1,y1) upright encoded pixels; source intervals end-exclusive, presentation-order frame numbers start at zero.",
+  "clips": [
+    {
+      "id": "x01",
+      "style": "normal",
+      "split": "diagnostic",
+      "provenance": "natural",
+      "input": "extras/x01.mp4",
+      "reference": null,
+      "width": 1280,
+      "height": 720,
+      "fps": "30/1",
+      "frames": 120,
+      "duration_seconds": 4.0,
+      "roi": [
+        459,
+        628,
+        823,
+        688
+      ],
+      "regions": [
+        {
+          "roi": [
+            459,
+            628,
+            823,
+            688
+          ],
+          "type": "subtitle"
+        },
+        {
+          "roi": [
+            1003,
+            542,
+            1275,
+            713
+          ],
+          "type": "watermark"
+        }
+      ],
+      "inspect_frames": [
+        0,
+        20,
+        40,
+        65,
+        90,
+        115,
+        119
+      ],
+      "source_sha256": "85daa0558f30ec90923f70ddb07fc20c167cca7ed393dafa4b09bc2eda896598",
+      "source_start_frame": 160,
+      "source_end_frame_exclusive": 280,
+      "source_start_seconds": 5.333333,
+      "source_end_seconds_exclusive": 9.333333,
+      "source_group": "same original as c03",
+      "sha256": "d2d3a7d0508e94c8084939866c813c85a85175c5a5b78a138cc82530e581ddf1",
+      "notes": "A real lower-center caption and a separate three-line lower-right platform watermark are simultaneously visible; two caption states and a background cut."
+    },
+    {
+      "id": "x02",
+      "style": "normal",
+      "split": "diagnostic",
+      "provenance": "natural",
+      "input": "extras/x02.mp4",
+      "reference": null,
+      "width": 1280,
+      "height": 720,
+      "fps": "30/1",
+      "frames": 600,
+      "duration_seconds": 20.0,
+      "roi": [
+        176,
+        618,
+        1104,
+        697
+      ],
+      "regions": [
+        {
+          "roi": [
+            176,
+            618,
+            1104,
+            697
+          ],
+          "type": "subtitle"
+        }
+      ],
+      "inspect_frames": [
+        0,
+        100,
+        200,
+        300,
+        400,
+        500,
+        599
+      ],
+      "source_sha256": "85daa0558f30ec90923f70ddb07fc20c167cca7ed393dafa4b09bc2eda896598",
+      "source_start_frame": 150,
+      "source_end_frame_exclusive": 750,
+      "source_start_seconds": 5.0,
+      "source_end_seconds_exclusive": 25.0,
+      "source_group": "same original as c03",
+      "sha256": "5f21d33d1e80b20b635cf1ffa3ddf600d40b3aa15633bd8a06246b258a6f3f1c",
+      "notes": "Longer native excerpt of the same tuning original for mixed-duration scheduler tests. Bottom-center narration is the target. The original platform watermark changes location over the longer interval."
+    }
+  ]
+}
