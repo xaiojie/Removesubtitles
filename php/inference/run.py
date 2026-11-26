@@ -16,7 +16,10 @@ def standard_task(request):
     plan = request.get('resolved_plan')
     if plan is None:
         return prepare_task(request['regions'], '{}', default_preset='balanced')
-    groups = {k: v for k, v in plan['parameters'].items() if k in ('clear', 'propainter')}
+    groups = {k: dict(v) for k, v in plan['parameters'].items() if k in ('clear', 'propainter')}
+    if 'clear' in groups:
+        # Earlier plan snapshots used the preset's conditioning rules.
+        groups['clear'].setdefault('subtitle_guidance', 'preset')
     if not groups:
         raise ValueError('处理方案缺少首遍参数')
     first = next(iter(groups.values()))

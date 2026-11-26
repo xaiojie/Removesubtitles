@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
+from subtitle_compositing import large_caption_guidance
 
 
 @dataclass(frozen=True)
@@ -22,12 +23,15 @@ class LiteOptions:
     context_padding: int = 28
     batch_size: int = 4
     export_crf: int = 18
+    mask_mode: str = 'boxes'
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
             raise ValueError('Lite 检测间隔、检测尺寸和批量大小须大于零')
         if min(self.box_padding, self.context_padding) < 0 or not 0 <= self.export_crf <= 51:
             raise ValueError('Lite 扩框或编码参数无效')
+        if self.mask_mode not in ('boxes', 'joint'):
+            raise ValueError('Lite 遮罩模式无效')
 
 
 def detect(frame, rois, detector, options=LiteOptions()):
@@ -94,7 +98,91 @@ def restore(frames, boxes_by_frame, lama, options=LiteOptions()):
     return frames
 
 
-def load_models():
+def caption_plates(crop, boxes):
+    """Find a near-uniform outlined card surrounding an OCR detection in the user band."""
+    h, w = crop.shape[:2]
+    result = np.zeros((h, w), np.uint8)
+    for x, y, r, b in boxes:
+        height = b-y
+        if height < 5:
+            continue
+        area = crop[y:b:2, x:r:2]
+        quantized = (area.astype(np.uint16) // 32)
+        bins = (quantized[..., 0] * 64 + quantized[..., 1] * 8 + quantized[..., 2]).ravel()
+        counts = np.bincount(bins, minlength=512)
+        for index in np.argsort(counts)[-2:]:
+            if counts[index] < .12 * bins.size:
+                continue
+            colors = area.reshape(-1, 3)[bins == index]
+            color = np.median(colors, axis=0).astype(int)
+            uniform = cv2.inRange(crop, tuple(map(int, np.maximum(0, color-18))),
+                                  tuple(map(int, np.minimum(255, color+18))))
+            closed = cv2.morphologyEx(uniform, cv2.MORPH_CLOSE, np.ones((3, 5), np.uint8))
+            contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                left, top, width, depth = cv2.boundingRect(contour)
+                right, end = left+width, top+depth
+                if width < max(2*depth, .65*(r-x)) or not .5*height <= depth <= 3*height:
+                    continue
+                overlap = max(0, min(r,right)-max(x,left)) * max(0, min(b,end)-max(y,top))
+                if overlap < .50*(b-y)*(r-x) or cv2.contourArea(contour) < .64*width*depth:
+                    continue
+                # An unbounded flat scene or letterbox is not a subtitle card.
+                if depth >= .91*h and width >= .91*w:
+                    continue
+                core = uniform[top:end, left:right]
+                edges = np.concatenate((core[0], core[-1], core[:, 0], core[:, -1]))
+                if np.count_nonzero(core) < .41*core.size or np.count_nonzero(edges) < .55*edges.size:
+                    continue
+                cv2.drawContours(result, [contour], -1, 255, cv2.FILLED)
+    return cv2.dilate(result, np.ones((5, 5), np.uint8)) if result.any() else result
+
+
+def restore_joint(frames, boxes_by_frame, rois, lama, options):
+    height, width = frames[0].shape[:2]
+    for left, top, right, bottom in rois:
+        active = []
+        for index, (frame, boxes) in enumerate(zip(frames, boxes_by_frame)):
+            crop = frame[top:bottom, left:right]
+            local = []
+            for x, y, r, b in boxes:
+                x, y = max(x, left), max(y, top)
+                r, b = min(r, right), min(b, bottom)
+                if x < r and y < b:
+                    local.append((x - left, y - top, r - left, b - top))
+            mask = caption_plates(crop, local)
+            _, outline = large_caption_guidance(crop)
+            if outline is not None:
+                mask |= outline
+            for x, y, r, b in local:
+                mask[y:b, x:r] = 255
+            if mask.any():
+                active.append((index, mask))
+
+        for start in range(0, len(active), options.batch_size):
+            batch = active[start:start + options.batch_size]
+            # One crop per batch keeps nearby words in context without running LaMa on an empty band.
+            union = np.maximum.reduce([mask for _, mask in batch])
+            x, y, w, h = cv2.boundingRect(union)
+            pad = options.context_padding
+            l, t = max(0, left + x - pad), max(0, top + y - pad)
+            r, b = min(width, left + x + w + pad), min(height, top + y + h + pad)
+            masks = []
+            crops = []
+            for index, mask in batch:
+                full = np.zeros((b - t, r - l), np.uint8)
+                full[top + y - t:top + y - t + h, left + x - l:left + x - l + w] = mask[y:y+h, x:x+w]
+                masks.append(full)
+                crops.append(cv2.cvtColor(frames[index][t:b, l:r], cv2.COLOR_BGR2RGB))
+            with span('lite_lama', device=str(lama.device), frames=len(batch)):
+                outputs = lama._inpaint_batch(crops, masks)
+            for (index, _), mask, repaired in zip(batch, masks, outputs):
+                selected = mask != 0
+                frames[index][t:b, l:r][selected] = cv2.cvtColor(repaired, cv2.COLOR_RGB2BGR)[selected]
+    return frames
+
+
+def load_models(options=LiteOptions()):
     os.environ.setdefault('PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK', 'True')
     import torch
     from paddleocr import TextDetection
@@ -120,14 +208,14 @@ def load_models():
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
     with span('lite_lama_load', device=device):
-        lama = LamaInpaint(torch.device(device), str(weights))
+        lama = LamaInpaint(torch.device(device), str(weights), batch_size=options.batch_size)
     return detector, lama
 
 
 def run(folder, request):
     plan = request.get('resolved_plan')
     options = LiteOptions(**plan['parameters']['lite']) if plan else LiteOptions()
-    detector, lama = load_models()
+    detector, lama = load_models(options)
     source = folder / 'source.video'
     rois = [r['roi'] for r in request['regions']]
     find = lambda frame: detect(frame, rois, detector, options)
@@ -152,7 +240,9 @@ def run(folder, request):
                     first = frames.pop()
                 else:
                     boxes.append(anchor)
-                for frame in restore(frames, boxes, lama, options):
+                repaired = (restore_joint(frames, boxes, rois, lama, options) if options.mask_mode == 'joint'
+                            else restore(frames, boxes, lama, options))
+                for frame in repaired:
                     writer.write(frame.tobytes())
                 repaired_count += sum(bool(selection) for selection in boxes)
                 count += len(frames)

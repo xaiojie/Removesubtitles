@@ -20,7 +20,7 @@ from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from job_trace import span
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
-from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance
+from subtitle_compositing import caption_mask, composite_caption, large_caption_guidance, visible_background
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -160,28 +160,37 @@ def model_geometry(width, height, resolution, preserve_aspect=False, large_capti
 
 
 def repair_regions(frames, regions, predict, context="roi", resolution="auto", blend_mode="rectangle",
-                   adaptive_processing=False, preset='custom'):
+                   adaptive_processing=False, preset='custom', subtitle_guidance='preset'):
     """Predict once from original frames, then composite only the selected regions."""
     precise = blend_mode == 'precise'
     large_caption = False
     input_hints = [[] for _ in frames]
+    observed = [[] for _ in frames]
     if precise:
-        inspect_large = preset == 'fast' and context == 'roi' and resolution == 'native'
+        fast_geometry = preset == 'fast' and context == 'roi' and resolution == 'native'
+        inspect_large = fast_geometry or subtitle_guidance == 'temporal'
         analyses = []
         for region in regions:
             if region['type'] != 'subtitle':
                 continue
             x1, y1, x2, y2 = region['roi']
             masks = []
+            region_hints = []
             for index, frame in enumerate(frames):
                 mask = caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy()
                 if inspect_large:
                     large, hint = large_caption_guidance(frame[y1:y2, x1:x2])
-                    large_caption |= large
+                    large_caption |= large and fast_geometry
+                    region_hints.append(hint)
                     if hint is not None:
                         mask |= hint
                         input_hints[index].append((region['roi'], hint))
                 masks.append(mask)
+            if subtitle_guidance == 'temporal' and any(h is not None for h in region_hints):
+                crops = [frame[y1:y2, x1:x2] for frame in frames]
+                for i, borrowed in enumerate(visible_background(crops, masks, region_hints)):
+                    if borrowed is not None:
+                        observed[i].append((region['roi'], *borrowed))
             analyses.append(dict(region=region, masks=masks, needs_model=any(mask.any() for mask in masks)))
     else:
         analyses = prepare_subtitles(frames, regions) if adaptive_processing else []
@@ -199,8 +208,11 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                                      large_caption=large_caption)
     originals = [frame[top:bottom, left:right].copy() for frame in frames]
     inputs = []
-    for original, hints in zip(originals, input_hints):
-        pixels = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
+    for original, hints, known in zip(originals, input_hints, observed):
+        conditioned = original.copy() if known else original
+        for (x1, y1, x2, y2), colors, valid in known:
+            conditioned[y1-top:y2-top, x1-left:x2-left][valid] = colors[valid]
+        pixels = cv2.cvtColor(conditioned, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(pixels)
         if image.size != resized:
             image = image.resize(resized, Image.Resampling.LANCZOS)
@@ -209,6 +221,8 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
             hint_mask = np.zeros((crop_height, crop_width), np.uint8)
             for (x1, y1, x2, y2), hint in hints:
                 hint_mask[y1-top:y2-top, x1-left:x2-left] |= hint
+            for (x1, y1, x2, y2), _, valid in known:
+                hint_mask[y1-top:y2-top, x1-left:x2-left][valid] = 0
             hint_mask = cv2.resize(hint_mask, resized, interpolation=cv2.INTER_AREA)
             # Suppress opaque lettering in the conditioning image before the single CLEAR pass.
             pixels = cv2.inpaint(pixels, hint_mask, 3, cv2.INPAINT_TELEA)
@@ -264,10 +278,12 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
         for frame, composite in zip(frames, generated):
             frame[y1:y2, x1:x2] = composite
     if precise:
-        for frame, original, repaired, mask in zip(frames, originals, repaired_frames, subtitle_masks):
+        for frame, original, repaired, mask, known in zip(frames, originals, repaired_frames, subtitle_masks, observed):
             selected = mask > 0
             composite = composite_caption(original, repaired, mask)
             frame[top:bottom, left:right][selected] = composite[selected]
+            for (x1, y1, x2, y2), colors, valid in known:
+                frame[y1:y2, x1:x2][valid] = colors[valid]
     # Match all watermark regions to the original background in one Poisson solve.
     selected = watermark_mask > 0
     if selected.any():
@@ -451,7 +467,8 @@ def encode(cap, first, fps, total, pipe, regions, folder, options, frame_range, 
                                 progress_bar_cmd=progress)
 
                 methods = repair_regions(batch, regions, predict, options.context, options.resolution,
-                                         options.blend_mode, options.adaptive_processing, preset=options.preset)
+                                         options.blend_mode, options.adaptive_processing, preset=options.preset,
+                                         subtitle_guidance=options.subtitle_guidance)
                 if options.adaptive_processing:
                     quality.methods.update(methods)
                     for offset, (original, repaired) in enumerate(zip(before, pending)):

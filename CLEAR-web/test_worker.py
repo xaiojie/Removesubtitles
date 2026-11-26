@@ -446,3 +446,19 @@ class MultiRegionRepairTests(unittest.TestCase):
         selected = np.zeros((48, 64), dtype=bool)
         selected[8:32, 8:52] = True
         np.testing.assert_array_equal(first[~selected], original[~selected])
+def test_temporal_stroke_recovery_uses_only_exposed_matching_background():
+    from subtitle_compositing import visible_background
+
+    bg = np.full((80, 100, 3), (62, 130, 170), np.uint8)
+    mask = np.zeros(bg.shape[:2], np.uint8)
+    mask[32:44, 40:52] = 255
+    text = bg.copy()
+    text[mask > 0] = 245
+    blank = np.zeros_like(mask)
+    values = visible_background([text, bg], [mask, blank], [mask, None])
+    colors, valid = values[0]
+    np.testing.assert_array_equal(valid, mask > 0)
+    np.testing.assert_array_equal(colors[valid], bg[valid])
+    assert values[1] is None
+    assert visible_background([text, bg], [mask, mask], [mask, None])[0] is None
+    assert visible_background([text, 255 - bg], [mask, blank], [mask, None])[0] is None

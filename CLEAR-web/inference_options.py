@@ -26,6 +26,7 @@ class InferenceOptions:
     adaptive_processing: bool = True
     preset: str = 'custom'
     resident_models: bool = False
+    subtitle_guidance: str = 'preset'
 
     def frame_range(self, fps, total):
         first = math.ceil(self.start_seconds * fps - 1e-8)
@@ -78,6 +79,9 @@ class InferenceOptions:
             raise ValueError('duration_seconds 必须是正的有限数字。')
         if options.blend_mode not in ("lines", "rectangle", "precise"):
             raise ValueError("blend_mode must be lines, rectangle or precise.")
+        if options.subtitle_guidance not in ('preset', 'temporal') or (
+                options.subtitle_guidance == 'temporal' and options.blend_mode != 'precise'):
+            raise ValueError('时序字幕引导需要 precise 遮罩融合')
         if options.segment_mode not in ("shots", "fixed"):
             raise ValueError("segment_mode must be shots or fixed.")
         return options

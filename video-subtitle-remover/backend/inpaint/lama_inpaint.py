@@ -9,10 +9,12 @@ from backend import config
 from backend.tools.inpaint_tools import get_inpaint_area_by_mask
 
 class LamaInpaint:
-    def __init__(self, device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"), model_path='big-lama.pt') -> None:
+    def __init__(self, device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+                 model_path='big-lama.pt', *, batch_size=4) -> None:
         self.model = torch.jit.load(model_path, map_location=device)
         self.model.eval()
         self.device = device
+        self.batch_size = batch_size
 
     def inpaint(self, image: Union[Image.Image, np.ndarray], mask: Union[Image.Image, np.ndarray]):
         if isinstance(image, np.ndarray):
@@ -33,8 +35,7 @@ class LamaInpaint:
             return [self.inpaint(images[0], masks[0])]
 
         orig_height, orig_width = images[0].shape[:2]
-        # 分小批次推理，每批最多 4 帧
-        mini_batch_size = 4
+        mini_batch_size = self.batch_size
         results = [None] * len(images)
         for start in range(0, len(images), mini_batch_size):
             end = min(start + mini_batch_size, len(images))

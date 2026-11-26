@@ -3,6 +3,36 @@ import cv2
 import numpy as np
 
 
+def visible_background(crops, masks, hints):
+    """Recover covered strokes from a neighbouring frame only where nearby unmasked pixels agree."""
+    result = []
+    for i, (source, hint) in enumerate(zip(crops, hints)):
+        if hint is None:
+            result.append(None)
+            continue
+        color = np.zeros_like(source)
+        score = np.full(hint.shape, np.inf, np.float32)
+        for j in sorted({0, len(crops)-1, i-8, i-3, i+3, i+8}, key=lambda j: abs(i-j)):
+            if j == i or j < 0 or j >= len(crops):
+                continue
+            donor = crops[j]
+            eligible = (hint != 0) & (masks[j] == 0)
+            if not eligible.any():
+                continue
+            shared = ((masks[i] == 0) & (masks[j] == 0)).astype(np.float32)
+            distance = cv2.absdiff(source, donor).max(axis=2).astype(np.float32)
+            for window in (23, 55):
+                support = cv2.blur(shared, (window, window))
+                error = cv2.blur(distance * shared, (window, window)) / np.maximum(support, .001)
+                cost = error + .02 * abs(i-j)
+                use = eligible & (support >= .3) & (error < 3.5) & (cost < score)
+                score[use] = cost[use]
+                color[use] = donor[use]
+        valid = np.isfinite(score)
+        result.append((color, valid) if valid.any() else None)
+    return result
+
+
 def large_caption_guidance(crop):
     """Find tall aligned glyphs and a fill mask for opaque strokes that CLEAR tends to copy."""
     if min(crop.shape[:2]) < 40:
