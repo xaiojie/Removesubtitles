@@ -328,6 +328,59 @@ def _paired_stroke_mask(crop, candidates):
     return cv2.dilate(strokes.astype(np.uint8)*255, np.ones((2*padding+1, 2*padding+1), np.uint8))
 
 
+def tinted_caption_guidance(crop, *, faded=False):
+    """Find a shared line of pastel and neutral lettering against a dark background."""
+    height, width = crop.shape[:2]
+    if min(height, width) < 14:
+        return None
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    if np.count_nonzero(gray <= 85) < .66 * gray.size:
+        return None
+    low, high = crop.min(axis=2), crop.max(axis=2)
+    chroma = high - low
+    nearby = cv2.erode(gray, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))
+    min_low, min_high, min_chroma, min_contrast = (38, 67, 10, 24) if faded else (68, 125, 22, 45)
+    contrast = (nearby <= 72) & (cv2.subtract(gray, nearby) >= min_contrast)
+    tinted = contrast & (low >= min_low) & (high >= min_high) & (chroma >= min_chroma) & (chroma <= 128)
+    if np.count_nonzero(tinted) < 36:
+        return None
+
+    hue = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)[:, :, 0].astype(np.uint16)
+    bins = ((hue + 9) // 18) % 10
+    counts = np.bincount(bins[tinted], minlength=10)
+    neutral = contrast & (chroma < 24) & (gray > (60 if faded else 118))
+    stroke_candidates = (tinted | neutral).astype(np.uint8) * 255
+    mask = np.zeros_like(gray)
+    for band in np.argsort(counts)[-2:]:
+        if counts[band] < max(30, gray.size * .001):
+            continue
+        _, components = _glyph_components(tinted & (bins == band), max(5, round(height * .055)))
+        letters = _coherent_glyphs([g for g in components if .12*g[4] <= g[3] <= 2.5*g[4]])
+        if len(letters) < 3:
+            continue
+        for _, x, y, w, h in letters:
+            neighbors = [g for g in letters if abs(g[1] - x) <= 4*h and abs(g[2]+g[4]-y-h) <= .3*h]
+            if len(neighbors) < 3:
+                continue
+            # Words can change color midway through a line. Adjacent white letters share the same baseline.
+            left, right = max(0, x-8*h), min(width, x+w+8*h)
+            top, bottom = max(0, y-h//3), min(height, y+h+h//3)
+            ink = stroke_candidates[top:bottom, left:right]
+            radius = max(4, min(12, round(.26*h)))
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
+            mask[top:bottom, left:right] |= cv2.dilate(ink, kernel)
+    return mask if mask.any() else None
+
+
+def tinted_caption_sequence(crops):
+    hints = [tinted_caption_guidance(crop) for crop in crops]
+    strong = [hint is not None for hint in hints]
+    for index, hint in enumerate(hints):
+        if hint is None and any(strong[max(0, index-3):index+4]):
+            hints[index] = tinted_caption_guidance(crops[index], faded=True)
+    return hints
+
+
 def caption_mask(frame, roi):
     """Cover light/colored glyphs, their outlines and rectangular dark caption plates.
 

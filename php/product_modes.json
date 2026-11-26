@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2026-11-27.2",
+  "catalog_version": "2026-11-27.3",
   "default": "pro",
   "modes": {
     "lite": {
@@ -22,7 +22,7 @@
       "subtitles": true,
       "watermarks": true,
       "stages": ["clear", "propainter", "selective_review"],
-      "overrides": {"clear": {"steps": 7, "subtitle_guidance": "motion_lama"}}
+      "overrides": {"clear": {"steps": 7, "subtitle_guidance": "motion_lama_tinted"}}
     }
   },
   "stages": {
@@ -41,7 +41,7 @@
       "chunk_frames": 33, "overlap_frames": 4, "context": "expanded", "start_seconds": 0,
       "duration_seconds": null, "resolution": "auto", "export_crf": 10, "blend_mode": "precise",
       "segment_mode": "shots", "vae_tiled": false, "adaptive_processing": false, "resident_models": true,
-      "subtitle_guidance": "lama", "share_prompt_embedding": true
+      "subtitle_guidance": "lama_tinted", "share_prompt_embedding": true
     },
     "propainter": {
       "start_seconds": 0, "duration_seconds": null, "segment_mode": "shots", "resolution": "native",

@@ -6,6 +6,20 @@ import numpy as np
 
 
 class SubtitleCompositingTests(unittest.TestCase):
+    def test_dark_scene_pastel_text_and_white_prefix_share_guidance(self):
+        from subtitle_compositing import tinted_caption_guidance
+
+        crop = np.full((70, 380, 3), 18, np.uint8)
+        cv2.putText(crop, 'END', (20, 46), cv2.FONT_HERSHEY_SIMPLEX, .9, (210, 210, 210), 2)
+        cv2.putText(crop, '6.30 USD', (94, 46), cv2.FONT_HERSHEY_SIMPLEX, .9, (166, 160, 216), 2)
+        mask = tinted_caption_guidance(crop)
+        self.assertIsNotNone(mask)
+        self.assertTrue(np.all(mask[crop.max(axis=2) > 128] == 255))
+        self.assertFalse(mask[:, 265:].any())
+        cv2.rectangle(crop, (0, 0), (379, 69), (18, 18, 18), -1)
+        cv2.circle(crop, (155, 34), 12, (166, 160, 216), -1)
+        self.assertIsNone(tinted_caption_guidance(crop))
+
     def test_clipped_outline_cannot_anchor_a_shadow_at_the_frame_edge(self):
         from subtitle_compositing import composite_caption
         # A known clean background with a diagonal gradient and an independently drawn caption.

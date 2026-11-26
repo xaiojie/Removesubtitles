@@ -82,7 +82,8 @@ class InferenceOptions:
             raise ValueError('duration_seconds 必须是正的有限数字。')
         if options.blend_mode not in ("lines", "rectangle", "precise"):
             raise ValueError("blend_mode must be lines, rectangle or precise.")
-        if options.subtitle_guidance not in ('preset', 'temporal', 'motion', 'lama', 'motion_lama') or (
+        if options.subtitle_guidance not in ('preset', 'temporal', 'motion', 'lama', 'motion_lama',
+                                             'lama_tinted', 'motion_lama_tinted') or (
                 options.subtitle_guidance != 'preset' and options.blend_mode != 'precise'):
             raise ValueError('时序字幕引导需要 precise 遮罩融合')
         if options.segment_mode not in ("shots", "fixed"):

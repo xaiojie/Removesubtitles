@@ -20,7 +20,7 @@ from regions import bounds, regions_from_config
 from video_segments import decoded_frames, find_shot_cuts, video_batches
 from job_trace import span
 from adaptive_processing import prepare_subtitles, composite_subtitle, QualityReport
-from subtitle_compositing import camera_path, caption_mask, colored_caption_cards, composite_caption, large_caption_guidance, light_caption_cards, visible_background
+from subtitle_compositing import camera_path, caption_mask, colored_caption_cards, composite_caption, large_caption_guidance, light_caption_cards, tinted_caption_sequence, visible_background
 
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get('CLEAR_WORKSPACE', ROOT.parent)).resolve()
@@ -188,6 +188,8 @@ def model_geometry(width, height, resolution, preserve_aspect=False, large_capti
 def repair_regions(frames, regions, predict, context="roi", resolution="auto", blend_mode="rectangle",
                    adaptive_processing=False, preset='custom', subtitle_guidance='preset'):
     """Predict once from original frames, then composite only the selected regions."""
+    use_tinted = subtitle_guidance.endswith('_tinted')
+    subtitle_guidance = subtitle_guidance.removesuffix('_tinted')
     precise = blend_mode == 'precise'
     large_caption = False
     input_hints = [[] for _ in frames]
@@ -204,6 +206,7 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
             x1, y1, x2, y2 = region['roi']
             masks = []
             region_hints = []
+            tinted = tinted_caption_sequence([frame[y1:y2, x1:x2] for frame in frames]) if use_tinted else None
             for index, frame in enumerate(frames):
                 mask = caption_mask(frame, region['roi'])[y1:y2, x1:x2].copy()
                 if inspect_large:
@@ -220,6 +223,8 @@ def repair_regions(frames, regions, predict, context="roi", resolution="auto", b
                             vicinity = cv2.dilate(cards, np.ones((31, 9), np.uint8))
                             cards |= mask & vicinity
                             hint = cards if hint is None else cv2.bitwise_or(hint, cards)
+                    if tinted is not None and tinted[index] is not None:
+                        hint = tinted[index] if hint is None else cv2.bitwise_or(hint, tinted[index])
                     large_caption |= large and fast_geometry
                     region_hints.append(hint)
                     if hint is not None:

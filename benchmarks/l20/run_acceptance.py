@@ -58,7 +58,9 @@ def main(args):
     corpus = bench / 'corpus'
     trials = bench / 'trials'
     batches = bench / 'queues'
-    output = bench / 'acceptance'
+    series = args.series
+    suffix = '-' + series if series else ''
+    output = bench / ('acceptance' + suffix)
     output.mkdir(parents=True, exist_ok=True)
     trials.mkdir(exist_ok=True)
     batches.mkdir(exist_ok=True)
@@ -94,7 +96,7 @@ def main(args):
     extras = json.loads((corpus/'extras.json').read_text())['clips']
     def isolated(c, role, manifest):
         key = role + '-' + c['id']
-        label = key if role=='baseline' else 'final-' + key
+        label = key if role=='baseline' else 'final' + suffix + '-' + key
         dest = trials / label
         kinds = sorted({r['type'] for r in c.get('regions',[{'type':'subtitle'}])})
         expected = None if role == 'baseline' else json.loads(subprocess.check_output(
@@ -111,7 +113,7 @@ def main(args):
     def batch(case, limit, profile=None):
         specs = CASES[case]
         name = 'frozen-' + case + '-at-' + str(limit) + ('-measured' if profile else '')
-        dest = batches/name
+        dest = batches/(name + suffix)
         marker = dest/'batch.json'
         same = False
         if marker.exists():
@@ -132,7 +134,7 @@ def main(args):
         run(name,dest,cmd,'batch.json',same)
     def entry(mode):
         label='live-'+mode
-        directory=batches/label
+        directory=batches/(label + suffix)
         marker=directory/'equivalence.json'
         same=False
         if marker.exists():
@@ -163,11 +165,18 @@ def main(args):
         raise SystemExit('未完成的测试组：' + '、'.join(failed))
 
 
+def series_name(value):
+    if value and not all(c.isascii() and (c.isalnum() or c in '-_') for c in value):
+        raise argparse.ArgumentTypeError('轮次名称可用英文字母、数字、下划线或短横线')
+    return value
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for field in ('state','install','baseline'):
         parser.add_argument('--'+field,type=Path,required=True)
     parser.add_argument('--heavy-profile',type=Path)
+    parser.add_argument('--series', default='', type=series_name, help='独立保存新一轮配置的成片和验收记录')
     parser.add_argument('--web',default='http://127.0.0.1:8800')
     parser.add_argument('--api',default='http://127.0.0.1:8801')
     main(parser.parse_args())
