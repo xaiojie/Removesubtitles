@@ -195,12 +195,22 @@ def run(args):
                str(prop), core]
         result = output / "output.mp4"
     else:
-        mode = {"ocr-lama": "lite", "selective": "max", "product-pro": "pro", "product-max": "max"}[args.candidate]
+        mode = {"ocr-lama": "lite", "selective": "max", "product-pro": "pro", "product-max": "max",
+                "pro-selective": "max"}[args.candidate]
         request["mode"] = mode
         resolver = root / "php/product_modes.php"
         if resolver.is_file():
+            first_pass = "pro" if args.candidate == "pro-selective" else mode
             request["resolved_plan"] = json.loads(subprocess.check_output(
-                ["php", str(resolver), mode, *sorted({r["type"] for r in regions})]))
+                ["php", str(resolver), first_pass, *sorted({r["type"] for r in regions})]))
+            if args.candidate == "pro-selective":
+                if any(region["type"] != "subtitle" for region in regions):
+                    raise ValueError("此对照只评估标准首遍后的字幕残留")
+                snapshot = request["resolved_plan"]
+                snapshot["mode"] = mode
+                snapshot["stages"].append("selective_review")
+                review = json.loads((resolver.parent / "product_modes.json").read_text())["parameters"]["review"]
+                snapshot["parameters"]["review"] = {**review, "region_types": ["subtitle"]}
             for name, changes in knobs.items():
                 request["resolved_plan"]["parameters"][name].update(changes)
         elif knobs:
@@ -263,7 +273,8 @@ if __name__ == "__main__":
     for name in ("manifest", "source", "install", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--clip", required=True)
-    parser.add_argument("--candidate", choices=[*PROFILES, "clear-custom", "ocr-lama", "selective", "product-pro", "product-max"], required=True)
+    parser.add_argument("--candidate", choices=[*PROFILES, "clear-custom", "ocr-lama", "selective", "product-pro",
+                                                "product-max", "pro-selective"], required=True)
     parser.add_argument("--options", default="{}", help="CLEAR options or parameter groups for the product candidate")
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--acceptance", action="store_true")
