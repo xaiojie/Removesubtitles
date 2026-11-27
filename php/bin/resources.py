@@ -44,6 +44,7 @@ class Settings:
             return {key: numeric(updates.get(key, default), key) for key, default in base.items()}
 
         self.profiles = {key: amounts(base, profiles.get(key, {})) for key, base in DEFAULTS.items()}
+        self.lite_overrides = profiles.get('lite', {})
         self.margin = amounts(HEADROOM, data.get('headroom', {}))
         self.poll = numeric(data.get('poll_seconds', 1), 'poll_seconds', .05)
         self.bypasses = int(numeric(data.get('max_bypasses', 3), 'max_bypasses'))
@@ -58,11 +59,19 @@ class Settings:
 
     def estimate(self, folder, mode):
         # Each stage runs in series within its job, so retain the largest prospective working set.
-        engines, width, height, input_mib, frames = file_info(str(folder), mode)
+        engines, width, height, input_mib, frames, gpu_ocr = file_info(str(folder), mode)
         amounts = {k: max(self.profiles[e][k] for e in engines) for k in KEYS}
-        if mode == 'lite' and os.environ.get('LITE_DEVICE', 'cuda') == 'cpu':
-            amounts['gpu_mib'] = 0
         pixels = width * height
+        if mode == 'lite':
+            if os.environ.get('LITE_DEVICE', 'cuda') == 'cpu':
+                amounts['gpu_mib'] = 0
+            elif gpu_ocr:
+                # L20 full clips peaked near 3.7 GiB at 720p and 7.3 GiB on larger bands.
+                extra_pixels = max(0, pixels - 1280*720)
+                if 'gpu_mib' not in self.lite_overrides:
+                    amounts['gpu_mib'] += min(4096, math.ceil(4096*extra_pixels/(1920*1080 - 1280*720)))
+                if 'ram_mib' not in self.lite_overrides:
+                    amounts['ram_mib'] += math.ceil(extra_pixels/1000)
         # CLEAR keeps the source chunk plus overlapping frames and several decoded working copies.
         if pixels:
             buffered_frames = 12 if mode == 'lite' else 100
@@ -79,10 +88,13 @@ class Settings:
 @lru_cache(maxsize=1024)
 def file_info(directory, mode):
     folder = Path(directory)
+    gpu_ocr = False
     try:
         request = json.loads((folder / 'request.json').read_text())
         kinds = {r['type'] for r in request['regions']}
         width, height = map(int, request['dimensions'])
+        lite_options = (request.get('resolved_plan') or {}).get('parameters', {}).get('lite', {})
+        gpu_ocr = lite_options.get('ocr_backend') == 'onnx_cuda'
     except (OSError, KeyError, TypeError, ValueError):
         kinds, width, height = {'subtitle'}, 0, 0
     engines = ['lite'] if mode == 'lite' else [
@@ -108,7 +120,7 @@ def file_info(directory, mode):
                 frames = math.ceil(float(stream.get('duration') or info['format']['duration']) * num / den)
         except (OSError, subprocess.SubprocessError, KeyError, IndexError, ZeroDivisionError, ValueError):
             pass
-    return engines or ['clear'], width, height, size, max(0, frames)
+    return engines or ['clear'], width, height, size, max(0, frames), gpu_ocr
 
 
 def read_text(path):

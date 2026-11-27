@@ -81,7 +81,7 @@ bash scripts/deploy.sh api-status
 | 部署内容 | 脚本行为 |
 | --- | --- |
 | 系统 | 安装、校验 PHP CLI 8.1+、PDO SQLite、带 libx264 的 FFmpeg 和 ffprobe。Ubuntu 22.04/24.04、Debian 12 等系统可从发行版软件源安装。在默认源缺少 PHP 8.1+ 或 FFmpeg 的系统上，需先配置相应的软件源或安装所需版本，再用 `--skip-system`。 |
-| Lite | 在 `video-subtitle-remover/.venv` 内安装 CUDA 版 PyTorch 2.7、PaddleOCR 及算法依赖，仅下载 Mobile OCR 和 LaMa。校验模型文件后，实际调用检测器和 LaMa 做短推理。 |
+| Lite | 在 `video-subtitle-remover/.venv` 安装 CUDA 版 PyTorch 2.7、PaddleOCR、ONNX Runtime GPU 和转换工具。`models` 下载 Mobile OCR 和 Big-LaMa 两组权重。`verify` 从已下载的 Mobile 权重生成约 4.8 MB 的 `inference.onnx`，记录摘要，并用产品档位实际运行 GPU 检测和修补。 |
 | Pro / Max | 共用已有的 CLEAR、ProPainter 环境和权重，Max 的局部精修复用同一套模型。完整性校验通过的权重会直接复用。 |
 | 服务 | 网页仍由原服务提供。普通三档通过网页后端转交 PHP，直接 API 请求和网页请求进入同一队列。PHP 测试端点默认端口为 8810。PHP 接口省略 `mode` 时使用 `pro`。 |
 
@@ -104,7 +104,7 @@ bash scripts/deploy.sh update --wait-idle 1800
 
 通过部署脚本启用 API 后，`start/stop/restart/status` 同时管理网页和 PHP 服务。停止或更新时，PHP 暂停接收新任务和重试请求（HTTP 503），等待已入队的任务完成。等待超时后恢复接单并保留运行中的进程。更新完成后恢复原先运行的服务。任务默认保存在 `php/var/`，首次启动前可用 `SUBTITLE_DATA_DIR` 指向数据盘的绝对路径。HTTP 和队列日志在 `.deploy/api/{http,worker}/service.log`。这些进程支持关闭 SSH 后运行，服务器重启后执行 `start`。
 
-离线部署时，除 CLEAR 和 ProPainter 外，还要预先准备 Lite 的 `requirements-headless.txt`、对应 Python/平台的 PyTorch 2.7.0 和 torchvision 0.22.0 CUDA wheels 及全部依赖，以及 `video-subtitle-remover/backend/models` 下的 Mobile OCR 与 LaMa 权重。将这些 wheels 放入 `--wheelhouse` 指定的目录。运行 `models --with-api --offline` 只校验本地模型。联网时 Lite 模型支持 `--proxy`、`--github-prefix` 或环境变量 `VSR_MODEL_BASE_URL`，自定义地址的目录结构应与上游 `backend/models` 相同。
+离线部署时，除 CLEAR 和 ProPainter 外，还要预先准备 Lite 的 `requirements-headless.txt`、对应 Python/平台的 PyTorch 2.7.0 和 torchvision 0.22.0 CUDA wheels 及全部依赖，以及 `video-subtitle-remover/backend/models` 下的 Mobile OCR 与 LaMa 权重。离线包还需包含 `onnxruntime-gpu==1.22.0`、`paddle2onnx==2.1.0`、`onnx==1.17.0` 及其依赖。将这些 wheels 放入 `--wheelhouse` 指定的目录。运行 `models --with-api --offline` 只校验本地模型。联网时 Lite 模型支持 `--proxy`、`--github-prefix` 或环境变量 `VSR_MODEL_BASE_URL`，自定义地址的目录结构应与上游 `backend/models` 相同。
 
 ## 4. 按步骤安装或恢复
 

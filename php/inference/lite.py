@@ -397,10 +397,10 @@ def load_models(options=LiteOptions()):
             cpu_threads=3,
             enable_mkldnn=False,
         )
-    if options.ocr_backend == 'onnx_cuda':
+    device = os.getenv('LITE_DEVICE', 'cuda')
+    if options.ocr_backend == 'onnx_cuda' and device != 'cpu':
         from lite_ocr import cuda_detector
         detector = cuda_detector(detector,ocr_path)
-    device = os.getenv('LITE_DEVICE', 'cuda')
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
     with span('lite_lama_load', device=device):
@@ -461,10 +461,21 @@ def run(folder, request):
     print(f'Lite: {repaired_count}/{count} 帧命中 OCR', flush=True)
 
 
-if __name__ == '__main__' and sys.argv[1:] == ['--verify']:
-    detector, lama = load_models()
+def verify_models(product=False):
+    options = LiteOptions()
+    if product:
+        import json
+        import subprocess
+
+        raw = subprocess.check_output(['php', str(ROOT/'php/product_modes.php'), 'lite', 'subtitle'])
+        options = LiteOptions(**json.loads(raw)['parameters']['lite'])
+    detector, lama = load_models(options)
     frame = np.zeros((64, 160, 3), dtype=np.uint8)
     cv2.putText(frame, 'TEST', (12, 42), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-    detect(frame, [(0, 0, 160, 64)], detector)
-    restore([frame], [[(10, 15, 95, 47)]], lama)
-    print('Lite 检测器与 LaMa 推理校验通过。')
+    detect(frame, [(0, 0, 160, 64)], detector, options)
+    restore([frame], [[(10, 15, 95, 47)]], lama, options)
+    print(f'Lite 字幕定位设备 {getattr(detector, "inference_device", "cpu")} 与 LaMa 设备 {lama.device} 校验通过。')
+
+
+if __name__ == '__main__' and sys.argv[1:] in (['--verify'], ['--verify-product']):
+    verify_models(product=sys.argv[1] == '--verify-product')

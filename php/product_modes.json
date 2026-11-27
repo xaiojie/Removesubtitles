@@ -1,10 +1,10 @@
 {
-  "catalog_version": "2026-11-27.3",
+  "catalog_version": "2026-11-27.4",
   "default": "pro",
   "modes": {
     "lite": {
       "label": "Lite · 快速",
-      "description": "在选区内定位字幕、描边和底板，合并同帧遮罩后使用 LaMa 快速修补。",
+      "description": "追踪选区内的字幕行、描边和底板，保留半透明底色下的背景，再用 LaMa 修补遮挡。",
       "subtitles": true,
       "watermarks": false,
       "stages": ["ocr_lama"]
@@ -34,7 +34,9 @@
   "parameters": {
     "lite": {
       "sample_stride": 8, "detector_max_side": 720, "box_padding": 9, "context_padding": 60,
-      "batch_size": 6, "export_crf": 18, "mask_mode": "joint_cards"
+      "batch_size": 8, "export_crf": 18, "mask_mode": "tracked_cards",
+      "adaptive_ocr": true, "inpaint_max_side": 768, "compact_transfer": true,
+      "ocr_backend": "onnx_cuda", "layout_profile": true
     },
     "clear": {
       "preset": "balanced", "steps": 5, "cfg_scale": 1.0, "lora_scale": 1.15, "seed": 20261113,

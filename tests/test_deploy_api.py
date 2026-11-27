@@ -87,8 +87,10 @@ class ApiDeploymentTests(unittest.TestCase):
                 return next(i for i, call in enumerate(calls) if fragment in call)
 
             self.assertLess(index('torch==2.7.0'), index('download_models.py'))
-            self.assertLess(index('download_models.py'), index('lite.py\x1f--verify'))
-            self.assertLess(index('lite.py\x1f--verify'), index('deploy_helper.py\x1fstart'))
+            self.assertLess(index('onnxruntime-gpu==1.22.0'), index('download_models.py'))
+            self.assertLess(index('download_models.py'), index('export_lite_ocr.py'))
+            self.assertLess(index('export_lite_ocr.py'), index('lite.py\x1f--verify-product'))
+            self.assertLess(index('lite.py\x1f--verify-product'), index('deploy_helper.py\x1fstart'))
             self.assertLess(index('deploy_helper.py\x1fstart'), index('deploy_api.py\x1fstart'))
 
     def test_options_persist_and_offline_lite_uses_its_own_python(self):
@@ -129,6 +131,9 @@ class ApiDeploymentTests(unittest.TestCase):
             lite_install = next(line for line in calls if 'torch==2.7.0' in line)
             self.assertIn('--no-index', lite_install)
             self.assertIn(str(wheelhouse), lite_install)
+            ocr_install = next(line for line in calls if 'onnxruntime-gpu==1.22.0' in line)
+            self.assertIn('--no-index', ocr_install)
+            self.assertIn(str(wheelhouse), ocr_install)
             result = subprocess.run(
                 ['bash', str(test_deploy.SCRIPT), 'models', '--offline', '--dir', folder],
                 env=env,

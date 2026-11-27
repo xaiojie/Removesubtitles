@@ -49,6 +49,23 @@ print('GPU-fixture, 16000, ' + Path(os.environ['FIXTURE_FREE']).read_text() + ',
 '''
 
 
+class ReservationTests(unittest.TestCase):
+    def test_large_gpu_ocr_jobs_reserve_the_measured_memory_and_respect_host_overrides(self):
+        from unittest.mock import patch
+        from resources import Settings
+
+        with tempfile.TemporaryDirectory() as path, patch.dict(os.environ, {'LITE_DEVICE': 'cuda'}):
+            directory = Path(path)
+            request = {'dimensions': [1620, 2880], 'regions': [{'type': 'subtitle'}],
+                       'resolved_plan': {'parameters': {'lite': {'ocr_backend': 'onnx_cuda'}}}}
+            (directory/'request.json').write_text(json.dumps(request))
+            estimate = Settings().estimate(directory, 'lite')
+            self.assertEqual(estimate['gpu_mib'], 8192)
+            self.assertGreater(estimate['ram_mib'], 6415)
+            settings = Settings({'profiles': {'lite': {'gpu_mib': 6200}}})
+            self.assertEqual(settings.estimate(directory, 'lite')['gpu_mib'], 6200)
+
+
 class QueueTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()

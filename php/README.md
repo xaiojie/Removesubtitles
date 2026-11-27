@@ -4,7 +4,7 @@
 
 | mode | 用途 | 处理方式 |
 | --- | --- | --- |
-| Lite · 快速（`lite`） | 纯字幕、批量预览 | PP-OCRv5 Mobile 每 8 帧采样，变化处补检。字框外扩 9 px、背景上下文 60 px，合并字幕与底板遮罩后由 GPU LaMa 回填。 |
+| Lite · 快速（`lite`） | 纯字幕、批量预览 | GPU PP-OCRv5 Mobile 每 8 帧定位、换句补检，追踪双行、逐词高亮和底板。字框外扩 9 px、上下文 60 px，Big-LaMa 每批最多 8 帧。 |
 | Pro · 标准（`pro`，默认） | 多处字幕和水印 | CLEAR 5 步，LoRA 强度 1.15，自动推理分辨率、较大上下文、33 帧分块、4 帧重叠，必要时调用 LaMa 预填。混合任务先处理字幕，再用 ProPainter 去水印。 |
 | Max · 增加（`max`） | 运动背景、粗描边或带底板的字幕，以及需要复查的水印 | CLEAR 7 步，使用对齐的邻帧和 LaMa 预填。包含水印时再用 ProPainter 去水印、逐帧复查水印选区并局部精修。 |
 
@@ -39,7 +39,7 @@ curl -fsS -H "Authorization: Bearer ${SUBTITLE_API_TOKEN}" http://127.0.0.1:8810
 | `CLEAR_PYTHON`、`CLEAR_WORKSPACE` | Pro 和 Max 使用的绝对解释器路径、模型工作目录。默认分别为仓库内的 `.venv/bin/python` 和仓库根目录。 |
 | `PROPAINTER_ROOT`、`PROPAINTER_PYTHON` | ProPainter 源码和权重目录、解释器。默认使用仓库内的 `ProPainter/` 和 Pro 使用的解释器。 |
 | `VSR_PYTHON`、`VSR_MODEL_DIR` | 默认使用 `video-subtitle-remover/.venv/bin/python` 和 `video-subtitle-remover/backend/models/`。 |
-| `LITE_DEVICE` | 默认为 `cuda`。在无 NVIDIA 显卡的测试机上可设为 `cpu` 运行 Lite。 |
+| `LITE_DEVICE` | 默认为 `cuda`。在 CPU 测试机可设为 `cpu`，届时 Paddle 检测器和 LaMa 均在 CPU 运行。 |
 
 ## 接口
 

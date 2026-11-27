@@ -473,6 +473,7 @@ step_env() {
         "$LITE_PYTHON" -m pip install --upgrade pip "${pip_source[@]}"
         "$LITE_PYTHON" -m pip install torch==2.7.0 torchvision==0.22.0 "${lite_torch[@]}"
         "$LITE_PYTHON" -m pip install -r "$VSR_DIR/requirements-headless.txt" "${pip_source[@]}"
+        "$LITE_PYTHON" -m pip install 'onnxruntime-gpu==1.22.0' 'paddle2onnx==2.1.0' 'onnx==1.17.0' "${pip_source[@]}"
         "$LITE_PYTHON" -m pip check
         "$LITE_PYTHON" -c 'import sys,torch; assert torch.version.cuda == sys.argv[1] and torch.cuda.is_available(), "Lite CUDA 环境不可用"' "$cuda_version"
     fi
@@ -501,7 +502,8 @@ step_verify() {
         rm -f "$STATE/lite.ready"
         api_dependencies
         lite_models verify
-        VSR_MODEL_DIR="$VSR_DIR/backend/models" LITE_DEVICE=cuda "$LITE_PYTHON" "$ROOT/php/inference/lite.py" --verify
+        "$LITE_PYTHON" "$ROOT/scripts/export_lite_ocr.py" "$VSR_DIR/backend/models/V5/ch_det_fast"
+        VSR_MODEL_DIR="$VSR_DIR/backend/models" LITE_DEVICE=cuda "$LITE_PYTHON" "$ROOT/php/inference/lite.py" --verify-product
         touch "$STATE/lite.ready"
     fi
 }
