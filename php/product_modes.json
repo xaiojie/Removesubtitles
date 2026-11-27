@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2026-11-27.5",
+  "catalog_version": "2026-11-27.6",
   "default": "pro",
   "modes": {
     "lite": {
@@ -37,7 +37,9 @@
       "batch_size": 8, "export_crf": 18, "mask_mode": "tracked_cards",
       "adaptive_ocr": true, "inpaint_max_side": 768, "compact_transfer": true,
       "ocr_backend": "onnx_cuda", "layout_profile": true,
-      "complete_flat_strokes": true, "track_highlight_edges": true, "repair_gradient_edges": true
+      "complete_flat_strokes": true, "track_highlight_edges": true, "repair_gradient_edges": true,
+      "skip_graph_up_to_seconds": 30, "variable_line_panels": true,
+      "multiline_light_cards": true, "recover_visible_cards": true, "follow_wrapped_rows": true
     },
     "clear": {
       "preset": "balanced", "steps": 5, "cfg_scale": 1.0, "lora_scale": 1.15, "seed": 20261113,
