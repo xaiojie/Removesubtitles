@@ -44,6 +44,13 @@ def registration(source, donor):
     return affine
 
 
+def flow_view(image):
+    scale = min(1., 512 / max(image.shape[:2]))
+    gray = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), None, fx=scale, fy=scale,
+                      interpolation=cv2.INTER_AREA)
+    return gray, np.float32([gray.shape[1] / image.shape[1], gray.shape[0] / image.shape[0]])
+
+
 def agrees_around_card(source, warped, valid, rect):
     l, t, r, b = rect
     h, w = valid.shape
@@ -72,6 +79,54 @@ class Donor:
     image: np.ndarray
     descriptors: tuple
     valid: np.ndarray
+    last_index: int = -10
+    last_matrix: np.ndarray = None
+    flow_reference: tuple = None
+
+    def follow(self, source, rect):
+        """Match original donor corners directly to this frame, using the last fit as a starting point."""
+        if self.flow_reference is None:
+            gray, scale = flow_view(self.image)
+            allowed = cv2.resize(self.valid, gray.shape[::-1], interpolation=cv2.INTER_NEAREST)
+            x, y, r, b = np.rint(np.asarray(rect) * np.tile(scale, 2)).astype(int)
+            allowed[max(0, y-4):b+4, max(0, x-4):r+4] = 0
+            points = cv2.goodFeaturesToTrack(gray, 160, .007, 6, mask=allowed)
+            self.flow_reference = gray, scale, points
+        gray, scale, original = self.flow_reference
+        if original is None or len(original) < 16:
+            return None
+        current, _ = flow_view(source)
+        projected = cv2.transform(original / scale, self.last_matrix)
+        x, y, r, b = rect
+        px, py = projected.reshape(-1, 2).T
+        outside = (px < x-6) | (px > r+6) | (py < y-6) | (py > b+6)
+        origins = original[outside]
+        if len(origins) < 16:
+            return None
+        settings = dict(winSize=(15, 15), maxLevel=2, flags=cv2.OPTFLOW_USE_INITIAL_FLOW)
+        dest, ok, error = cv2.calcOpticalFlowPyrLK(gray, current, origins, projected[outside] * scale, **settings)
+        if dest is None:
+            return None
+        back, reverse_ok, _ = cv2.calcOpticalFlowPyrLK(current, gray, dest, origins.copy(), **settings)
+        if back is None:
+            return None
+        consistent = (ok.ravel() > 0) & (reverse_ok.ravel() > 0) & (error.ravel() < 16)
+        consistent &= np.linalg.norm((back-origins).reshape(-1, 2), axis=1) < .75
+        if consistent.sum() < 16:
+            return None
+        reference = (origins[consistent] / scale).reshape(-1, 2)
+        matrix, support = cv2.estimateAffinePartial2D(reference, dest[consistent] / scale,
+                                                      method=cv2.RANSAC, ransacReprojThreshold=1.6)
+        if matrix is None or support.sum() < 12 or support.mean() < .73:
+            return None
+        spread = np.ptp(reference[support.ravel() != 0], axis=0)
+        if np.any(spread < .30*np.asarray(self.image.shape[1::-1])):
+            return None
+        # Only small camera motion can continue a previously verified registration.
+        delta = cv2.transform(origins / scale, matrix) - projected[outside]
+        if np.linalg.norm(delta.reshape(-1, 2), axis=1).max() > .035*max(source.shape[:2]):
+            return None
+        return matrix
 
 
 class VisibleCardBackground:
@@ -153,11 +208,24 @@ class VisibleCardBackground:
         if not donors:
             return None
         source = frame[wy:wb, wx:wr]
-        keypoints = features(source, rect, self.sift)
-        for donor in sorted(donors, key=lambda v: abs(v.frame_index-index)):
+        keypoints = None
+
+        def alignments(donor):
+            nonlocal keypoints
+            if 0 < index-donor.last_index <= 2 and donor.last_matrix is not None:
+                affine = donor.follow(source, rect)
+                if affine is not None:
+                    yield affine, 'flow'
+            if keypoints is None:
+                keypoints = features(source, rect, self.sift)
             affine = registration(keypoints, donor.descriptors)
-            if affine is None:
-                continue
+            if affine is not None:
+                yield affine, 'features'
+
+        def order(donor):
+            return (not 0 < index-donor.last_index <= 2, abs(donor.frame_index-index))
+
+        for donor, affine, method in ((d, a, m) for d in sorted(donors, key=order) for a, m in alignments(d)):
             size = (wr-wx, wb-wy)
             warped = cv2.warpAffine(donor.image, affine, size)
             valid = cv2.warpAffine(donor.valid, affine, size)
@@ -168,7 +236,8 @@ class VisibleCardBackground:
                 continue
             if not agrees_around_card(source, warped, valid, rect):
                 continue
-            with span('lite_visible_card', device='cpu', frame=index, source_frame=donor.frame_index,
+            donor.last_index, donor.last_matrix = index, affine
+            with span('lite_visible_card', device='cpu', frame=index, source_frame=donor.frame_index, method=method,
                       recovered_pixels=cv2.countNonZero(use), mask_pixels=cv2.countNonZero(mask)):
                 cv2.copyTo(warped[area], use, frame[t:b, l:r])
                 residual = mask.copy()

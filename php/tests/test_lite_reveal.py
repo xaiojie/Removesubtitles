@@ -1,5 +1,6 @@
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import cv2
@@ -36,6 +37,19 @@ class RevealTests(unittest.TestCase):
         self.assertIsNotNone(residual)
         self.assertFalse(residual.any())
         np.testing.assert_allclose(repaired, scene, atol=1)
+
+        # Recover the next frame even if its descriptor fit is lost for a single frame.
+        motion = np.float32([[1, 0, 1.3], [0, 1, .6]])
+        actual = cv2.warpAffine(scene, motion, (370, 180), borderMode=cv2.BORDER_REPLICATE)
+        covered = actual.copy()
+        covered[59:134, 46:320] = 247
+        with patch('lite_reveal.registration', return_value=None):
+            residual = tool.recover(covered, 13, roi, mask, boxes)
+            self.assertIsNotNone(residual)
+            self.assertLess(cv2.absdiff(covered[60:133, 47:319], actual[60:133, 47:319]).mean(), 2)
+            cut = before_cut.copy()
+            cut[59:134, 46:320] = 247
+            self.assertIsNone(tool.recover(cut, 14, roi, mask, boxes))
 
         wrong_shot = VisibleCardBackground(lambda index: before_cut, lambda frame: (), fps=12, total=45)
         untouched = target.copy()
