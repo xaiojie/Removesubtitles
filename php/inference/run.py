@@ -47,7 +47,9 @@ def record_execution(folder, request, mode, task):
         raise ValueError('档位快照与任务模式或选区不一致')
     paths = ['php/inference/run.py', 'php/inference/media.py']
     entries = {
-        'ocr_lama': ['php/inference/lite.py'],
+        'ocr_lama': ['php/inference/lite.py','php/inference/lite_masks.py','php/inference/lite_tracking.py',
+                     'php/inference/lite_profile.py','php/inference/lite_layer.py','php/inference/lite_ocr.py',
+                     'video-subtitle-remover/backend/inpaint/lama_inpaint.py'],
         'clear': ['CLEAR-web/worker.py'],
         'propainter': ['CLEAR-web/propainter_worker.py'],
         'selective_review': ['php/inference/fine.py'],
