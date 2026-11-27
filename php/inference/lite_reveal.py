@@ -28,20 +28,22 @@ def registration(source, donor):
     if min(len(p), len(q)) < 12:
         return None
     pairs = cv2.BFMatcher(cv2.NORM_L2).knnMatch(d, e, k=2)
-    matches = []
-    for pair in pairs:
-        if len(pair) == 2 and pair[0].distance < .75 * pair[1].distance:
-            matches.append((pair[0].queryIdx, pair[0].trainIdx))
-    if len(matches) < 12:
-        return None
-    i, j = np.asarray(matches).T
-    affine, inliers = cv2.estimateAffinePartial2D(q[j], p[i], method=cv2.RANSAC, ransacReprojThreshold=2.)
-    if affine is None or inliers.sum() < 12 or inliers.mean() < .36:
-        return None
-    scale = np.hypot(*affine[0, :2])
-    if not .80 < scale < 1.22 or abs(affine[1, 0]) > .2*scale:
-        return None
-    return affine
+    # Repeated print or photographic grain can create a large pool of ambiguous descriptors.
+    for ratio in (.75, .70):
+        matches = []
+        for pair in pairs:
+            if len(pair) == 2 and pair[0].distance < ratio * pair[1].distance:
+                matches.append((pair[0].queryIdx, pair[0].trainIdx))
+        if len(matches) < 12:
+            break
+        i, j = np.asarray(matches).T
+        affine, inliers = cv2.estimateAffinePartial2D(q[j], p[i], method=cv2.RANSAC, ransacReprojThreshold=2.)
+        if affine is None or inliers.sum() < 12 or inliers.mean() < .36:
+            continue
+        scale = np.hypot(*affine[0, :2])
+        if .80 < scale < 1.22 and abs(affine[1, 0]) <= .2*scale:
+            return affine
+    return None
 
 
 def flow_view(image):
@@ -90,7 +92,7 @@ class Donor:
             allowed = cv2.resize(self.valid, gray.shape[::-1], interpolation=cv2.INTER_NEAREST)
             x, y, r, b = np.rint(np.asarray(rect) * np.tile(scale, 2)).astype(int)
             allowed[max(0, y-4):b+4, max(0, x-4):r+4] = 0
-            points = cv2.goodFeaturesToTrack(gray, 160, .007, 6, mask=allowed)
+            points = cv2.goodFeaturesToTrack(gray, 220, .0005, 5, mask=allowed)
             self.flow_reference = gray, scale, points
         gray, scale, original = self.flow_reference
         if original is None or len(original) < 16:
