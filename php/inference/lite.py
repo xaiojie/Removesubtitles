@@ -4,6 +4,7 @@ import math
 import os
 import sys
 from collections import defaultdict
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,6 +38,7 @@ class LiteOptions:
     repair_gradient_edges: bool = False
     track_highlight_edges: bool = False
     complete_flat_strokes: bool = False
+    optimize_lama_graph: bool = True
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -389,7 +391,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 input_crops = [cv2.resize(im,size,interpolation=cv2.INTER_AREA) for im in crops]
                 input_masks = [(cv2.resize(m,size,interpolation=cv2.INTER_AREA)>0).astype(np.uint8)*255 for m in masks]
             anchors, order = inference_frames(crops, masks, options.frame_tolerance)
-            with span('lite_lama', device=str(lama.device), frames=len(anchors), output_frames=len(batch)):
+            with span('lite_lama', device=str(lama.device), frames=len(anchors), output_frames=len(batch),
+                      optimize_graph=options.optimize_lama_graph):
                 repairs = lama._inpaint_batch([input_crops[i] for i in anchors], [input_masks[i] for i in anchors])
             if scale < 1:
                 repairs = [cv2.resize(image, (r-l, b-t), interpolation=cv2.INTER_LINEAR) for image in repairs]
@@ -461,7 +464,11 @@ def run(folder, request):
         from lite_profile import profile_source
         with span('lite_layout_probe',device='cpu'):
             profiles = profile_source(source,rois,find)
-    with capture(source) as video:
+    jit_settings = nullcontext()
+    if not options.optimize_lama_graph:
+        import torch
+        jit_settings = torch.jit.optimized_execution(False)
+    with jit_settings, capture(source) as video:
         fps, total = geometry(video)
         ok, first = video.read()
         if not ok or list(first.shape[1::-1]) != request['dimensions']:
