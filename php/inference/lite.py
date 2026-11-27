@@ -13,6 +13,7 @@ from media import ROOT, capture, encode, geometry, report
 from job_trace import span
 from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights, locate_chip
 from lite_reuse import inference_frames
+from lite_gradient import GradientPanel
 from lite_tracking import reject_transient_skin, track_block
 from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
@@ -33,6 +34,7 @@ class LiteOptions:
     ocr_backend: str = 'paddle'
     layout_profile: bool = False
     frame_tolerance: int = 0
+    repair_gradient_edges: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -257,6 +259,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 if layer is not None:
                     (l,t,r,b),background,ink = layer
                     frame[t:b,l:r] = background
+                    if options.repair_gradient_edges and isinstance(profile.panel, GradientPanel):
+                        profile.panel.repair_edges(frame, key)
                     active.append((index,ink))
                     continue
             dialogue = profile.dialogue_rows(local) if profile is not None else []

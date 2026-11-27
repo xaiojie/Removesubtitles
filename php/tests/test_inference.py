@@ -16,6 +16,19 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_tint_fringe_is_removed_only_on_a_supported_smooth_edge(self):
+        from lite_gradient import reduce_edge_fringe
+
+        strip = np.full((17, 90, 3), 110, np.uint8)
+        strip[8, :60] = (91, 143, 83)
+        strip[8:, 60:] = (202, 67, 38)
+        strip[7, 15] = (5, 92, 215)
+        object_edge = strip[:, 60:].copy()
+        reduce_edge_fringe(strip)
+        np.testing.assert_array_equal(strip[8, :60], np.full((60, 3), 110, np.uint8))
+        np.testing.assert_array_equal(strip[:, 60:], object_edge)
+        np.testing.assert_array_equal(strip[7, 15], [5, 92, 215])
+
     def test_similar_frames_require_matching_native_masks_and_stay_close_to_anchor(self):
         from lite_reuse import inference_frames
         images = [np.full((32, 56, 3), n, np.uint8) for n in (80, 82, 84, 86, 86, 86)]

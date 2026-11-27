@@ -7,6 +7,31 @@ import numpy as np
 from lite_layer import Panel
 
 
+def reduce_edge_fringe(strip):
+    """Remove a repeated colour spike normal to the panel edge, preserving subject contours."""
+    pixels = strip.astype(np.float32)
+    before, after = pixels[:3], pixels[-3:]
+    left, right = before.mean(0), after.mean(0)
+    flat = ((np.ptp(before, axis=0).max(1) <= 14) & (np.ptp(after, axis=0).max(1) <= 14)
+            & (np.abs(left - right).max(1) <= 26))
+    if np.count_nonzero(flat) < max(12, .10 * len(flat)):
+        return
+    # The two background estimates are centred one pixel from either end of the strip.
+    for row in range(3, len(strip) - 3):
+        expected = left + (right - left) * ((row - 1) / (len(strip) - 3))
+        residual = pixels[row] - expected
+        bias = np.median(residual[flat], axis=0)
+        if np.ptp(bias) < 8 or np.max(np.abs(bias)) < 9:
+            continue
+        error = np.abs(residual).mean(1)
+        better = flat & (np.abs(residual - bias).mean(1) + 3 < error)
+        if np.count_nonzero(better) < .55 * np.count_nonzero(flat):
+            continue
+        # Correct only the recurring excess, capped by each pixel's own deviation.
+        amount = np.clip(np.sign(bias) * residual[better], 0, np.abs(bias))
+        strip[row, better] = np.clip(np.rint(pixels[row, better] - np.sign(bias) * amount), 0, 255)
+
+
 def edge_samples(images, box):
     left, top, right, bottom = box
     xs = np.arange(left+3, right-2, max(1, (right-left)//160))
@@ -61,6 +86,22 @@ class GradientPanel(Panel):
     def offsets(self, xs, left, right):
         u = ((xs-left)/(right-left)-.5).astype(np.float32)
         return self.offset + u[:, None]*self.slope
+
+    def repair_edges(self, frame, roi):
+        # Chroma subsampling mixes a few pixels across a hard tint boundary. Inspect both sides
+        # after undoing the tint and only within the operator's selection.
+        x, y, right, bottom = roi
+        l, t, r, b = self.native_box
+        band = frame[y:bottom, x:right]
+        for image, edges, span in (
+            (band, (t-y, b-y), (max(l-x, 0), min(r-x, right-x))),
+            (band.transpose(1, 0, 2), (l-x, r-x), (max(t-y, 0), min(b-y, bottom-y))),
+        ):
+            if span[1] <= span[0]:
+                continue
+            for edge in edges:
+                if 8 <= edge < len(image) - 8:
+                    reduce_edge_fringe(image[edge-8:edge+9, span[0]:span[1]])
 
     def active(self, images):
         left, _, right, _ = self.box
