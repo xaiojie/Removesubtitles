@@ -14,6 +14,7 @@ from media import ROOT, capture, encode, geometry, report
 from job_trace import span
 from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights, locate_chip
 from lite_reuse import inference_frames
+from lite_reveal import VisibleCardBackground, restore_from_source
 from lite_gradient import GradientPanel
 from lite_line_panel import LinePanel
 from lite_tracking import reject_transient_skin, track_block
@@ -43,6 +44,7 @@ class LiteOptions:
     variable_line_panels: bool = False
     skip_graph_up_to_seconds: int = 0
     multiline_light_cards: bool = False
+    recover_visible_cards: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -271,7 +273,8 @@ def include_punctuation(mask,patch,padding):
     return mask | cv2.dilate(extra,np.ones((5,5),np.uint8))
 
 
-def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profiles=None):
+def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, profiles=None,
+                  *, reveal=None, first_index=0):
     height, width = frames[0].shape[:2]
     tracked = options.mask_mode == 'tracked_cards'
     if tracks is None:
@@ -310,6 +313,9 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     if not local:
                         continue
             card_boxes = local if options.multiline_light_cards else ()
+            visible_card = None
+            if reveal is not None and len(card_boxes) >= 3 and key not in originals:
+                visible_card = light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True)
             dialogue = profile.dialogue_rows(local) if profile is not None else []
             if profile is not None:
                 local = dialogue or profile.select(local)
@@ -331,9 +337,13 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 dark_card = black_caption_cards(crop, local)
             if profile is not None and not local and dark_card is None and chip is None and highlight is None:
                 if len(card_boxes) >= 3:
-                    card = light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True)
+                    card = (visible_card if reveal is not None and key not in originals else
+                            light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True))
                     if card is not None:
-                        active.append((index, card))
+                        if visible_card is not None:
+                            card = restore_from_source(reveal, frame, first_index+index, key, card_boxes, card, visible_card)
+                        if card.any():
+                            active.append((index, card))
                 continue
             mask = caption_plates(crop, local)
             if dark_card is not None:
@@ -388,6 +398,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 mask[:, right_edge:] = 0
             if highlight is not None:
                 mask |= highlight
+            if visible_card is not None:
+                mask = restore_from_source(reveal, frame, first_index+index, key, card_boxes, mask, visible_card)
             if mask.any():
                 active.append((index, mask))
 
@@ -493,6 +505,15 @@ def run(folder, request):
         video = resources.enter_context(capture(source))
         fps, total = geometry(video)
         options = options.for_clip(video.get(cv2.CAP_PROP_FRAME_COUNT), fps)
+        reveal = None
+        if options.multiline_light_cards and options.recover_visible_cards and total > 1:
+            from media import NearbyFrames
+
+            nearby = NearbyFrames(source)
+            resources.callback(nearby.close)
+            # Use unfiltered OCR when excluding native lettering and the next subtitle from a reference.
+            reveal = VisibleCardBackground(nearby.read, lambda frame: detect(frame, rois, detector, options),
+                                           fps=fps, total=total, read_reference=lambda i: nearby.read(i, reference=True))
         if not options.optimize_lama_graph:
             import torch
             resources.enter_context(torch.jit.optimized_execution(False))
@@ -522,7 +543,8 @@ def run(folder, request):
                     original_last = boxes[-1]
                     boxes = reject_transient_skin(frames,boxes,previous_boxes,anchor if ok else None)
                     previous_boxes = original_last
-                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks, profiles) if options.mask_mode != 'boxes'
+                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks, profiles,
+                                          reveal=reveal, first_index=count) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(memoryview(np.ascontiguousarray(frame)))

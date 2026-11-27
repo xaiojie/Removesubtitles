@@ -76,6 +76,52 @@ def report(percent, stage):
     )
 
 
+def sdr_decode_command(path, color, width, height, *, timestamp=None):
+    # Sequential frames and frames borrowed from the source must use the same colour conversion.
+    matrix = SDR_MATRICES[color['color_space']]
+    filters = (f'scale=in_color_matrix={matrix}:in_range={color["color_range"]}:out_range=pc:flags={SCALE_FLAGS},'
+               f'format=bgr24,scale={width}:{height}:flags=bilinear')
+    ffmpeg = os.getenv('FFMPEG', 'ffmpeg')
+    seek = [] if timestamp is None else ['-ss', f'{max(0., timestamp - .000001):.6f}']
+    limit = [] if timestamp is None else ['-frames:v', '1']
+    return [ffmpeg, '-nostdin', '-v', 'error', '-filter_threads', '1', '-threads:v', '2',
+            *seek, '-i', str(path), '-map', '0:v:0', '-vf', filters, *_passthrough(ffmpeg),
+            *limit, '-threads:v', '1', '-pix_fmt', 'bgr24', '-f', 'rawvideo', 'pipe:1']
+
+
+class NearbyFrames:
+    """Open the independent decoder only when a large caption needs a reference frame."""
+    def __init__(self, path):
+        self.path = path
+        self.video = None
+        self.color = None
+
+    def read(self, index, *, reference=False):
+        if self.video is None:
+            self.video = open_video_capture(self.path)
+            self.color = _sdr_video(_streams(self.path))
+        if not self.video.set(cv2.CAP_PROP_POS_FRAMES, index):
+            return None
+        ok, frame = self.video.read()
+        if not ok or abs(self.video.get(cv2.CAP_PROP_POS_FRAMES) - (index + 1)) > .5:
+            return None
+        if not reference or not self.color:
+            return frame
+        timestamp = self.video.get(cv2.CAP_PROP_POS_MSEC) / 1000
+        if not math.isfinite(timestamp) or timestamp < 0 or (index > 0 and timestamp == 0):
+            return None
+        height, width = frame.shape[:2]
+        command = sdr_decode_command(self.path, self.color, width, height, timestamp=timestamp)
+        result = subprocess.run(command, stdout=subprocess.PIPE)
+        if result.returncode or len(result.stdout) != frame.nbytes:
+            return None
+        return np.frombuffer(result.stdout, dtype=np.uint8).reshape(frame.shape)
+
+    def close(self):
+        if self.video is not None:
+            self.video.release()
+
+
 @contextmanager
 def capture(path):
     video = open_video_capture(path)
@@ -97,13 +143,7 @@ def capture(path):
         video.release()
 
     # Older OpenCV FFmpeg backends convert tagged BT.709 as BT.601 before returning BGR.
-    matrix = SDR_MATRICES[color['color_space']]
-    filters = (f'scale=in_color_matrix={matrix}:in_range={color["color_range"]}:out_range=pc:flags={SCALE_FLAGS},'
-               f'format=bgr24,scale={width}:{height}:flags=bilinear')
-    ffmpeg = os.getenv('FFMPEG', 'ffmpeg')
-    args = [ffmpeg, '-nostdin', '-v', 'error', '-filter_threads', '1',
-            '-threads:v', '2', '-i', str(path), '-map', '0:v:0', '-vf', filters, *_passthrough(ffmpeg),
-            '-threads:v', '1', '-pix_fmt', 'bgr24', '-f', 'rawvideo', 'pipe:1']
+    args = sdr_decode_command(path, color, width, height)
     with subprocess.Popen(args, stdout=subprocess.PIPE) as process:
         try:
             yield _ColorCapture(process, width, height, fps, count)

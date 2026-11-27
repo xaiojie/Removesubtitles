@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'inference'))
-from media import capture, encode, geometry, open_video_capture
+from media import NearbyFrames, capture, encode, geometry, open_video_capture
 
 
 def make_clip(path, matrix=None, color_range='tv', sar='1', transfer=None):
@@ -60,6 +60,22 @@ def copy_pixels(source, output):
 
 
 class MediaColorTests(unittest.TestCase):
+    def test_reference_read_uses_the_same_colour_and_frame_as_the_main_decoder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'changing.mp4'
+            subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i',
+                            'testsrc2=size=128x96:rate=30000/1001', '-frames:v', '12',
+                            '-c:v', 'libx264', '-colorspace', 'bt709', '-color_trc', 'bt709',
+                            '-color_range', 'tv', str(path)], check=True)
+            with capture(path) as stream:
+                expected = [stream.read()[1] for _ in range(12)]
+            nearby = NearbyFrames(path)
+            try:
+                for index in (11, 0, 7):
+                    np.testing.assert_array_equal(nearby.read(index, reference=True), expected[index])
+            finally:
+                nearby.close()
+
     def test_display_colors_metadata_and_aac_packets_survive_round_trip(self):
         cases = [('bt709', 'tv', 'bt709'), ('bt709', 'pc', 'bt709'),
                  ('bt470bg', 'tv', None), ('bt470bg', 'tv', 'bt470bg')]
