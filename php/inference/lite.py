@@ -259,8 +259,9 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     frame[t:b,l:r] = background
                     active.append((index,ink))
                     continue
+            dialogue = profile.dialogue_rows(local) if profile is not None else []
             if profile is not None:
-                local = profile.select(local)
+                local = dialogue or profile.select(local)
             chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
             focused = options.mask_mode in ('focused_cards', 'tracked_cards')
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
@@ -270,6 +271,9 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
             dark_card = None
             if tracked:
                 local, dark_card = tracks[key].update(crop, local)
+                if dialogue:
+                    # A stored single black card must not hide words on a verified second row.
+                    local = dialogue
             elif focused:
                 dark_card = black_caption_cards(crop, local)
             if profile is not None and not local and dark_card is None and chip is None:

@@ -41,6 +41,48 @@ class BandProfile:
     panel: object
     chip: object = None
 
+    def dialogue_rows(self, boxes):
+        """Recognize multiple centered dialogue rows moving together, including one-word lines."""
+        if len(self.rows) < 2 or len(boxes) < 2:
+            return []
+        height = float(np.median([h for _, h in self.rows]))
+        groups = []
+        for box in sorted(boxes, key=lambda rect: rect[1]+rect[3]):
+            x, y, right, bottom = box
+            if not .59*height <= bottom-y <= 1.52*height:
+                continue
+            center = (y+bottom)/2
+            if groups and abs(groups[-1][0]-center) < .28*height:
+                groups[-1][1].append(box)
+            else:
+                groups.append((center, [box]))
+        centered = []
+        for center, line in groups:
+            left = min(box[0] for box in line)
+            right = max(box[2] for box in line)
+            if abs((left+right)/2-self.width/2) < .16*self.width:
+                centered.append((center, right-left, line))
+        best, best_score = [], (0, float('-inf'))
+        for center, _, _ in centered:
+            for expected, _ in self.rows:
+                shift = center-expected
+                if abs(shift) > .75*height:
+                    continue
+                matches = []
+                used = set()
+                for row, _ in self.rows:
+                    choices = [(abs(c-row-shift), i) for i,(c,_,_) in enumerate(centered) if i not in used]
+                    if choices:
+                        distance, i = min(choices)
+                        if distance <= .23*height:
+                            used.add(i)
+                            matches.append(centered[i])
+                score = (len(matches), -abs(shift))
+                if len(matches) >= 2 and max(width for _,width,_ in matches) >= .35*self.width and score > best_score:
+                    best = [box for _,_,line in matches for box in line]
+                    best_score = score
+        return best
+
     def select(self,boxes):
         if not self.rows or not boxes:
             return boxes

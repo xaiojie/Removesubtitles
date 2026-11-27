@@ -122,6 +122,17 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(profile.select(samples[0]),[samples[0][0]])
         self.assertEqual(profile.select([(10,4,46,24)]),[])
 
+    def test_two_dialogue_rows_keep_short_words_and_exclude_printed_titles(self):
+        from lite_profile import BandProfile
+        profile = BandProfile(500, 150, [(60,48), (99,48)], None)
+        top, short = (65,34,434,86), (195,75,308,124)
+        title = (122,0,378,40)
+        self.assertCountEqual(profile.dialogue_rows([title,top,short]), [top,short])
+        fragments = [(76,12,169,59), (152,16,299,62), (294,14,427,61), (176,48,327,102)]
+        print_on_shirt = (25,95,245,144)
+        self.assertCountEqual(profile.dialogue_rows([print_on_shirt,*fragments]), fragments)
+        self.assertEqual(profile.dialogue_rows([title,print_on_shirt]), [])
+
     def test_transient_pruning_preserves_confirmed_neighbors_and_clip_ends(self):
         from lite_tracking import reject_transient_skin
         frames=[np.full((45,100,3),(130,163,211),np.uint8) for _ in range(3)]
