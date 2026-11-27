@@ -8,19 +8,56 @@ from backend.inpaint.utils.lama_util import prepare_img_and_mask, get_image, pad
 from backend import config
 from backend.tools.inpaint_tools import get_inpaint_area_by_mask
 
+
+def _is_byte_crop(image, mask, height, width):
+    return (
+        isinstance(image, np.ndarray)
+        and image.dtype == np.uint8
+        and image.shape == (height, width, 3)
+        and isinstance(mask, np.ndarray)
+        and mask.dtype == np.uint8
+        and mask.shape in ((height, width), (height, width, 1))
+    )
+
+
+def _padded_byte_tensor(arrays, device):
+    channels_first = [array.transpose(2, 0, 1) if array.ndim == 3 else array[None] for array in arrays]
+    batch = np.array(channels_first, order='C')
+    height, width = batch.shape[-2:]
+    pad_h, pad_w = -height % 8, -width % 8
+    if pad_h or pad_w:
+        batch = np.pad(batch, ((0, 0), (0, 0), (0, pad_h), (0, pad_w)), mode='symmetric')
+    return torch.from_numpy(batch).to(device, non_blocking=device.type == 'cuda')
+
+
 class LamaInpaint:
     def __init__(self, device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-                 model_path='big-lama.pt', *, batch_size=4) -> None:
+                 model_path='big-lama.pt', *, batch_size=4, compact_transfer=False) -> None:
         self.model = torch.jit.load(model_path, map_location=device)
         self.model.eval()
         self.device = device
         self.batch_size = batch_size
+        # A device divisor preserves NumPy's float32 division. CUDA can replace
+        # division by a Python scalar with multiplication by a rounded reciprocal.
+        self._byte_divisor = torch.full((), 255.0, dtype=torch.float32, device=device) if compact_transfer else None
+
+    @torch.inference_mode()
+    def _inpaint_byte_crops(self, images, masks):
+        height, width = images[0].shape[:2]
+        device = self._byte_divisor.device
+        image = _padded_byte_tensor(images, device).float().div_(self._byte_divisor)
+        mask = _padded_byte_tensor(masks, device).ne(0).long()
+        repaired = self.model(image, mask)[:, :, :height, :width]
+        pixels = repaired.mul(255).clamp_(0, 255).permute(0, 2, 3, 1)
+        return pixels.to(dtype=torch.uint8, memory_format=torch.contiguous_format).cpu().numpy()
 
     def inpaint(self, image: Union[Image.Image, np.ndarray], mask: Union[Image.Image, np.ndarray]):
         if isinstance(image, np.ndarray):
             orig_height, orig_width = image.shape[:2]
         else:
             orig_height, orig_width = np.array(image).shape[:2]
+        if self._byte_divisor is not None and _is_byte_crop(image, mask, orig_height, orig_width):
+            return self._inpaint_byte_crops([image], [mask])[0]
         image, mask = prepare_img_and_mask(image, mask, self.device)
         with torch.inference_mode():
             inpainted = self.model(image, mask)
@@ -37,8 +74,14 @@ class LamaInpaint:
         orig_height, orig_width = images[0].shape[:2]
         mini_batch_size = self.batch_size
         results = [None] * len(images)
+        use_compact = self._byte_divisor is not None and len(images) == len(masks) and all(
+            _is_byte_crop(image, mask, orig_height, orig_width) for image, mask in zip(images, masks)
+        )
         for start in range(0, len(images), mini_batch_size):
             end = min(start + mini_batch_size, len(images))
+            if use_compact:
+                results[start:end] = self._inpaint_byte_crops(images[start:end], masks[start:end])
+                continue
             batch_imgs = []
             batch_masks = []
             for i in range(start, end):

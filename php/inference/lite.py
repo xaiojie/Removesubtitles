@@ -28,6 +28,7 @@ class LiteOptions:
     mask_mode: str = 'boxes'
     adaptive_ocr: bool = False
     inpaint_max_side: int = 0
+    compact_transfer: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -306,7 +307,8 @@ def load_models(options=LiteOptions()):
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
     with span('lite_lama_load', device=device):
-        lama = LamaInpaint(torch.device(device), str(weights), batch_size=options.batch_size)
+        lama = LamaInpaint(torch.device(device), str(weights), batch_size=options.batch_size,
+                           compact_transfer=options.compact_transfer)
     return detector, lama
 
 

@@ -25,11 +25,80 @@ def json_file(path, data):
     temp.replace(path)
 
 
-def video_info(path):
-    args = ["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
-            "-show_entries", "stream=width,height,avg_frame_rate,nb_read_frames",
-            "-of", "json", str(path)]
+def video_info(path, *, count_frames=True):
+    args = ["ffprobe", "-v", "error", "-select_streams", "v:0"]
+    if count_frames:
+        args.append("-count_frames")
+    args.extend(["-show_entries", "stream=width,height,sample_aspect_ratio,avg_frame_rate,nb_read_frames"
+                 ":stream_side_data=rotation", "-of", "json", str(path)])
     return json.loads(subprocess.check_output(args))["streams"][0]
+
+
+def fingerprint(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def pixel_aspect(probe):
+    try:
+        numerator, denominator = map(int, probe.get("sample_aspect_ratio", "").split(":"))
+    except ValueError:
+        return Fraction(1)
+    return Fraction(numerator, denominator) if numerator > 0 and denominator > 0 else Fraction(1)
+
+
+def rotation_degrees(probe):
+    return next((int(item["rotation"]) % 360 for item in probe.get("side_data_list", [])
+                 if "rotation" in item), 0)
+
+
+def benchmark_geometry(clip, probe):
+    """Apply the Web selection to the corpus's half-open, coded-pixel boxes."""
+    width, height = probe["width"], probe["height"]
+    if [width, height] != [clip["width"], clip["height"]]:
+        raise ValueError("输入编码尺寸与样片清单不符")
+    aspect = pixel_aspect(probe)
+    # PHP dimensions() and DisplayCapture round half up before applying rotation.
+    scaled_width = max(1, math.floor(width * aspect + Fraction(1, 2)))
+    rotation = rotation_degrees(probe)
+    if rotation not in (0, 90, 180, 270):
+        raise ValueError(f"无法映射该视频的旋转角度 {rotation}°")
+    display = [height, scaled_width] if rotation in (90, 270) else [scaled_width, height]
+    coded_regions = clip.get("regions") or [{"type": "subtitle", "roi": clip["roi"]}]
+    display_regions = []
+    for region in coded_regions:
+        left, top, right, bottom = region["roi"]
+        if not (0 <= left < right <= width and 0 <= top < bottom <= height):
+            raise ValueError(f"样片选区超出编码尺寸 {region['roi']}")
+        # selection.mjs floors the near edge and ceils the far edge in the display raster.
+        left = left * scaled_width // width
+        right = (right * scaled_width + width - 1) // width
+        if rotation == 90:
+            box = [top, scaled_width - right, bottom, scaled_width - left]
+        elif rotation == 180:
+            box = [scaled_width - right, height - bottom, scaled_width - left, height - top]
+        elif rotation == 270:
+            box = [height - bottom, left, height - top, right]
+        else:
+            box = [left, top, right, bottom]
+        display_regions.append({**region, "roi": box})
+    return {"coded_dimensions": [width, height], "coded_regions": coded_regions,
+            "sample_aspect_ratio": f"{aspect.numerator}:{aspect.denominator}", "rotation_ccw_degrees": rotation,
+            "display_dimensions": display, "display_regions": display_regions,
+            "encoded_dimensions": [value + value % 2 for value in display]}
+
+
+def validate_output(raw, final, geometry):
+    same_fps = math.isclose(float(Fraction(raw["avg_frame_rate"])), float(Fraction(final["avg_frame_rate"])),
+                            rel_tol=.002)
+    if ([final["width"], final["height"]] != geometry["encoded_dimensions"]
+            or pixel_aspect(final) != 1 or rotation_degrees(final)
+            or raw["nb_read_frames"] != final["nb_read_frames"] or not same_fps):
+        raise ValueError(f"成片尺寸、像素比例、方向、帧数或帧率与预期不符 {raw} → {final}，"
+                         f"预期编码尺寸 {geometry['encoded_dimensions']}")
 
 
 def plan(source, regions, options, preset):
@@ -80,8 +149,9 @@ def run(args):
         raise ValueError("独立验收样片只允许在冻结配置后使用 --acceptance")
     src = (args.manifest.resolve().parent / clip["input"]).resolve(strict=True)
     check_clip(src)
-    if hashlib.sha256(src.read_bytes()).hexdigest() != clip["sha256"]:
+    if fingerprint(src) != clip["sha256"]:
         raise ValueError("输入与样片清单签名不符")
+    geometry = benchmark_geometry(clip, video_info(src, count_frames=False))
     root, live = args.source.resolve(), args.install.resolve()
     revision = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
     if args.candidate == "baseline" and (revision != BASELINE or subprocess.run(
@@ -90,8 +160,8 @@ def run(args):
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     (output / "source.video").symlink_to(src)
-    regions = clip.get("regions") or [{"type": "subtitle", "roi": clip["roi"]}]
-    request = {"dimensions": [clip["width"], clip["height"]], "regions": regions,
+    regions = geometry["display_regions"]
+    request = {"dimensions": geometry["display_dimensions"], "regions": regions,
                "original_filename": src.name}
     core = str(live / ".venv/bin/python")
     lite = str(live / "video-subtitle-remover/.venv/bin/python")
@@ -139,7 +209,7 @@ def run(args):
         cmd = [lite if mode == "lite" else core, "-u", str(root / "php/inference/run.py"), str(output), mode]
         result = output / "result.mp4"
     record = {"candidate": args.candidate, "clip": clip["id"], "style": clip["style"], "split": clip["split"],
-              "source_revision": revision, "input_sha256": clip["sha256"], "parameters": request,
+              "source_revision": revision, "input_sha256": clip["sha256"], "geometry": geometry, "parameters": request,
               "checkpoint_sha256": checkpoint_hash,
               "source_video_seconds": clip["duration_seconds"], "model_process": "fresh per trial",
               "clock": "worker launch through finalized output, upload and queue excluded"}
@@ -182,10 +252,8 @@ def run(args):
                    e.get("checkpoint_sha256") == checkpoint_hash for e in events):
             raise RuntimeError("任务未记录实际加载的试验权重，不能作为权重对照")
     raw, final = video_info(src), video_info(result)
-    if (any(raw[k] != final[k] for k in ("width", "height", "nb_read_frames"))
-            or not math.isclose(float(Fraction(raw["avg_frame_rate"])), float(Fraction(final["avg_frame_rate"])), rel_tol=.002)):
-        raise RuntimeError(f"成片几何、帧数或帧率有变化 {raw} → {final}")
-    record.update(output=result.name, output_probe=final, validated=True)
+    validate_output(raw, final, geometry)
+    record.update(output=result.name, output_sha256=fingerprint(result), output_probe=final, validated=True)
     json_file(output / "trial.json", record)
     print(f"{clip['id']} {args.candidate} {record['elapsed_seconds']} s {result}", flush=True)
 
