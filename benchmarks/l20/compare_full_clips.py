@@ -63,20 +63,32 @@ def timing(folder, clip, candidate, revision, frozen=None):
     if not observations:
         raise ValueError(f"Missing GPU measurements for {folder.name}")
     outsiders = sum(sum(s["gpu_processes"].values()) > s["job_gpu_mib"] for s in observations)
+    video = dict(width=probe["width"], height=probe["height"], frames=int(probe["nb_read_frames"]),
+                 fps=str(Fraction(probe["avg_frame_rate"])))
     return dict(seconds=run["elapsed_seconds"], peak_vram_mib=run["job_peak_vram_mib"],
                 mean_gpu_percent=run["gpu_util_mean_pct"], gpu_samples=len(observations),
                 monitor_errors=len(samples) - len(observations),
-                other_compute_samples=outsiders, sha256=sha)
+                other_compute_samples=outsiders, sha256=sha, video=video)
 
 
 def paired_ratio(rows, faster, reference):
-    common = [r for r in rows if r["split"] in ("tune", "holdout") and
-              all((r["runs"].get(k) or {}).get("other_compute_samples") == 0
-                  and not r["runs"][k]["monitor_errors"] for k in (faster, reference))]
+    common, unmatched = [], []
+    for row in rows:
+        runs = row["runs"]
+        if row["split"] not in ("tune", "holdout") or not all(
+                k in runs and runs[k]["other_compute_samples"] == 0 and not runs[k]["monitor_errors"]
+                for k in (faster, reference)):
+            continue
+        left, right = (runs[k].get("video") for k in (faster, reference))
+        if left and left == right:
+            common.append(row)
+        else:
+            unmatched.append({"id": row["id"], faster: left, reference: right})
     measured = sum(r["runs"][faster]["seconds"] for r in common)
     baseline = sum(r["runs"][reference]["seconds"] for r in common)
     return dict(clips=[r["id"] for r in common], seconds=round(measured, 3),
-                reference_seconds=round(baseline, 3), ratio=round(measured / baseline, 4) if baseline else None)
+                reference_seconds=round(baseline, 3), ratio=round(measured / baseline, 4) if baseline else None,
+                unmatched_outputs=unmatched)
 
 
 def summarize(manifest, trials, frozen):
@@ -104,7 +116,7 @@ def summarize(manifest, trials, frozen):
         ("pro", "original_standard"), ("max", "pro"))}
     return dict(frozen_lite=frozen["source_revision"], main_count=sum(r["split"] in ("tune", "holdout") for r in rows),
                 timing="fresh single worker through finalized media, excluding upload and queue",
-                comparison="ratio of summed seconds on paired main clips with no sampled outside compute process",
+                comparison="ratio of summed seconds on paired main clips with matching encoded dimensions, frame rate and frame count, and no sampled outside compute process",
                 ratios=ratios, clips=rows)
 
 

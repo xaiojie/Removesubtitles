@@ -1,0 +1,255 @@
+{
+  "group": "Previously evaluated holdout used for regression. No input was taken from the evaluation annotations by the inference jobs.",
+  "frozen_lite_revision": "c45733606cf023e44118ebeb7e240192e14960d2",
+  "grouped_revision": "2b50afd97d5aec2cc9d6b3923bb5bbf928aa27fb",
+  "baseline_clear_revision": "b7f26f203dbb6f6a4b780a051d7b147c8023d30d",
+  "baseline_ocr_lama_revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8",
+  "methods": {
+    "geometry": "Each decoded encode has 750 aligned frames at 25 fps, 1440 x 1080. The original product encoding settings of each path were used.",
+    "mask": "At native pixel size, compute grayscale and erode using a 9 x 9 rectangle. Use the original BGR pixels with all channels >= 182 or B <= 148, G >= 165, R >= 188, and contrast to local eroded minimum at least 40. Measure which source-bright pixels remain bright in the same encoded frame.",
+    "counts": "A frame is counted when more than half of the marked input pixels are also marked in its output. Count over a clipped fixed region for each of the final word and the ellipsis, separately from the full upper line. These counts measure text retention only.",
+    "upper_line": "The source evaluator localized this line in all 57 frames indexed 57 through 113. Match the top line containing 'all of Europe' in the original and use this same box in every output.",
+    "word_pixel_rect_xyxy_exclusive": [
+      959,
+      927,
+      1052,
+      969
+    ],
+    "ellipsis_pixel_rect_xyxy_exclusive": [
+      1053,
+      956,
+      1102,
+      973
+    ],
+    "native_visual_review": [
+      57,
+      107,
+      269,
+      276,
+      294,
+      302,
+      311,
+      330,
+      515,
+      749
+    ]
+  },
+  "clip": "N02",
+  "source_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+  "roi": [
+    80,
+    794,
+    1370,
+    986
+  ],
+  "original_frames": 750,
+  "runs": {
+    "clear-fast": {
+      "seconds": 417.062,
+      "peak_vram_mib": 12710,
+      "mean_gpu_percent": 72.9,
+      "gpu_samples": 457,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "febcccfed936e2d095f0819904e0990a4a2dbb57e7d1fa6d20a6e5f9389feba5",
+      "video": {
+        "width": 1440,
+        "height": 1080,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "ocr-lama": {
+      "seconds": 91.567,
+      "peak_vram_mib": 3672,
+      "mean_gpu_percent": 12.2,
+      "gpu_samples": 99,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "1cb503918cda85251ecd5c3b92844d1b9b7ff497f049fd6a5f7daa424d36d52d",
+      "video": {
+        "width": 1440,
+        "height": 1080,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "lama-v5": {
+      "seconds": 44.528,
+      "peak_vram_mib": 4272,
+      "mean_gpu_percent": 14.2,
+      "gpu_samples": 45,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "1e40a34f8fc4ad1afc444ff562007a1941b89dd11cc6c7973968325c08cf1eaf",
+      "video": {
+        "width": 1440,
+        "height": 1080,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "lama-grouped-words-eval": {
+      "seconds": 47.55,
+      "peak_vram_mib": 3714,
+      "mean_gpu_percent": 10.0,
+      "gpu_samples": 47,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "eed8386a0fb6e7dce33ea23d225a560796de9b9bc53116fafb0d49858767b8aa",
+      "video": {
+        "width": 1440,
+        "height": 1080,
+        "frames": 750,
+        "fps": "25"
+      }
+    }
+  },
+  "subtitle_measures": {
+    "upper_line": {
+      "frames": 57,
+      "range": [
+        57,
+        113
+      ],
+      "output_shares_over_half": {
+        "clear-fast": 0,
+        "ocr-lama": 0,
+        "lama-v5": 57,
+        "lama-grouped-words-eval": 0
+      },
+      "at_frames": [
+        {
+          "frame": 57,
+          "pixels": 4874,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.98236,
+            "lama-grouped-words-eval": 0.0
+          }
+        },
+        {
+          "frame": 107,
+          "pixels": 5192,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.97669,
+            "lama-grouped-words-eval": 0.0
+          }
+        }
+      ]
+    },
+    "limit": {
+      "frames": 62,
+      "range": [
+        269,
+        330
+      ],
+      "output_shares_over_half": {
+        "clear-fast": 0,
+        "ocr-lama": 8,
+        "lama-v5": 9,
+        "lama-grouped-words-eval": 9
+      },
+      "at_frames": [
+        {
+          "frame": 269,
+          "pixels": 987,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.0,
+            "lama-grouped-words-eval": 0.0
+          }
+        },
+        {
+          "frame": 294,
+          "pixels": 993,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.0,
+            "lama-grouped-words-eval": 0.0
+          }
+        },
+        {
+          "frame": 311,
+          "pixels": 997,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.9679,
+            "lama-v5": 0.98094,
+            "lama-grouped-words-eval": 0.98094
+          }
+        },
+        {
+          "frame": 330,
+          "pixels": 989,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.0,
+            "lama-grouped-words-eval": 0.0
+          }
+        }
+      ]
+    },
+    "ellipsis": {
+      "frames": 62,
+      "range": [
+        269,
+        330
+      ],
+      "output_shares_over_half": {
+        "clear-fast": 0,
+        "ocr-lama": 52,
+        "lama-v5": 51,
+        "lama-grouped-words-eval": 51
+      },
+      "at_frames": [
+        {
+          "frame": 269,
+          "pixels": 70,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.14286,
+            "lama-v5": 0.12857,
+            "lama-grouped-words-eval": 0.12857
+          }
+        },
+        {
+          "frame": 294,
+          "pixels": 70,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.71429,
+            "lama-v5": 0.7,
+            "lama-grouped-words-eval": 0.7
+          }
+        },
+        {
+          "frame": 311,
+          "pixels": 69,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 1.0,
+            "lama-v5": 1.0,
+            "lama-grouped-words-eval": 1.0
+          }
+        },
+        {
+          "frame": 330,
+          "pixels": 68,
+          "shares": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.70588,
+            "lama-v5": 0.70588,
+            "lama-grouped-words-eval": 0.70588
+          }
+        }
+      ]
+    }
+  }
+}
