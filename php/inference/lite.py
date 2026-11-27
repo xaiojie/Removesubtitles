@@ -50,6 +50,7 @@ class LiteOptions:
     recover_static_text: bool = False
     track_line_panel_edges: bool = False
     alternate_line_heights: bool = False
+    split_ocr_shapes: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -490,7 +491,7 @@ def load_models(options=LiteOptions()):
     device = os.getenv('LITE_DEVICE', 'cuda')
     if options.ocr_backend == 'onnx_cuda' and device != 'cpu':
         from lite_ocr import cuda_detector
-        detector = cuda_detector(detector,ocr_path)
+        detector = cuda_detector(detector, ocr_path, split_shapes=options.split_ocr_shapes)
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
     checkpoint_info = {}
