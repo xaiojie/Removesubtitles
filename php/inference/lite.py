@@ -67,7 +67,7 @@ class LiteOptions:
         return self
 
 
-def detect(frame, rois, detector, options=LiteOptions()):
+def detect(frame, rois, detector, options=LiteOptions(), *, profiles=None):
     boxes = []
     for x, y, r, b in rois:
         crop = frame[y:b, x:r]
@@ -75,12 +75,16 @@ def detect(frame, rois, detector, options=LiteOptions()):
         if scale < 1:
             crop = cv2.resize(crop, (max(1, round((r - x) * scale)), max(1, round((b - y) * scale))))
         sx, sy = (r - x) / crop.shape[1], (b - y) / crop.shape[0]
+        profile = profiles.get((x, y, r, b)) if profiles else None
+        panel = profile.panel if profile is not None else None
         with span('lite_ocr', device=getattr(detector,'inference_device','cpu'),
                   width=crop.shape[1], height=crop.shape[0]):
             predictions = list(detector.predict(crop))
         for result in predictions:
             for polygon in result['dt_polys']:
                 pts = np.asarray(polygon)
+                if isinstance(panel, LinePanel) and panel.scene_print(frame, pts*(sx, sy)+(x, y)):
+                    continue
                 left, top = pts.min(axis=0)
                 right, bottom = pts.max(axis=0)
                 rect = (
@@ -479,8 +483,8 @@ def run(folder, request):
     detector, lama = load_models(options)
     source = folder / 'source.video'
     rois = [r['roi'] for r in request['regions']]
-    find = lambda frame: detect(frame, rois, detector, options)
     profiles = {}
+    find = lambda frame: detect(frame, rois, detector, options, profiles=profiles)
     if options.layout_profile:
         from lite_profile import profile_source
         with span('lite_layout_probe',device='cpu'):

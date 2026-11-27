@@ -52,6 +52,27 @@ def fit_edges(images, top, bottom):
 
 
 class LinePanel(Panel):
+    def scene_print(self, frame, quad):
+        """Keep slanted print if the learned horizontal caption backing is absent."""
+        if self.native_box is None or quad.shape != (4, 2):
+            return False
+        upper = quad[1] - quad[0]
+        lower = quad[2] - quad[3]
+        run, rise = np.abs((upper + lower) / 2)
+        depth = (np.linalg.norm(quad[3]-quad[0]) + np.linalg.norm(quad[2]-quad[1])) / 2
+        if run < 1.5*depth or rise < max(.45*depth, .075*run):
+            return False
+        left, top, right, bottom = self.native_box
+        x = max(left, int(np.floor(quad[:, 0].min())))
+        end = min(right, int(np.ceil(quad[:, 0].max())))
+        if end <= x or top < 2 or bottom+1 >= frame.shape[0]:
+            return False
+        cols = np.arange(x, end, max(1, (end-x)//80))
+        outside = frame[[[top-2], [bottom+1]], cols].astype(np.float32)
+        inside = frame[[[top+1], [bottom-2]], cols].astype(np.float32)
+        supported = edge_gain(outside, inside, self.transmission, self.offset) > 3
+        return supported.mean(axis=1).min() < .27
+
     def fallback_boxes(self, roi, boxes):
         # Words entering the selection from outside the measured backing are
         # often scene signs. Keep full words available for a change of style.

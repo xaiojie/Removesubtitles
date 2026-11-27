@@ -16,6 +16,25 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_learned_horizontal_backing_protects_slanted_scene_signs_after_the_caption_ends(self):
+        from lite_line_panel import LinePanel
+        from lite_profile import BandProfile
+
+        roi = (10, 10, 290, 125)
+        panel = LinePanel((0, 0, 300, 140), (300, 140), (90, 47, 210, 94),
+                          .55, np.array([28, 28, 28], np.float32), (0, 47, 300, 94))
+        profile = BandProfile(280, 115, [(60, 30)], panel)
+        flat = np.array([[36, 48], [222, 49], [222, 68], [36, 67]])
+        slanted = np.array([[56, 42], [184, 73], [180, 89], [52, 58]])
+        frame = np.full((140, 300, 3), 170, np.uint8)
+        opts = LiteOptions(box_padding=0)
+        detector = SimpleNamespace(predict=lambda crop: [{'dt_polys': [flat, slanted]}])
+        expected = detect(frame, [roi], SimpleNamespace(predict=lambda crop: [{'dt_polys': [flat]}]), opts)
+        self.assertEqual(detect(frame, [roi], detector, opts, profiles={roi: profile}), expected)
+        frame[47:94, 24:275] = 122
+        self.assertEqual(detect(frame, [roi], detector, opts, profiles={roi: profile}),
+                         detect(frame, [roi], detector, opts))
+
     def test_centered_caption_band_can_contain_a_whole_multiline_white_card(self):
         from subtitle_compositing import light_caption_cards
 
