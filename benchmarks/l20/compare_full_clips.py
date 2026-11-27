@@ -47,6 +47,7 @@ def timing(folder, clip, candidate, revision, frozen=None):
                 and conditions["regions"] == clip["regions"] and conditions["revision"] == revision
                 and conditions["weights"] == frozen["weights"] and conditions["lite"] == frozen["parameters"]
                 and conditions["modes"] == plan["catalog_sha256"]
+                and conditions["modes"] == frozen.get("catalog_sha256", conditions["modes"])
                 and conditions["ocr_graph_sha256"] == frozen["graph_sha256"]):
             raise ValueError(f"Saved input, selection or loaded weight provenance mismatch: {folder.name}")
         events = [json.loads(line) for line in (folder / "stages.jsonl").read_text().splitlines()]

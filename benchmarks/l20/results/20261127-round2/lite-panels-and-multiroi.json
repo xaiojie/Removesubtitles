@@ -435,6 +435,34 @@
           821,
           822
         ]
+      },
+      "lama-height-and-continuity": {
+        "source_revision": "1fb9b977cc0d4c9afa7f10b45f3602400c63717e",
+        "input_sha256": "0aa39fad2f1ba073d68baef86b1edf1685e6793e67f78fb201e710a0171ddeb2",
+        "output_sha256": "a5ee14ca1f08ea918eeef0417a81d7d4e7f15d2e92c1041389b0bedc6da5c63d",
+        "frames": 900,
+        "source_seconds": 30.0,
+        "elapsed_seconds": 31.611,
+        "gpu_util_mean_pct": 19.4,
+        "peak_gpu_mib": 3758,
+        "ocr_gpu_seconds": 1.4675,
+        "ocr_calls": 249,
+        "cuda_graphs": [
+          0
+        ],
+        "edges_retained_frames": 10,
+        "failures": [
+          85,
+          319,
+          321,
+          324,
+          325,
+          328,
+          329,
+          817,
+          818,
+          819
+        ]
       }
     },
     "visual_failures": "0.47 and 27.33 seconds retain the gray rectangle; at 10.70 seconds the original background lettering and punctuation under the plate are damaged. Faint tint also remains over the flat green background."
