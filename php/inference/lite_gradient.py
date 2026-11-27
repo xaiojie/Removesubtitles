@@ -104,6 +104,20 @@ class GradientPanel(Panel):
         # Fixed printed motifs recur at the same screen pixels while dialogue and scenery change.
         self.decoration = (outside_range.mean(0) >= .57).astype(np.uint8)*255
         self.decoration = cv2.morphologyEx(self.decoration, cv2.MORPH_CLOSE, np.ones((3,3),np.uint8))
+        # Ink inside the admissible tint range still belongs to a printed border.
+        # Complete only narrow edge strips with recurring pigment across their width.
+        for edge in (self.decoration, self.decoration[::-1]):
+            supported = (edge != 0).mean(axis=1) >= .24
+            rows = np.flatnonzero(supported)
+            if not len(rows) or rows[0] > .08*len(edge):
+                continue
+            gaps = np.flatnonzero(np.diff(rows) > 2)
+            depth = int(rows[gaps[0]] if len(gaps) else rows[-1]) + 1
+            if not 4 <= depth <= .38*len(edge):
+                continue
+            strip = edge[:depth]
+            if all((tile != 0).mean() > .13 for tile in np.array_split(strip, 8, axis=1)):
+                edge[:min(len(edge), depth + 2)] = 255
 
     def restore(self, frame, roi, boxes):
         wx, wy, wr, wb = self.window

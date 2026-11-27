@@ -319,12 +319,10 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     area |= strokes
             if profile is not None and local and profile.rows:
                 # Standalone graphics elsewhere in a broad user selection have no dialogue anchor.
-                support=np.zeros_like(mask)
-                for x,y,r,b in local:
-                    support[y:b,x:r]=255
                 count,indices=cv2.connectedComponents(mask)
                 keep=np.zeros(count,np.uint8)
-                keep[np.unique(indices[support!=0])]=255
+                for x, y, r, b in local:
+                    keep[indices[y:b, x:r]] = 255
                 keep[0]=0
                 mask=keep[indices]
             if chip is not None:
@@ -373,8 +371,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     # Retain the source frame's own small color and lighting differences.
                     delta = cv2.subtract(crops[i], crops[anchors[slot]], dtype=cv2.CV_16S)
                     repaired = cv2.add(repaired, delta, dtype=cv2.CV_8U)
-                selected = mask != 0
-                frames[index][t:b, l:r][selected] = cv2.cvtColor(repaired, cv2.COLOR_RGB2BGR)[selected]
+                cv2.copyTo(cv2.cvtColor(repaired, cv2.COLOR_RGB2BGR), mask, frames[index][t:b, l:r])
     return frames
 
 
@@ -455,7 +452,7 @@ def run(folder, request):
                 repaired = (restore_joint(frames, boxes, rois, lama, options, tracks, profiles) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
-                    writer.write(frame.tobytes())
+                    writer.write(memoryview(np.ascontiguousarray(frame)))
                 repaired_count += sum(bool(selection) for selection in boxes)
                 count += len(frames)
                 report(min(98, 4 + 94 * count / total), '裁带检测并逐句去字幕')

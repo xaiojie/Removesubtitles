@@ -114,6 +114,23 @@ class InferenceTests(unittest.TestCase):
                                scenes[3][43:52,94:124]).mean(),9)
         self.assertIsNone(panel.restore(scenes[3],(0,0,244,96),[]))
 
+    def test_printed_border_keeps_its_low_contrast_ink_inside_the_repair(self):
+        from lite_gradient import GradientPanel
+
+        size = (100, 50)
+        panel = GradientPanel((0, 0, *size), size, (0, 0, *size), .5,
+                              np.array([70., 70., 70.]), np.array([0., 0., 0.]))
+        samples = np.full((8, 50, 100, 3), 133, np.uint8)
+        for x in range(0, 100, 10):
+            samples[:, 40:, x:x+5] = (10, 70, 180)
+        panel.learn_decoration(samples)
+        self.assertTrue(np.all(panel.decoration[41:] == 255))
+        self.assertFalse(panel.decoration[:35].any())
+        # A single station logo in the corner does not turn into a full-width border.
+        samples[:, 40:, 15:] = 133
+        panel.learn_decoration(samples)
+        self.assertFalse(panel.decoration[42:, 30:].any())
+
     def test_profile_preserves_scene_print_outside_the_dialogue_row(self):
         from lite_profile import BandProfile,find_rows
         samples=[[(70,52,310,84),(10,4,46,24)]]*12
