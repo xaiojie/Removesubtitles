@@ -1,11 +1,11 @@
 """Learn repeated subtitle rows and stable panel boundaries from a bounded set of input frames."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import cv2
 import numpy as np
 from video_capture import open_video_capture
 from lite_layer import learn_panel
 from lite_highlight import learn_highlight
-from lite_masks import chip_examples, repeated_chips
+from lite_masks import OpaqueCardTrack, chip_examples, repeated_chips
 from subtitle_compositing import colored_caption_cards
 
 
@@ -113,6 +113,7 @@ class BandProfile:
     panel: object
     chip: object = None
     highlight: object = None
+    opaque_card: OpaqueCardTrack = field(default_factory=OpaqueCardTrack, repr=False, compare=False)
 
     def wrapped_dialogue(self, frame, boxes, selected, *, group_words=False):
         """Keep an adjacent row matching the font of an established, centred subtitle."""

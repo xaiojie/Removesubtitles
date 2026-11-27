@@ -13,6 +13,65 @@ def edge_rows(edges):
     return [int(a + np.argmax(counts[a:b])) for a, b in intervals(counts >= threshold)]
 
 
+def has_multiline_card(crop, boxes, bounds, color):
+    """Verify two text rows, a flat fill and four visible transitions at the proposed edges."""
+    x, y, w, h = bounds
+    margin = max(3, min(8, round(.04*h)))
+    if x < margin or y < margin or x+w+margin > crop.shape[1] or y+h+margin > crop.shape[0]:
+        return False
+    centers = [(top+bottom)/2 for left,top,right,bottom in boxes
+               if y < (top+bottom)/2 < y+h and min(x+w, right)-max(x, left) >= .75*(right-left)]
+    if len(centers) < 2 or max(centers)-min(centers) < .25*h:
+        return False
+    patch = crop[y-margin:y+h+margin, x-margin:x+w+margin]
+    fill = cv2.inRange(patch, tuple(np.maximum(color-16, 0).tolist()),
+                       tuple(np.minimum(color+16, 255).tolist())) != 0
+    body = fill[margin:-margin, margin:-margin]
+    if body[::3, ::3].mean() < .57:
+        return False
+    # A small decoration can cross one edge. A wider panel or a uniform wall lacks a transition.
+    for scan in (fill, fill.T):
+        core = scan[margin:-margin, margin:-margin:3]
+        if (core[2:margin+2].mean() < .43 or core[-margin-2:-2].mean() < .43
+                or scan[:margin, margin:-margin:3].mean() > .25
+                or scan[-margin:, margin:-margin:3].mean() > .25):
+            return False
+    return True
+
+
+class OpaqueCardTrack:
+    """Keep a confirmed multiline card separate from same-color objects touching its edges."""
+
+    def __init__(self):
+        self.last = -2
+        self.contour = None
+
+    def update(self, crop, boxes, detected, index):
+        contours = (cv2.findContours(detected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+                    if detected is not None else ())
+        if (self.contour is not None and index == self.last+1
+                and has_multiline_card(crop, boxes, self.bounds, self.color)):
+            self.last = index
+            x, y, w, h = self.bounds
+            mask = np.zeros(crop.shape[:2], np.uint8) if detected is None else detected
+            for contour in contours:
+                if cv2.pointPolygonTest(contour, (x+w/2, y+h/2), False) >= 0:
+                    cv2.drawContours(mask, [contour], -1, 0, cv2.FILLED)
+            cv2.drawContours(mask, [self.contour], -1, 255, cv2.FILLED)
+            return mask
+
+        self.contour = None
+        for contour in contours:
+            x, y, w, h = bounds = cv2.boundingRect(contour)
+            if w < max(.5*crop.shape[1], 3*h) or h < 16 or cv2.contourArea(contour) < .90*w*h:
+                continue
+            color = np.median(crop[y:y+h:4, x:x+w:4].reshape(-1, 3), axis=0).astype(int)
+            if color.max()-color.min() >= 24 and has_multiline_card(crop, boxes, bounds, color):
+                self.bounds, self.color, self.contour, self.last = bounds, color, contour, index
+                break
+        return detected
+
+
 def black_caption_cards(crop, boxes, previous_band=None):
     height, width = crop.shape[:2]
     if min(width, height) < 16:

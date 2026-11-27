@@ -16,6 +16,61 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_multiline_card_touching_a_matching_decoration_keeps_its_own_bounds(self):
+        from lite_profile import BandProfile
+        from subtitle_compositing import colored_caption_cards
+
+        width, height = 800, 260
+        roi = (0, 0, width, height)
+        color = (174, 76, 153)
+        profile = BandProfile(width, height, [(112, 40), (155, 40)], None)
+        rows = [(274, 91, 526, 133), (273, 135, 527, 176)]
+        scene = np.full((height, width, 3), (69, 54, 40), np.uint8)
+        normal = scene.copy()
+        normal[82:185, 55:745] = color
+        for baseline, text in [(124, 'FIRST LINE'), (167, 'NEXT WORD')]:
+            cv2.putText(normal, text, (287, baseline), cv2.FONT_HERSHEY_DUPLEX,
+                        1.12, (246, 246, 246), 2, cv2.LINE_AA)
+        joined = normal.copy()
+        joined[:83, 138:166] = color
+        self.assertIsNotNone(colored_caption_cards(normal))
+        self.assertIsNone(colored_caption_cards(joined))
+        frames = [normal.copy(), joined.copy(), joined.copy(), scene.copy()]
+        painter = SimpleNamespace(device='cpu', _inpaint_batch=lambda images, masks:
+                                  [np.full_like(image, 18) for image in images])
+        options = LiteOptions(mask_mode='tracked_cards', layout_profile=True, track_opaque_cards=True)
+        tracks = {}
+        for i, frame in enumerate(frames):
+            restore_joint([frame], [rows if i < 3 else []], [roi], painter, options,
+                          tracks=tracks, profiles={roi: profile}, first_index=i)
+        for i in range(3):
+            self.assertEqual(frames[i][106, 88].tolist(), [18]*3, f'caption backing in frame {i}')
+        np.testing.assert_array_equal(frames[1][40, 146], joined[40, 146])
+        np.testing.assert_array_equal(frames[3], scene)
+
+    def test_color_card_track_rechecks_the_current_edges_text_and_frame_number(self):
+        from lite_masks import OpaqueCardTrack
+        from subtitle_compositing import colored_caption_cards
+
+        color = (165, 123, 54)
+        card = np.full((200, 600, 3), 50, np.uint8)
+        card[55:145, 47:551] = color
+        boxes = [(202, 65, 379, 101), (202, 103, 379, 140)]
+        for baseline in (97, 135):
+            cv2.putText(card, 'NEWS', (211, baseline), cv2.FONT_HERSHEY_DUPLEX,
+                        1.17, (245, 245, 245), 2, cv2.LINE_AA)
+        detection = colored_caption_cards(card)
+        self.assertIsNotNone(detection)
+        narrower = card.copy()
+        narrower[:, 47:80] = 50
+        wall = np.full_like(card, color)
+        for image, current_rows, index in [(narrower, boxes, 1), (wall, boxes, 1),
+                                          (card, boxes[:1], 1), (card, boxes, 4)]:
+            tracker = OpaqueCardTrack()
+            tracker.update(card, boxes, detection.copy(), 0)
+            self.assertIsNotNone(tracker.contour)
+            self.assertIsNone(tracker.update(image, current_rows, None, index))
+
     def test_scaled_word_tile_can_be_distinguished_from_a_similarly_colored_background(self):
         from lite_masks import scaled_word_chip
 
