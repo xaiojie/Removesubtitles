@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2026-11-27.7",
+  "catalog_version": "2026-11-27.8",
   "default": "pro",
   "modes": {
     "lite": {
@@ -41,7 +41,9 @@
       "skip_graph_up_to_seconds": 30, "variable_line_panels": true,
       "multiline_light_cards": true, "recover_visible_cards": true, "follow_wrapped_rows": true,
       "native_thin_ocr": true, "recover_static_text": true, "alternate_line_heights": true,
-      "track_line_panel_edges": true, "split_ocr_shapes": true
+      "track_line_panel_edges": true, "split_ocr_shapes": true,
+      "group_wrapped_words": true, "follow_scaled_rows": true,
+      "track_opaque_cards": true, "protect_side_labels": true
     },
     "clear": {
       "preset": "balanced", "steps": 5, "cfg_scale": 1.0, "lora_scale": 1.15, "seed": 20261113,
