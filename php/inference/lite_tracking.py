@@ -3,6 +3,36 @@ import cv2
 import numpy as np
 
 
+def reject_transient_skin(frames,boxes,previous,following):
+    """Ignore isolated OCR responses on moving skin when there is no dark or bright printed ink."""
+    def overlaps(box,neighbor):
+        x,y,r,b=box
+        return any(max(0,min(r,rr)-max(x,l))*max(0,min(b,bb)-max(y,t)) > .26*(r-x)*(b-y)
+                   for l,t,rr,bb in neighbor)
+
+    result=[]
+    for i,regions in enumerate(boxes):
+        before=boxes[i-1] if i else previous
+        after=boxes[i+1] if i+1<len(boxes) else following
+        if before is None or after is None:
+            result.append(regions)
+            continue
+        keep=[]
+        for box in regions:
+            if not overlaps(box,before) and not overlaps(box,after):
+                x,y,r,b=box
+                patch=frames[i][y:b,x:r]
+                chroma=cv2.cvtColor(patch,cv2.COLOR_BGR2YCrCb)
+                skin=cv2.inRange(chroma,(50,133,72),(255,183,135))
+                low=patch.max(axis=2)<75
+                high=patch.min(axis=2)>225
+                if (cv2.countNonZero(skin)>.52*skin.size and (low|high).mean()<.013):
+                    continue
+            keep.append(box)
+        result.append(tuple(keep))
+    return result
+
+
 def covered_union(a, b):
     if len(a) != len(b):
         return None

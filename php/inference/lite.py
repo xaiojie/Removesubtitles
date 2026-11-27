@@ -11,8 +11,8 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
-from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards
-from lite_tracking import track_block
+from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights
+from lite_tracking import reject_transient_skin, track_block
 from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
 
@@ -30,6 +30,7 @@ class LiteOptions:
     inpaint_max_side: int = 0
     compact_transfer: bool = False
     ocr_backend: str = 'paddle'
+    layout_profile: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -206,7 +207,23 @@ def outlined_text_mask(patch, padding):
     return cv2.dilate(strokes & close_to_line, kernel)
 
 
-def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None):
+def include_punctuation(mask,patch,padding):
+    height,width=mask.shape
+    glyph=max(8,height-2*padding)
+    gray=cv2.cvtColor(patch,cv2.COLOR_BGR2GRAY)
+    outlines,_=cv2.findContours((gray<112).astype(np.uint8),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    extra=np.zeros_like(mask)
+    for curve in outlines:
+        x,y,w,h=cv2.boundingRect(curve)
+        if not .05*glyph <= h <= .47*glyph or not .05*glyph <= w <= .63*glyph:
+            continue
+        if min(x,width-x-w)>1.35*glyph or y+h/2<.48*height:
+            continue
+        cv2.drawContours(extra,[curve],-1,255,cv2.FILLED)
+    return mask | cv2.dilate(extra,np.ones((5,5),np.uint8))
+
+
+def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profiles=None):
     height, width = frames[0].shape[:2]
     tracked = options.mask_mode == 'tracked_cards'
     if tracks is None:
@@ -230,6 +247,16 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None):
                 r, b = min(r, right), min(b, bottom)
                 if x < r and y < b:
                     local.append((x - left, y - top, r - left, b - top))
+            profile = profiles.get(key) if profiles else None
+            if profile is not None and profile.panel is not None and key not in originals:
+                layer = profile.panel.restore(frame,key,local)
+                if layer is not None:
+                    (l,t,r,b),background,ink = layer
+                    frame[t:b,l:r] = background
+                    active.append((index,ink))
+                    continue
+            if profile is not None:
+                local = profile.select(local)
             focused = options.mask_mode in ('focused_cards', 'tracked_cards')
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
                                      if focused else (0, right-left))
@@ -240,6 +267,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None):
                 local, dark_card = tracks[key].update(crop, local)
             elif focused:
                 dark_card = black_caption_cards(crop, local)
+            if profile is not None and not local and dark_card is None:
+                continue
             mask = caption_plates(crop, local)
             if dark_card is not None:
                 mask |= dark_card
@@ -251,6 +280,9 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None):
                 brush = anchored_brush_card(crop,local)
                 if brush is not None:
                     mask |= brush
+                highlights = word_highlights(crop,local)
+                if highlights is not None:
+                    mask |= highlights
             cards = light_caption_cards(crop)
             if cards is not None:
                 mask |= cards
@@ -270,7 +302,19 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None):
                 if strokes is None:
                     area[:] = 255
                 else:
+                    if options.layout_profile:
+                        strokes=include_punctuation(strokes,crop[y:b,x:r],options.box_padding)
                     area |= strokes
+            if profile is not None and local and profile.rows:
+                # Standalone graphics elsewhere in a broad user selection have no dialogue anchor.
+                support=np.zeros_like(mask)
+                for x,y,r,b in local:
+                    support[y:b,x:r]=255
+                count,indices=cv2.connectedComponents(mask)
+                keep=np.zeros(count,np.uint8)
+                keep[np.unique(indices[support!=0])]=255
+                keep[0]=0
+                mask=keep[indices]
             if focused:
                 mask[:, :left_edge] = 0
                 mask[:, right_edge:] = 0
@@ -352,6 +396,11 @@ def run(folder, request):
     source = folder / 'source.video'
     rois = [r['roi'] for r in request['regions']]
     find = lambda frame: detect(frame, rois, detector, options)
+    profiles = {}
+    if options.layout_profile:
+        from lite_profile import profile_source
+        with span('lite_layout_probe',device='cpu'):
+            profiles = profile_source(source,rois,find)
     with capture(source) as video:
         fps, total = geometry(video)
         ok, first = video.read()
@@ -359,6 +408,7 @@ def run(folder, request):
             raise ValueError('视频无法解码或显示尺寸不一致')
         anchor = find(first)
         tracks = {}
+        previous_boxes = None
         count = 0
         repaired_count = 0
         with encode(folder / 'result.mp4', source, request['dimensions'], fps, options.export_crf) as writer:
@@ -375,7 +425,11 @@ def run(folder, request):
                     first = frames.pop()
                 else:
                     boxes.append(anchor)
-                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks) if options.mask_mode != 'boxes'
+                if options.layout_profile:
+                    original_last = boxes[-1]
+                    boxes = reject_transient_skin(frames,boxes,previous_boxes,anchor if ok else None)
+                    previous_boxes = original_last
+                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks,profiles) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(frame.tobytes())

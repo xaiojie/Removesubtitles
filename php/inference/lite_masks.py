@@ -160,3 +160,49 @@ def anchored_brush_card(crop, boxes):
             xr,yb = min(width,int(np.ceil((l+cw)/scale))+pad),min(height,int(np.ceil((t+ch)/scale))+pad)
             result[yt:yb,xl:xr] = 255
     return result if result.any() else None
+
+
+def word_highlights(crop, boxes):
+    """Mask the entire colored highlight behind a word, including the padding outside its letters."""
+    if not boxes:
+        return None
+    height,width = crop.shape[:2]
+    scale = min(1.,512/width)
+    small = cv2.resize(crop,(round(width*scale),max(1,round(height*scale))),interpolation=cv2.INTER_AREA)
+    hsv = cv2.cvtColor(small,cv2.COLOR_BGR2HSV)
+    saturated = (hsv[...,1]>=80) & (hsv[...,2]>=90)
+    bright = (small.min(axis=2)>149) & (hsv[...,1]<75)
+    result = None
+    for x,y,r,b in boxes:
+        l,t = int(x*scale),int(y*scale)
+        rr,bb = min(hsv.shape[1],int(np.ceil(r*scale))),min(hsv.shape[0],int(np.ceil(b*scale)))
+        patch = saturated[t:bb,l:rr]
+        if not patch.size or cv2.countNonZero(patch.astype(np.uint8)) < .05*patch.size:
+            continue
+        hues = hsv[t:bb,l:rr,0][patch]
+        hist = np.bincount(hues//8,minlength=23)
+        for bin_index in np.argsort(hist)[-2:]:
+            if hist[bin_index] < max(12,.04*patch.size):
+                continue
+            hue = int(np.median(hues[hues//8==bin_index]))
+            diff = abs(hsv[...,0].astype(np.int16)-hue)
+            core = (saturated & (np.minimum(diff,180-diff)<=8)).astype(np.uint8)
+            contours,_ = cv2.findContours(core,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                cx,cy,w,h = cv2.boundingRect(contour)
+                if (h < max(7,.30*(bb-t)) or h > min(.80*height*scale,1.40*(bb-t))
+                        or w < .85*h or w > max(rr-l,2*h)*1.15 or cy<1 or cy+h>=core.shape[0]):
+                    continue
+                overlap = max(0,min(rr,cx+w)-max(l,cx))*max(0,min(bb,cy+h)-max(t,cy))
+                if overlap < .58*w*h or cv2.contourArea(contour)<.70*w*h:
+                    continue
+                area = core[cy:cy+h,cx:cx+w]
+                if np.max(area.mean(axis=1))<.78 or bright[cy:cy+h,cx:cx+w].mean()<.045:
+                    continue
+                if result is None:
+                    result = np.zeros((height,width),np.uint8)
+                pad = max(2,round(.10*h/scale))
+                left,top = max(0,int(cx/scale)-pad),max(0,int(cy/scale)-pad)
+                right,bottom = min(width,int(np.ceil((cx+w)/scale))+pad),min(height,int(np.ceil((cy+h)/scale))+pad)
+                result[top:bottom,left:right] = 255
+    return result

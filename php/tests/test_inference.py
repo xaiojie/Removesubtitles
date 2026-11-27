@@ -16,6 +16,48 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_translucent_panel_uses_visible_texture_and_masks_only_ink(self):
+        from lite_layer import learn_panel
+        rng=np.random.default_rng(21)
+        backgrounds=[]; inputs=[]
+        for i in range(9):
+            coarse=rng.integers(40,235,(8,12,3),dtype=np.uint8)
+            background=cv2.resize(coarse,(240,94),interpolation=cv2.INTER_LINEAR)
+            ink=background.copy()
+            ink[18:76,20:218]=(ink[18:76,20:218].astype(float)*.45+4).astype(np.uint8)
+            cv2.putText(ink,'SUBTITLE',(51,60),cv2.FONT_HERSHEY_SIMPLEX,.85,(241,241,241),2)
+            backgrounds.append(background)
+            inputs.append(ink)
+        panel=learn_panel(inputs,(0,0,240,94))
+        self.assertIsNotNone(panel)
+        self.assertAlmostEqual(panel.transmission,.45,delta=.065)
+        rect,repair,mask=panel.restore(inputs[3],(0,0,240,94),[(43,28,184,72)])
+        l,t,r,b=rect
+        compare=np.zeros((94,240),bool)
+        compare[23:31,32:208]=True
+        selected=compare[t:b,l:r]
+        reality=backgrounds[3][t:b,l:r].astype(float)
+        self.assertLess(np.abs(repair.astype(float)-reality)[selected].mean(),9)
+        self.assertGreater(np.count_nonzero(mask),100)
+        self.assertEqual(np.count_nonzero(mask[:25]),0)
+        self.assertIsNone(panel.restore(backgrounds[3],(0,0,240,94),[(43,28,184,72)]))
+
+    def test_profile_preserves_scene_print_outside_the_dialogue_row(self):
+        from lite_profile import BandProfile,find_rows
+        samples=[[(70,52,310,84),(10,4,46,24)]]*12
+        rows=find_rows(samples,400,100)
+        profile=BandProfile(400,100,rows,None)
+        self.assertEqual(profile.select(samples[0]),[samples[0][0]])
+        self.assertEqual(profile.select([(10,4,46,24)]),[])
+
+    def test_transient_pruning_preserves_confirmed_neighbors_and_clip_ends(self):
+        from lite_tracking import reject_transient_skin
+        frames=[np.full((45,100,3),(130,163,211),np.uint8) for _ in range(3)]
+        box=(20,9,77,37)
+        self.assertEqual(reject_transient_skin(frames,[(),(box,),()],None,None),[(),(),()])
+        self.assertEqual(reject_transient_skin(frames,[(box,),(box,),()],None,None)[1],(box,))
+        self.assertEqual(reject_transient_skin(frames,[(),(),(box,)],None,None)[-1],(box,))
+
     def test_tracked_card_handles_one_word_and_protects_print_during_the_gap(self):
         from lite_masks import DarkCardTrack
         track = DarkCardTrack()
