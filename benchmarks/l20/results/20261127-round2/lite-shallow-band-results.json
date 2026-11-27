@@ -1,0 +1,120 @@
+{
+  "clock": "single fresh L20 worker from launch through final output, full clip, upload and queue excluded",
+  "N03": {
+    "clip_seconds": 30,
+    "manifest_split": "development",
+    "source_sha256": "ac9e1995ad0eeb64eb90b7aac4a0b47795b3eef87ba6ecf45f01978ef6db0910",
+    "display_frames": 750,
+    "scored_frames_inclusive": [
+      559,
+      618
+    ],
+    "rate": "25/1",
+    "scoring_reference": 620,
+    "threshold": "report each row separately when at least one quarter of its bright stroke pixels survive on the original print footprint",
+    "quality_zh": "第 571、584、597、607 帧，原两行对白均已擦除。单独提高 OCR 精度会抹去螺栓的棱边，引用原片干净背景后棱边恢复。原片和两种候选均已解码到末帧。",
+    "versions": {
+      "lama-v4": {
+        "elapsed_seconds": 30.97,
+        "sha256": "ecaa40aefc77fe9b11042896a4ac1aab2172eefa46eea6f3e1fe23279613b86b",
+        "source_revision": "d87233c30ee64d12ab6576107a3a78d3309326a5",
+        "mean_gpu_percent": 16.8,
+        "peak_gpu_mib": 3330,
+        "full_frames": 750,
+        "printed_rows": [
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 6,
+            "median_retained_fraction": 0.1452
+          },
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 52,
+            "median_retained_fraction": 0.8003
+          }
+        ],
+        "mean_bolt_luma_mae": 40.687,
+        "median_bolt_edge_recall": 0.9386,
+        "reference_fill_frames": 0,
+        "source_reference_indices": []
+      },
+      "lama-shallow-detect": {
+        "elapsed_seconds": 31.087,
+        "sha256": "85efd4550b116a56e98fb30c459b22ff2ed666d89b9fd64f9483c13aad739a0c",
+        "source_revision": "050f0b8d15153e6a08f64a5957d1861eb2f3b611",
+        "mean_gpu_percent": 20.9,
+        "peak_gpu_mib": 2778,
+        "full_frames": 750,
+        "printed_rows": [
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          },
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          }
+        ],
+        "mean_bolt_luma_mae": 19.219,
+        "median_bolt_edge_recall": 0.3279,
+        "reference_fill_frames": 0,
+        "source_reference_indices": []
+      },
+      "lama-shallow-reference": {
+        "elapsed_seconds": 31.109,
+        "sha256": "4c960e1eee1e9e462a7f7b98144e38020906144cb27c817253d096629e87c2cd",
+        "source_revision": "050f0b8d15153e6a08f64a5957d1861eb2f3b611",
+        "mean_gpu_percent": 11.1,
+        "peak_gpu_mib": 2778,
+        "full_frames": 750,
+        "printed_rows": [
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          },
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          }
+        ],
+        "mean_bolt_luma_mae": 3.782,
+        "median_bolt_edge_recall": 0.9555,
+        "reference_fill_frames": 61,
+        "source_reference_indices": [
+          558,
+          620
+        ]
+      }
+    }
+  },
+  "P10": {
+    "clip_seconds": 29.99,
+    "manifest_split": "development",
+    "rate": "24000/1001",
+    "metric": "native frames with a visible, two-sided backing on the input and a majority of both original edges surviving on the rendered output",
+    "versions": {
+      "lama-v4": {
+        "output_sha256": "93b9cd18a9b8154b831d1d1cd83e01e810cbc06dccccc1320f2deaccff06513a",
+        "seconds": 34.879,
+        "source_measurable_frames": 546,
+        "two_edges_mostly_retained_frames": 13,
+        "median_retention": 0.02758653491718094,
+        "source_revision": "d87233c30ee64d12ab6576107a3a78d3309326a5"
+      },
+      "lama-panel-continuity": {
+        "output_sha256": "e44661b8601bff1f208b2e03793436bffb2020813009e5778850b7283bbd913e",
+        "seconds": 30.855,
+        "source_measurable_frames": 546,
+        "two_edges_mostly_retained_frames": 3,
+        "median_retention": 0.026595744680851064,
+        "source_revision": "629c4a29c9ab8459b9212cc14a4daba155007567"
+      }
+    }
+  },
+  "model_weights": "unchanged original PP-OCRv5 Mobile and Big-LaMa FP32 during these experiments",
+  "frozen_v4_holdout": "lite-v4-acceptance.json"
+}
