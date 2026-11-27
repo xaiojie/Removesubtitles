@@ -78,6 +78,26 @@ class InferenceTests(unittest.TestCase):
         image[:71] = 55
         self.assertEqual(profile.wrapped_dialogue(image, boxes, words, group_words=True), [])
 
+    def test_scaled_dialogue_preserves_screen_print_outside_a_confirmed_caption_card(self):
+        from lite_profile import BandProfile
+        from subtitle_compositing import colored_caption_cards
+
+        image = np.full((300, 800, 3), 64, np.uint8)
+        profile = BandProfile(800, 300, [(141, 51), (190, 51)], None)
+        # Both rows have the same print. Only the lower one sits on the wide subtitle backing.
+        rows = [(226, 61, 574, 111), (226, 117, 574, 167)]
+        for bounds, expected in [((75, 114, 724, 223), []), ((75, 51, 724, 220), rows),
+                                 ((218, 114, 565, 223), rows)]:
+            with self.subTest(card=bounds):
+                image[:] = 64
+                left, top, right, bottom = bounds
+                cv2.rectangle(image, (left, top), (right, bottom), (185, 117, 49), cv2.FILLED)
+                for x, y, right, low in rows:
+                    cv2.putText(image, 'MONDAY NEWS', (x+4, low-6), cv2.FONT_HERSHEY_DUPLEX,
+                                1.45, (244, 244, 244), 3, cv2.LINE_AA)
+                self.assertIsNotNone(colored_caption_cards(image))
+                self.assertEqual(profile.scaled_dialogue(image, rows, [rows[1]]), expected)
+
     def test_a_short_final_line_does_not_hide_the_matching_line_above_it(self):
         from lite_profile import BandProfile
 

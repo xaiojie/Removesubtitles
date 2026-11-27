@@ -6,6 +6,7 @@ from video_capture import open_video_capture
 from lite_layer import learn_panel
 from lite_highlight import learn_highlight
 from lite_masks import chip_examples, repeated_chips
+from subtitle_compositing import colored_caption_cards
 
 
 def local_boxes(boxes,roi):
@@ -83,6 +84,25 @@ def next_subtitle_row(above, below, width):
     return (.73*depth <= other_depth <= 1.37*depth
             and .66*min(depth, other_depth) < spacing < 1.45*max(depth, other_depth)
             and abs(left+right-x-r) <= .22*width)
+
+
+def shared_caption_card(frame, selected):
+    """Find an opaque multi-line backing that contains every established word box."""
+    mask = colored_caption_cards(frame)
+    if mask is None:
+        return None
+    for contour in cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]:
+        x, y, width, height = cv2.boundingRect(contour)
+        if width < max(.55*frame.shape[1], 3*height) or cv2.contourArea(contour) < .8*width*height:
+            continue
+        right, bottom = x+width, y+height
+        for left, top, end, low in selected:
+            overlap = max(0, min(end, right)-max(left, x)) * max(0, min(low, bottom)-max(top, y))
+            if height < 1.25*(low-top) or overlap < .70*(end-left)*(low-top):
+                break
+        else:
+            return x, y, right, bottom
+    return None
 
 
 @dataclass
@@ -220,6 +240,13 @@ class BandProfile:
             if (words.intersection(selected) or (not selected and near_band)) and any(
                     r-x >= .35*self.width for x, _, r, _ in bounds):
                 kept.update(words)
+        if selected and len(kept) > len(selected):
+            card = shared_caption_card(frame, selected)
+            if card is not None:
+                x, y, right, bottom = card
+                # Exclude an unrelated sign above a complete caption card even when its print matches.
+                kept = {box for box in kept if box[0] < right and x < box[2]
+                        and box[1] < bottom and y < box[3]}
         return [box for box in boxes if box in kept] if len(kept) > len(selected) else []
 
     def select(self,boxes):
