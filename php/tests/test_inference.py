@@ -16,6 +16,32 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_scaled_word_tile_can_be_distinguished_from_a_similarly_colored_background(self):
+        from lite_masks import scaled_word_chip
+
+        box = (120, 55, 308, 115)
+        for hue, tile_value, scene_value in [(65, 188, 139), (151, 139, 188)]:
+            template = (hue, 175, tile_value, 30, 34)
+            def bgr(value):
+                return tuple(map(int, cv2.cvtColor(np.uint8([[[hue, 175, value]]]), cv2.COLOR_HSV2BGR)[0, 0]))
+
+            for backing in ('word', 'wide stripe', 'uniform'):
+                with self.subTest(hue=hue, backing=backing):
+                    crop = np.full((170, 450, 3), bgr(scene_value), np.uint8)
+                    if backing == 'word':
+                        cv2.rectangle(crop, (114, 48), (314, 119), bgr(tile_value), -1)
+                    elif backing == 'wide stripe':
+                        cv2.rectangle(crop, (0, 48), (449, 119), bgr(tile_value), -1)
+                    cv2.putText(crop, 'FAST', (132, 105), cv2.FONT_HERSHEY_DUPLEX,
+                                1.65, (250, 250, 250), 4, cv2.LINE_AA)
+                    mask = scaled_word_chip(crop, [box], template)
+                    if backing == 'word':
+                        self.assertIsNotNone(mask)
+                        self.assertTrue(mask[48:120, 114:315].all())
+                        self.assertEqual(mask[64, 50], 0)
+                    else:
+                        self.assertIsNone(mask)
+
     def test_enlarged_word_highlight_confirms_caption_rows_without_erasing_unrelated_print(self):
         from lite_profile import BandProfile
 

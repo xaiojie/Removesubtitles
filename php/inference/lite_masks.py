@@ -246,7 +246,19 @@ def repeated_chips(frames):
     return max(winners)[1] if winners else None
 
 
-def locate_chip(crop,template):
+def word_shades(value, supported):
+    """Separate two visibly different shades of the same hue inside a word's search region."""
+    samples = value[supported != 0]
+    if samples.size < 2:
+        return ()
+    threshold, _ = cv2.threshold(samples, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    dark = samples <= threshold
+    if not dark.any() or dark.all() or samples[~dark].mean() - samples[dark].mean() < 20:
+        return ()
+    return (supported & (value <= threshold), supported & (value > threshold))
+
+
+def locate_chip(crop,template, *, split_shades=False):
     hue,sat,val,center,height=template
     h,w=crop.shape[:2]
     t,b=max(0,int(center-height)),min(h,int(np.ceil(center+height)))
@@ -254,26 +266,39 @@ def locate_chip(crop,template):
     delta=abs(hsv[...,0].astype(np.int16)-hue)
     supported=((np.minimum(delta,180-delta)<=8)&(hsv[...,1]>max(50,sat-72))&
                (hsv[...,2]>max(66,val-75))).astype(np.uint8)
-    contours,_=cv2.findContours(supported,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    layers = word_shades(hsv[..., 2], supported) if split_shades else (supported,)
     result=None
-    for contour in contours:
-        x,y,cw,ch=cv2.boundingRect(contour)
-        if (not .46*height<=ch<=1.52*height or cw<.65*ch or
-                abs(y+t+ch/2-center)>.36*height or cv2.contourArea(contour)<.65*cw*ch):
-            continue
-        panel=crop[t+y:t+y+ch,x:x+cw]
-        ink=(panel.min(axis=2)>165)|(panel.max(axis=2)<85)
-        if ink.mean()<.037 or (supported[y:y+ch,x:x+cw].mean(axis=1)>.76).sum()<2:
-            continue
-        if result is None:
-            result=np.zeros((h,w),np.uint8)
-        pad=max(3,round(.12*ch))
-        result[max(0,t+y-pad):min(h,t+y+ch+pad),max(0,x-pad):min(w,x+cw+pad)]=255
+    for layer in layers:
+        contours,_=cv2.findContours(layer,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            x,y,cw,ch=cv2.boundingRect(contour)
+            if (not .46*height<=ch<=1.52*height or cw<.65*ch or
+                    abs(y+t+ch/2-center)>.36*height or cv2.contourArea(contour)<.65*cw*ch):
+                continue
+            # A surrounding shade may enclose the word's tile as a hole.
+            if split_shades and (x == 0 or x+cw == w):
+                continue
+            panel=crop[t+y:t+y+ch,x:x+cw]
+            ink=(panel.min(axis=2)>165)|(panel.max(axis=2)<85)
+            if ink.mean()<.037 or (layer[y:y+ch,x:x+cw].mean(axis=1)>.76).sum()<2:
+                continue
+            if result is None:
+                result=np.zeros((h,w),np.uint8)
+            pad=max(3,round(.12*ch))
+            result[max(0,t+y-pad):min(h,t+y+ch+pad),max(0,x-pad):min(w,x+cw+pad)]=255
     return result
 
 
 def scaled_word_chip(crop, boxes, template):
     """Confirm a learned highlight behind a word at its current size and position."""
+    for split_shades in (False, True):
+        mask = word_chip_at_boxes(crop, boxes, template, split_shades=split_shades)
+        if mask is not None:
+            return mask
+    return None
+
+
+def word_chip_at_boxes(crop, boxes, template, *, split_shades):
     height, width = crop.shape[:2]
     result = None
     for x, y, right, bottom in boxes:
@@ -282,7 +307,7 @@ def scaled_word_chip(crop, boxes, template):
         left, top = max(0, x-margin), max(0, y-margin)
         patch = crop[top:min(height, bottom+margin), left:min(width, right+margin)]
         current = (*template[:3], (y+bottom)/2-top, depth)
-        mask = locate_chip(patch, current)
+        mask = locate_chip(patch, current, split_shades=split_shades)
         if mask is None:
             continue
         for contour in cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]:
