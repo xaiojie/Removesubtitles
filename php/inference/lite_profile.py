@@ -96,4 +96,22 @@ def profile_source(path,rois,find):
         x,y,r,b=key
         panel=learn_panel(thumbs,windows[key]) if len(thumbs)>=5 else None
         result[key]=BandProfile(r-x,b-y,find_rows(samples[key],r-x,b-y),panel,repeated_chips(chips[key]))
+    panels = {key: profile.panel for key, profile in result.items() if profile.panel is not None}
+    if panels:
+        # One additional sparse decode for all candidate panels. Keep just four coordinates per sample.
+        observations = {key: [] for key in panels}
+        sampler = open_video_capture(path)
+        try:
+            for index in np.unique(np.linspace(0, max(0, total-1), min(5, max(1, total)), dtype=int)):
+                if index and not sampler.set(cv2.CAP_PROP_POS_FRAMES, int(index)):
+                    continue
+                ok, frame = sampler.read()
+                if ok:
+                    for key, panel in panels.items():
+                        observations[key].append(panel.measure_edges(frame))
+        finally:
+            sampler.release()
+        for key, panel in panels.items():
+            if not panel.calibrate(observations[key]):
+                result[key].panel = None
     return result

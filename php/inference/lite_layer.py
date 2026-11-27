@@ -90,6 +90,54 @@ class Panel:
     box: tuple
     transmission: float
     offset: np.ndarray
+    native_box: tuple = None
+
+    def estimated_bounds(self):
+        wx, wy, wr, wb = self.window
+        sx, sy = (wr-wx)/self.size[0], (wb-wy)/self.size[1]
+        left, top, right, bottom = self.box
+        return (wx+round(sx*left), wy+round(sy*top), wx+round(sx*right), wy+round(sy*bottom))
+
+    def measure_edges(self, frame):
+        """Find the transition from outside to inside using the fitted layer color at native resolution."""
+        bounds = self.estimated_bounds()
+        wx, wy, wr, wb = self.window
+        radii = [int(np.ceil((wr-wx)/self.size[0]))+2, int(np.ceil((wb-wy)/self.size[1]))+2]
+        observations = []
+        for side, center in enumerate(bounds):
+            vertical = side in (0, 2)
+            image = frame.transpose(1, 0, 2) if vertical else frame
+            lo, hi = bounds[1::2] if vertical else bounds[::2]
+            margin = max(2, (hi-lo)//12)
+            radius = radii[0 if vertical else 1]
+            first, last = max(1, center-radius), min(image.shape[0]-1, center+radius)
+            if last < first or hi-lo <= 2*margin:
+                observations.append(None)
+                continue
+            step = max(1, (hi-lo)//160)
+            strip = image[first-1:last+1, lo+margin:hi-margin:step].astype(np.float32)
+            outside, inside = (strip[:-1], strip[1:]) if side < 2 else (strip[1:], strip[:-1])
+            contrast = np.abs(inside-outside).mean(axis=2)
+            error = np.abs(inside-(self.transmission*outside+self.offset)).mean(axis=2)
+            gain = np.median(contrast-error, axis=1)
+            index = int(np.argmax(gain))
+            observations.append(first+index if gain[index] >= 5 else None)
+        return observations
+
+    def calibrate(self, observations):
+        selected = []
+        for edge in zip(*observations):
+            values = [value for value in edge if value is not None]
+            if len(values) < 2:
+                return False
+            middle = int(np.median(values))
+            if sum(abs(value-middle) <= 1 for value in values) < max(2, .7*len(values)):
+                return False
+            selected.append(middle)
+        if len(selected) != 4 or selected[2] <= selected[0] or selected[3] <= selected[1]:
+            return False
+        self.native_box = tuple(selected)
+        return True
 
     def restore(self,frame,roi,boxes):
         """Return the panel's ink mask and corrected pixels only when the layer is visible."""
@@ -100,11 +148,10 @@ class Panel:
         error = abs(inside-(self.transmission*outside+self.offset)).mean(axis=1)
         if np.median(error)+3 >= .68*np.median(control) or np.median(error)>15:
             return None
-        l,t,r,b = self.box
-        sx,sy = (wr-wx)/self.size[0],(wb-wy)/self.size[1]
+        l,t,r,b = self.native_box or self.estimated_bounds()
         x,y,rr,bb = roi
-        left,top = max(x,wx+round(l*sx)),max(y,wy+round(t*sy))
-        right,bottom = min(rr,wx+round(r*sx)+1),min(bb,wy+round(b*sy)+1)
+        left,top = max(x,l),max(y,t)
+        right,bottom = min(rr,r),min(bb,b)
         if right<=left or bottom<=top:
             return None
         ink = np.zeros((bb-y,rr-x),np.uint8)

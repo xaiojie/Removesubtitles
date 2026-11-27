@@ -68,6 +68,25 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(np.count_nonzero(mask[:25]),0)
         self.assertIsNone(panel.restore(backgrounds[3],(0,0,240,94),[(43,28,184,72)]))
 
+    def test_scaled_panel_recovers_half_open_edges_at_source_resolution(self):
+        from lite_layer import learn_panel
+        frames, thumbs = [], []
+        rng = np.random.default_rng(27)
+        for _ in range(7):
+            texture = rng.integers(60, 235, (3, 5, 3), dtype=np.uint8)
+            frame = cv2.resize(texture, (610, 206), interpolation=cv2.INTER_LINEAR)
+            frame[37:165, 39:571] = (frame[37:165, 39:571].astype(float) * .45).astype(np.uint8)
+            cv2.putText(frame, 'SAMPLE', (130, 120), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (250, 250, 250), 2)
+            frames.append(frame)
+            thumbs.append(cv2.resize(frame, (240, 81), interpolation=cv2.INTER_AREA))
+        panel = learn_panel(thumbs, (0, 0, 610, 206))
+        self.assertIsNotNone(panel)
+        self.assertTrue(panel.calibrate([panel.measure_edges(frame) for frame in frames[:5]]))
+        self.assertEqual(panel.native_box, (39, 37, 571, 165))
+        # The user's top boundary cuts through the layer. Never brighten the exterior or cross the selection.
+        rect, _, _ = panel.restore(frames[0], (12, 40, 601, 197), [(108, 41, 296, 93)])
+        self.assertEqual(rect, (39, 40, 571, 165))
+
     def test_profile_preserves_scene_print_outside_the_dialogue_row(self):
         from lite_profile import BandProfile,find_rows
         samples=[[(70,52,310,84),(10,4,46,24)]]*12
