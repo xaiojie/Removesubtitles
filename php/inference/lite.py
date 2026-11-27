@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
-from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights
+from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights, locate_chip
 from lite_tracking import reject_transient_skin, track_block
 from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
@@ -257,6 +257,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     continue
             if profile is not None:
                 local = profile.select(local)
+            chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
             focused = options.mask_mode in ('focused_cards', 'tracked_cards')
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
                                      if focused else (0, right-left))
@@ -267,7 +268,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 local, dark_card = tracks[key].update(crop, local)
             elif focused:
                 dark_card = black_caption_cards(crop, local)
-            if profile is not None and not local and dark_card is None:
+            if profile is not None and not local and dark_card is None and chip is None:
                 continue
             mask = caption_plates(crop, local)
             if dark_card is not None:
@@ -298,7 +299,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     mask |= outline
             for x, y, r, b in local:
                 area = mask[y:b, x:r]
-                strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding) if focused else None
+                preserve_gaps = focused and (profile is None or profile.chip is None)
+                strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding) if preserve_gaps else None
                 if strokes is None:
                     area[:] = 255
                 else:
@@ -315,6 +317,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 keep[np.unique(indices[support!=0])]=255
                 keep[0]=0
                 mask=keep[indices]
+            if chip is not None:
+                mask |= chip
             if focused:
                 mask[:, :left_edge] = 0
                 mask[:, right_edge:] = 0

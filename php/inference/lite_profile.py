@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from video_capture import open_video_capture
 from lite_layer import learn_panel
+from lite_masks import chip_examples, repeated_chips
 
 
 def local_boxes(boxes,roi):
@@ -38,6 +39,7 @@ class BandProfile:
     height: int
     rows: list
     panel: object
+    chip: object = None
 
     def select(self,boxes):
         if not self.rows or not boxes:
@@ -64,6 +66,7 @@ def profile_source(path,rois,find):
     sampler=open_video_capture(path)
     grids={tuple(roi):[] for roi in rois}
     samples={key:[] for key in grids}
+    chips={key:[] for key in grids}
     windows={}
     try:
         total=int(sampler.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -80,6 +83,7 @@ def profile_source(path,rois,find):
                 samples[key].append(local_boxes(boxes,key))
                 if r-x < 1.7*(b-y):
                     continue
+                chips[key].append(chip_examples(frame[y:b,x:r],samples[key][-1]))
                 l,t,rr,bb=max(0,x-20),max(0,y-20),min(width,r+20),min(height,b+20)
                 windows[key]=(l,t,rr,bb)
                 scale=min(1.,448/(rr-l))
@@ -91,5 +95,5 @@ def profile_source(path,rois,find):
     for key,thumbs in grids.items():
         x,y,r,b=key
         panel=learn_panel(thumbs,windows[key]) if len(thumbs)>=5 else None
-        result[key]=BandProfile(r-x,b-y,find_rows(samples[key],r-x,b-y),panel)
+        result[key]=BandProfile(r-x,b-y,find_rows(samples[key],r-x,b-y),panel,repeated_chips(chips[key]))
     return result

@@ -27,7 +27,8 @@ def cuda_detector(detector, model_dir):
         input_name = session.get_inputs()[0].name
 
     def infer(x):
-        return session.run(None,{input_name:np.ascontiguousarray(x[0])})
+        with span('lite_ocr_inference',device='cuda'):
+            return session.run(None,{input_name:np.ascontiguousarray(x[0])})
 
     # Keep the pinned PaddleX detector's resizing, normalization, DB thresholds and polygon extraction.
     detector.paddlex_predictor.infer = infer

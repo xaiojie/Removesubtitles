@@ -9,7 +9,7 @@ import time
 from urllib.request import Request, urlopen
 
 from clip_limits import check_clip
-from run_candidate import json_file
+from run_candidate import benchmark_geometry, json_file, video_info
 
 
 def get(base, path, headers):
@@ -18,7 +18,7 @@ def get(base, path, headers):
 
 
 def submit(base, headers, clip, source, mode, catalog_hash):
-    regions = clip.get('regions') or [dict(type='subtitle', roi=clip['roi'])]
+    regions = benchmark_geometry(clip, video_info(source,count_frames=False))['display_regions']
     cmd = ['curl', '-fsS', '--max-time', '90', '-F', 'video=@' + str(source),
            '--form-string', 'mode=' + mode, '--form-string', 'regions=' + json.dumps(regions),
            '--form-string', 'catalog_sha256=' + catalog_hash]

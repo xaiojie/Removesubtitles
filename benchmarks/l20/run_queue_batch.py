@@ -16,11 +16,11 @@ from itertools import combinations
 from fractions import Fraction
 
 from clip_limits import check_clip
-from run_candidate import json_file, video_info
+from run_candidate import benchmark_geometry, json_file, video_info
 
 
-GPU_STAGES = {"lite_lama", "guide_lama", "clear_inference", "propainter_inference"}
-CPU_STAGES = {"shot_scan", "lite_ocr", "max_review", "ffmpeg_finalize"}
+GPU_STAGES = {"lite_lama", "lite_ocr_inference", "guide_lama", "clear_inference", "propainter_inference"}
+CPU_STAGES = {"shot_scan", "lite_ocr_cpu", "max_review", "ffmpeg_finalize"}
 
 
 def lines(file):
@@ -29,7 +29,8 @@ def lines(file):
 
 def merged(spans, stages):
     intervals = sorted((s["started_at"], s["finished_at"]) for s in spans
-                       if s["stage"] in stages and s.get("ok"))
+                       if s.get("ok") and (s["stage"] in stages or
+                           ("lite_ocr_cpu" in stages and s["stage"]=="lite_ocr" and s.get("device","cpu")=="cpu")))
     result = []
     for start, end in intervals:
         if result and start <= result[-1][1]:
@@ -96,8 +97,10 @@ def report(data, jobs, started, limit):
         if state["state"] == "done":
             output = folder / "result.mp4"
             before, after = video_info(folder / "source.video"), video_info(output)
+            expected = job.get("geometry",{}).get("encoded_dimensions",[before["width"],before["height"]])
             row.update(output=str(output), output_probe=after, input_probe=before,
-                       same_frames_and_dimensions=all(before[k] == after[k] for k in ("width", "height", "nb_read_frames")),
+                       same_frames_and_dimensions=expected==[after["width"],after["height"]] and
+                                                  before["nb_read_frames"]==after["nb_read_frames"],
                        same_fps=math.isclose(float(Fraction(before["avg_frame_rate"])),
                                              float(Fraction(after["avg_frame_rate"])), rel_tol=.002),
                        output_sha256=hashlib.sha256(output.read_bytes()).hexdigest())
@@ -131,7 +134,8 @@ def main(args):
     install = (args.install or root).resolve()
     output = args.output.resolve()
     manifest = args.manifest.resolve()
-    corpus = {c["id"]: c for c in json.loads(manifest.read_text())["clips"]}
+    catalog = json.loads(manifest.read_text())
+    corpus = {c["id"]: c for c in catalog["clips"]}
     jobs = []
     for spec in args.jobs:
         mode, clip_id = spec.split(":", 1)
@@ -140,11 +144,13 @@ def main(args):
             raise ValueError(f"无效档位或未冻结配置的独立样片 {spec}")
         file = (manifest.parent / clip["input"]).resolve(strict=True)
         seconds = check_clip(file)
+        if catalog.get("max_seconds") and seconds>catalog["max_seconds"]:
+            raise ValueError(f"样片超过本轮时长上限 {clip_id}")
         if hashlib.sha256(file.read_bytes()).hexdigest() != clip["sha256"]:
             raise ValueError(f"样片校验失败 {clip_id}")
-        regions = clip.get("regions") or [dict(type="subtitle", roi=clip["roi"])]
+        geometry=benchmark_geometry(clip,video_info(file,count_frames=False))
         jobs.append(dict(clip=clip_id, mode=mode, file=str(file), source_seconds=float(seconds),
-                         sha256=clip["sha256"], regions=regions))
+                         sha256=clip["sha256"], regions=geometry["display_regions"], geometry=geometry))
     if len({j["sha256"] for j in jobs}) < 2:
         raise ValueError("并发批次需要至少两个不同视频")
     output.mkdir(parents=True, exist_ok=False)

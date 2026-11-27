@@ -171,7 +171,7 @@ def word_highlights(crop, boxes):
     small = cv2.resize(crop,(round(width*scale),max(1,round(height*scale))),interpolation=cv2.INTER_AREA)
     hsv = cv2.cvtColor(small,cv2.COLOR_BGR2HSV)
     saturated = (hsv[...,1]>=80) & (hsv[...,2]>=90)
-    bright = (small.min(axis=2)>149) & (hsv[...,1]<75)
+    ink = ((small.min(axis=2)>149) & (hsv[...,1]<75)) | (small.max(axis=2)<86)
     result = None
     for x,y,r,b in boxes:
         l,t = int(x*scale),int(y*scale)
@@ -197,7 +197,7 @@ def word_highlights(crop, boxes):
                 if overlap < .58*w*h or cv2.contourArea(contour)<.70*w*h:
                     continue
                 area = core[cy:cy+h,cx:cx+w]
-                if np.max(area.mean(axis=1))<.78 or bright[cy:cy+h,cx:cx+w].mean()<.045:
+                if np.max(area.mean(axis=1))<.78 or ink[cy:cy+h,cx:cx+w].mean()<.045:
                     continue
                 if result is None:
                     result = np.zeros((height,width),np.uint8)
@@ -205,4 +205,63 @@ def word_highlights(crop, boxes):
                 left,top = max(0,int(cx/scale)-pad),max(0,int(cy/scale)-pad)
                 right,bottom = min(width,int(np.ceil((cx+w)/scale))+pad),min(height,int(np.ceil((cy+h)/scale))+pad)
                 result[top:bottom,left:right] = 255
+    return result
+
+
+def chip_examples(crop,boxes):
+    mask=word_highlights(crop,boxes)
+    if mask is None:
+        return []
+    contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    examples=[]
+    for contour in contours:
+        x,y,w,h=cv2.boundingRect(contour)
+        hsv=cv2.cvtColor(crop[y:y+h,x:x+w],cv2.COLOR_BGR2HSV)
+        colors=hsv[(hsv[...,1]>75)&(hsv[...,2]>90)]
+        if len(colors)<.24*w*h:
+            continue
+        hist=np.bincount(colors[:,0]//6,minlength=30)
+        peak=int(np.argmax(hist))
+        hue,sat,val=np.median(colors[colors[:,0]//6==peak],axis=0)
+        examples.append((float(hue),float(sat),float(val),y+h/2,h))
+    return examples
+
+
+def repeated_chips(frames):
+    candidates=[(i,*chip) for i,examples in enumerate(frames) for chip in examples]
+    winners=[]
+    for _,hue,sat,val,center,height in candidates:
+        matched=[v for v in candidates if min(abs(v[1]-hue),180-abs(v[1]-hue))<=8 and
+                 abs(v[4]-center)<.45*height and .60*height<v[5]<1.55*height]
+        support=len({v[0] for v in matched})
+        if support>=max(3,.28*len(frames)):
+            typical=np.median([v[1:] for v in matched],axis=0)
+            typical[0]=(hue+np.median([(v[1]-hue+90)%180-90 for v in matched]))%180
+            winners.append((support,tuple(typical)))
+    return max(winners)[1] if winners else None
+
+
+def locate_chip(crop,template):
+    hue,sat,val,center,height=template
+    h,w=crop.shape[:2]
+    t,b=max(0,int(center-height)),min(h,int(np.ceil(center+height)))
+    hsv=cv2.cvtColor(crop[t:b],cv2.COLOR_BGR2HSV)
+    delta=abs(hsv[...,0].astype(np.int16)-hue)
+    supported=((np.minimum(delta,180-delta)<=8)&(hsv[...,1]>max(50,sat-72))&
+               (hsv[...,2]>max(66,val-75))).astype(np.uint8)
+    contours,_=cv2.findContours(supported,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    result=None
+    for contour in contours:
+        x,y,cw,ch=cv2.boundingRect(contour)
+        if (not .46*height<=ch<=1.52*height or cw<.65*ch or
+                abs(y+t+ch/2-center)>.36*height or cv2.contourArea(contour)<.65*cw*ch):
+            continue
+        panel=crop[t+y:t+y+ch,x:x+cw]
+        ink=(panel.min(axis=2)>165)|(panel.max(axis=2)<85)
+        if ink.mean()<.037 or (supported[y:y+ch,x:x+cw].mean(axis=1)>.76).sum()<2:
+            continue
+        if result is None:
+            result=np.zeros((h,w),np.uint8)
+        pad=max(3,round(.12*ch))
+        result[max(0,t+y-pad):min(h,t+y+ch+pad),max(0,x-pad):min(w,x+cw+pad)]=255
     return result

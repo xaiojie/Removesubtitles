@@ -16,6 +16,23 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_known_highlight_can_catch_a_short_word_between_ocr_detections(self):
+        from lite_masks import chip_examples,locate_chip,repeated_chips
+        samples=[]
+        for x in (22,80,155,104):
+            crop=np.full((80,300,3),45,np.uint8)
+            crop[23:53,x:x+51]=(50,178,52)
+            cv2.putText(crop,'DA',(x+4,46),cv2.FONT_HERSHEY_SIMPLEX,.67,(244,244,244),2)
+            samples.append(chip_examples(crop,[(10,14,275,61)]))
+        template=repeated_chips(samples)
+        self.assertIsNotNone(template)
+        found=locate_chip(crop,template)
+        self.assertTrue(np.all(found[23:53,104:155]))
+        # A switch to a sign of the same color away from the subtitle row stays intact.
+        blank=np.full_like(crop,45)
+        blank[:12,104:155]=(50,178,52)
+        self.assertIsNone(locate_chip(blank,template))
+
     def test_translucent_panel_uses_visible_texture_and_masks_only_ink(self):
         from lite_layer import learn_panel
         rng=np.random.default_rng(21)
