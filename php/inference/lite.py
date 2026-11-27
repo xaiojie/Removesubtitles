@@ -30,7 +30,7 @@ class LiteOptions:
             raise ValueError('Lite 检测间隔、检测尺寸和批量大小须大于零')
         if min(self.box_padding, self.context_padding) < 0 or not 0 <= self.export_crf <= 51:
             raise ValueError('Lite 扩框或编码参数无效')
-        if self.mask_mode not in ('boxes', 'joint', 'joint_cards'):
+        if self.mask_mode not in ('boxes', 'joint', 'joint_cards', 'focused_cards'):
             raise ValueError('Lite 遮罩模式无效')
 
 
@@ -138,6 +138,63 @@ def caption_plates(crop, boxes):
     return cv2.dilate(result, np.ones((5, 5), np.uint8)) if result.any() else result
 
 
+def caption_band(boxes, width, height, padding):
+    """Protect a distant, smaller HUD label when the band has a dominant dialogue line."""
+    if len(boxes) < 2 or width < 4 * height:
+        return 0, width
+    central = [box for box in boxes if abs((box[0]+box[2])/2-width/2) < width*.25
+               and box[2]-box[0] >= max(width*.16, 3*(box[3]-box[1]-2*padding))]
+    if not central:
+        return 0, width
+    main = max(central, key=lambda box: (box[3]-box[1], box[2]-box[0]))
+    main_height = max(1, main[3]-main[1]-2*padding)
+    start, end = 0, width
+    for x, y, r, b in boxes:
+        if b-y-2*padding > .72*main_height or r-x > .45*(main[2]-main[0]):
+            continue
+        gap = max(2*main_height, .12*width)
+        if (x+r)/2 > .84*width and x-main[2] > gap:
+            end = min(end, max(main[2], x-padding))
+        elif (x+r)/2 < .16*width and main[0]-r > gap:
+            start = max(start, min(main[0], r+padding))
+    return start, end
+
+
+def outlined_text_mask(patch, padding):
+    """Cover confirmed light text and its dark outline while preserving gaps between glyphs."""
+    height, width = patch.shape[:2]
+    glyph_height = height-2*padding
+    if glyph_height < 8 or width < glyph_height:
+        return None
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    radius = max(2, min(12, round(.18*glyph_height)))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
+    near_dark = cv2.erode(gray, kernel)
+    white = cv2.inRange(patch, (162, 162, 162), (255, 255, 255))
+    yellow = cv2.inRange(patch, (0, 145, 176), (135, 255, 255))
+    strokes = cv2.bitwise_and(white | yellow, cv2.inRange(cv2.subtract(gray, near_dark), 54, 255))
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(strokes, connectivity=8)
+    keep = np.zeros(count, np.uint8)
+    for index, (_, _, w, h, area) in enumerate(stats[1:], 1):
+        if h >= max(3, .18*glyph_height) and w <= 4*glyph_height and area >= max(4, .12*glyph_height):
+            keep[index] = 255
+    seed = keep[labels]
+    ys, xs = np.nonzero(seed)
+    if len(xs) < .025*glyph_height*max(1, width-2*padding):
+        return None
+    if xs.max()-xs.min() < .70*(width-2*padding) or ys.max()-ys.min() < .50*glyph_height:
+        return None
+    occupied = np.flatnonzero(seed.any(axis=0))
+    if np.max(np.diff(occupied), initial=0) > 1.5*glyph_height:
+        return None
+    # Include detached dots, accents and punctuation near the supported text.
+    extent = max(2, round(.40*glyph_height))
+    close_to_line = cv2.dilate(seed, np.ones((2*extent+1, 2*extent+1), np.uint8))
+    radius = max(3, min(18, round(.17*glyph_height)+2))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
+    return cv2.dilate(strokes & close_to_line, kernel)
+
+
 def restore_joint(frames, boxes_by_frame, rois, lama, options):
     height, width = frames[0].shape[:2]
     for left, top, right, bottom in rois:
@@ -150,8 +207,13 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options):
                 r, b = min(r, right), min(b, bottom)
                 if x < r and y < b:
                     local.append((x - left, y - top, r - left, b - top))
+            focused = options.mask_mode == 'focused_cards'
+            left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
+                                     if focused else (0, right-left))
+            if focused:
+                local = [box for box in local if left_edge <= box[0] and box[2] <= right_edge]
             mask = caption_plates(crop, local)
-            if options.mask_mode == 'joint_cards':
+            if options.mask_mode in ('joint_cards', 'focused_cards'):
                 colored = colored_caption_cards(crop)
                 if colored is not None:
                     mask |= cv2.dilate(colored, np.ones((11, 11), np.uint8))
@@ -162,7 +224,15 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options):
             if outline is not None:
                 mask |= outline
             for x, y, r, b in local:
-                mask[y:b, x:r] = 255
+                area = mask[y:b, x:r]
+                strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding) if focused else None
+                if strokes is None:
+                    area[:] = 255
+                else:
+                    area |= strokes
+            if focused:
+                mask[:, :left_edge] = 0
+                mask[:, right_edge:] = 0
             if mask.any():
                 active.append((index, mask))
 
@@ -247,7 +317,7 @@ def run(folder, request):
                     first = frames.pop()
                 else:
                     boxes.append(anchor)
-                repaired = (restore_joint(frames, boxes, rois, lama, options) if options.mask_mode in ('joint', 'joint_cards')
+                repaired = (restore_joint(frames, boxes, rois, lama, options) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(frame.tobytes())

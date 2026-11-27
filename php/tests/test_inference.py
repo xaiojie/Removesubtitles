@@ -11,11 +11,50 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'inference'))
 from fine import ReviewOptions, review, run_pass, suspect
-from lite import LiteOptions, detect, restore, sample_block
+from lite import LiteOptions, detect, restore, restore_joint, sample_block
 from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_focused_mask_keeps_smaller_peripheral_game_prompt(self):
+        frame = np.full((80, 600, 3), 85, np.uint8)
+        cv2.putText(frame, 'COMMENTARY', (180, 46), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (255, 255, 255), 2)
+        cv2.putText(frame, 'UI', (553, 48), cv2.FONT_HERSHEY_SIMPLEX, .4, (255, 255, 255), 1)
+        src = frame.copy()
+        painter = SimpleNamespace(device='cpu', _inpaint_batch=lambda imgs, masks:
+                                  [np.full_like(im, 21) for im in imgs])
+        options = LiteOptions(mask_mode='focused_cards', box_padding=3)
+        restore_joint([frame], [[(172, 17, 394, 54), (545, 36, 580, 52)]],
+                      [(0, 0, 600, 80)], painter, options)
+        self.assertTrue(np.array_equal(frame[:, 520:], src[:, 520:]))
+        self.assertFalse(np.array_equal(frame[:, 170:400], src[:, 170:400]))
+
+    def test_focused_mask_keeps_a_standalone_short_subtitle_and_both_lines(self):
+        painter = SimpleNamespace(device='cpu', _inpaint_batch=lambda imgs, masks:
+                                  [np.full_like(im, 21) for im in imgs])
+        opts = LiteOptions(mask_mode='focused_cards', box_padding=3)
+        for boxes in [[(540, 42, 580, 60)], [(130, 15, 455, 40), (180, 45, 430, 68)]]:
+            frame = np.full((80, 600, 3), 85, np.uint8)
+            restore_joint([frame], [boxes], [(0, 0, 600, 80)], painter, opts)
+            for x, y, r, b in boxes:
+                self.assertEqual(int(frame[(y+b)//2, (x+r)//2, 0]), 21)
+
+    def test_focused_mask_preserves_the_space_around_outlined_letters(self):
+        frame = np.full((72, 300, 3), (110, 180, 110), np.uint8)
+        for index, letter in enumerate('SAMPLE'):
+            origin = (34 + index*36, 47)
+            cv2.putText(frame, letter, origin, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 5)
+            cv2.putText(frame, letter, origin, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        original = frame.copy()
+        painter = SimpleNamespace(device='cpu', _inpaint_batch=lambda imgs, masks:
+                                  [np.full_like(im, 21) for im in imgs])
+        restore_joint([frame], [[(26, 17, 247, 58)]], [(0, 0, 300, 72)], painter,
+                      LiteOptions(mask_mode='focused_cards', box_padding=6))
+        ink = (original.min(axis=2) > 245) | (original.max(axis=2) < 10)
+        self.assertTrue(np.all(frame[ink] == 21))
+        self.assertTrue(np.array_equal(frame[56, 100], original[56, 100]))
+
     def test_sampling_rechecks_changed_intervals_and_keeps_last_frame(self):
         a, b = ((3, 5, 15, 20),), ((35, 4, 70, 21),)
         frames = list(range(7))
