@@ -16,6 +16,27 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_a_short_final_line_does_not_hide_the_matching_line_above_it(self):
+        from lite_profile import BandProfile
+
+        frame = np.full((160, 700, 3), 77, np.uint8)
+        boxes = []
+        for text, baseline, scale in [('LONG CAPTION ABOVE', 74, 1.6), ('ends.', 126, 1.6)]:
+            (w, h), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 3)
+            x = (700-w)//2
+            cv2.putText(frame, text, (x, baseline), cv2.FONT_HERSHEY_DUPLEX, scale, (13, 13, 13), 7, cv2.LINE_AA)
+            cv2.putText(frame, text, (x, baseline), cv2.FONT_HERSHEY_DUPLEX, scale, (246, 246, 246), 3, cv2.LINE_AA)
+            boxes.append((x-7, baseline-h-7, x+w+7, baseline+9))
+        row = boxes[1]
+        profile = BandProfile(700, 160, [((row[1]+row[3])/2, row[3]-row[1])], None)
+        self.assertEqual(profile.select(boxes), [row])
+        self.assertCountEqual(profile.wrapped_dialogue(frame, boxes, [row]), boxes)
+        # A native heading with a different fill or an off-centre label must remain visible.
+        frame[:83] = (50, 83, 202)
+        self.assertFalse(profile.wrapped_dialogue(frame, boxes, [row]))
+        extra = (1, boxes[0][1], 125, boxes[0][3])
+        self.assertFalse(profile.wrapped_dialogue(frame, [extra, row], [row]))
+
     def test_learned_horizontal_backing_protects_slanted_scene_signs_after_the_caption_ends(self):
         from lite_line_panel import LinePanel
         from lite_profile import BandProfile

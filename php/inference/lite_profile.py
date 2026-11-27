@@ -34,6 +34,26 @@ def find_rows(samples,width,height):
     return sorted(chosen)
 
 
+def printed_row_style(frame, box):
+    """Measure the height and fill of several high-contrast glyphs inside one OCR row."""
+    x, y, right, bottom = box
+    patch = frame[y:bottom, x:right]
+    height, width = patch.shape[:2]
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    radius = max(2, min(9, round(height * .12)))
+    dark = cv2.erode(gray, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1)))
+    white = cv2.inRange(patch, (169, 169, 169), (255, 255, 255))
+    yellow = cv2.inRange(patch, (0, 148, 174), (146, 255, 255))
+    ink = (white | yellow) & cv2.inRange(cv2.subtract(gray, dark), 53, 255)
+    _, labels, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
+    xx, yy, ww, hh, area = stats.T
+    letters = ((xx > 0) & (xx+ww < width) & (yy > 0) & (yy+hh < height)
+               & (hh >= .22*height) & (hh < .90*height) & (ww < 2.3*hh) & (area >= hh))
+    if np.count_nonzero(letters) < 3:
+        return None
+    return float(np.median(hh[letters])), np.median(patch[letters[labels]], axis=0)
+
+
 @dataclass
 class BandProfile:
     width: int
@@ -42,6 +62,40 @@ class BandProfile:
     panel: object
     chip: object = None
     highlight: object = None
+
+    def wrapped_dialogue(self, frame, boxes, selected):
+        """Keep an adjacent row matching the font of an established, centred subtitle."""
+        if len(self.rows) != 1 or len(selected) != 1 or len(boxes) < 2 or self.panel or self.chip or self.highlight:
+            return []
+        anchor = selected[0]
+        x, y, right, bottom = anchor
+        height = bottom-y
+        center = (x+right)/2
+        if height < 10 or abs(center-self.width/2) > .12*self.width:
+            return []
+        expected, size = self.rows[0]
+        if abs((y+bottom)/2-expected) > .45*size:
+            return []
+        anchor_style = None
+        for other in boxes:
+            left, top, end, low = other
+            depth = low-top
+            distance = abs(top+low-y-bottom)/2
+            if not .73*height <= depth <= 1.37*height or not .66*height < distance < 1.43*height:
+                continue
+            if min(right-x,end-left) < 1.65*min(height,depth) or max(right-x,end-left) < .42*self.width:
+                continue
+            if abs((left+end)/2-center) > .11*self.width or top <= 1 or low >= self.height-1:
+                continue
+            if anchor_style is None:
+                anchor_style = printed_row_style(frame, anchor)
+                if anchor_style is None:
+                    break
+            style = printed_row_style(frame, other)
+            if (style is not None and .73*anchor_style[0] <= style[0] <= 1.38*anchor_style[0]
+                    and np.abs(style[1]-anchor_style[1]).max() < 31):
+                return [anchor, other]
+        return []
 
     def dialogue_rows(self, boxes):
         """Recognize multiple centered dialogue rows moving together, including one-word lines."""

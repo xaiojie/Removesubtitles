@@ -45,6 +45,7 @@ class LiteOptions:
     skip_graph_up_to_seconds: int = 0
     multiline_light_cards: bool = False
     recover_visible_cards: bool = False
+    follow_wrapped_rows: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -318,7 +319,10 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
                 visible_card = light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True)
             dialogue = profile.dialogue_rows(local) if profile is not None else []
             if profile is not None:
-                local = dialogue or profile.select(local)
+                selected = dialogue or profile.select(local)
+                if options.follow_wrapped_rows and not dialogue and len(selected) < len(local):
+                    dialogue = profile.wrapped_dialogue(crop, local, selected)
+                local = dialogue or selected
             chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
             highlight = (profile.highlight.mask(frame, key, track=options.track_highlight_edges)
                          if profile is not None and profile.highlight is not None and key not in originals else None)
