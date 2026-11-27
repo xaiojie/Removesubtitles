@@ -69,7 +69,7 @@ def paired_ratio(rows, faster, reference):
 
 def summarize(manifest, trials, frozen):
     clips = read(manifest)["clips"]
-    routes = {"lite": ("lama-border", "ocr-lama", frozen["source_revision"]),
+    routes = {"lite": (frozen.get("trial_suffix", "lama-border"), "ocr-lama", frozen["source_revision"]),
               "original_lama": ("ocr-lama", "ocr-lama", ORIGINAL_PRODUCT),
               "original_clear_fast": ("clear-fast", "clear-fast", ORIGINAL_CLEAR),
               "pro": ("product-pro", "product-pro", ORIGINAL_PRODUCT),
