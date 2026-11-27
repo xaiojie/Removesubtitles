@@ -14,7 +14,7 @@ from media import ROOT, capture, encode, geometry, report
 from job_trace import span
 from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights, locate_chip
 from lite_reuse import inference_frames
-from lite_reveal import VisibleCardBackground, restore_from_source
+from lite_reveal import StaticSubtitleBackground, VisibleCardBackground, restore_from_source
 from lite_gradient import GradientPanel
 from lite_line_panel import LinePanel
 from lite_tracking import reject_transient_skin, track_block
@@ -46,6 +46,8 @@ class LiteOptions:
     multiline_light_cards: bool = False
     recover_visible_cards: bool = False
     follow_wrapped_rows: bool = False
+    native_thin_ocr: bool = False
+    recover_static_text: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -75,6 +77,9 @@ def detect(frame, rois, detector, options=LiteOptions(), *, profiles=None):
     for x, y, r, b in rois:
         crop = frame[y:b, x:r]
         scale = min(1.0, options.detector_max_side / max(crop.shape[:2]))
+        if options.native_thin_ocr and r-x >= 3*(b-y) and (b-y)*scale < 80:
+            # Preserve both baselines when resizing a very shallow band for Mobile OCR.
+            scale = max(scale, min(1., 960/(r-x)))
         if scale < 1:
             crop = cv2.resize(crop, (max(1, round((r - x) * scale)), max(1, round((b - y) * scale))))
         sx, sy = (r - x) / crop.shape[1], (b - y) / crop.shape[0]
@@ -275,7 +280,7 @@ def include_punctuation(mask,patch,padding):
 
 
 def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, profiles=None,
-                  *, reveal=None, first_index=0):
+                  *, reveal=None, static_sources=None, first_index=0):
     height, width = frames[0].shape[:2]
     tracked = options.mask_mode == 'tracked_cards'
     if tracks is None:
@@ -289,6 +294,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
     for left, top, right, bottom in rois:
         active = []
         key = (left,top,right,bottom)
+        static = static_sources.get(key) if static_sources and key not in originals else None
         if tracked and key not in tracks:
             tracks[key] = DarkCardTrack()
         for index, (frame, boxes) in enumerate(zip(frames, boxes_by_frame)):
@@ -300,6 +306,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
                 if x < r and y < b:
                     local.append((x - left, y - top, r - left, b - top))
             profile = profiles.get(key) if profiles else None
+            empty_detection = not local
             if profile is not None and profile.panel is not None and key not in originals:
                 layer = profile.panel.restore(frame,key,local)
                 if layer is not None:
@@ -340,6 +347,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
             elif focused:
                 dark_card = black_caption_cards(crop, local)
             if profile is not None and not local and dark_card is None and chip is None and highlight is None:
+                if static is not None and empty_detection:
+                    static.observe(crop, first_index+index)
                 if len(card_boxes) >= 3:
                     card = (visible_card if reveal is not None and key not in originals else
                             light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True))
@@ -405,6 +414,9 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
             if visible_card is not None:
                 mask = restore_from_source(reveal, frame, first_index+index, key, card_boxes, mask, visible_card)
             if mask.any():
+                if (static is not None and dark_card is None and cards is None and visible_card is None
+                        and static.restore(crop, first_index+index, mask, local)):
+                    continue
                 active.append((index, mask))
 
         for start in range(0, len(active), options.batch_size):
@@ -509,6 +521,15 @@ def run(folder, request):
         video = resources.enter_context(capture(source))
         fps, total = geometry(video)
         options = options.for_clip(video.get(cv2.CAP_PROP_FRAME_COUNT), fps)
+        static_sources = {}
+        if options.recover_static_text and options.mask_mode == 'tracked_cards':
+            def contains_text(crop):
+                h, w = crop.shape[:2]
+                return bool(detect(crop, [(0, 0, w, h)], detector, options))
+
+            for key, profile in profiles.items():
+                if profile.width >= 3*profile.height and not (profile.panel or profile.highlight or profile.chip):
+                    static_sources[key] = StaticSubtitleBackground(max(1, round(3*fps)), contains_text)
         reveal = None
         if options.multiline_light_cards and options.recover_visible_cards and total > 1:
             from media import NearbyFrames
@@ -548,7 +569,8 @@ def run(folder, request):
                     boxes = reject_transient_skin(frames,boxes,previous_boxes,anchor if ok else None)
                     previous_boxes = original_last
                 repaired = (restore_joint(frames, boxes, rois, lama, options, tracks, profiles,
-                                          reveal=reveal, first_index=count) if options.mask_mode != 'boxes'
+                                          reveal=reveal, static_sources=static_sources,
+                                          first_index=count) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(memoryview(np.ascontiguousarray(frame)))

@@ -257,3 +257,68 @@ def restore_from_source(tool, frame, index, roi, boxes, mask, card):
     if residual is None:
         return mask
     return mask & (cv2.bitwise_not(selected) | residual)
+
+
+class StaticSubtitleBackground:
+    """Restore a stationary shot from consecutive subtitle-free frames observed in the same band."""
+
+    def __init__(self, max_age, contains_text):
+        self.max_age = max_age
+        self.contains_text = contains_text
+        self.index = -2
+        self.image = None
+        self.confirmed = False
+        self.checked = False
+
+    def observe(self, crop, index):
+        self.confirmed = False
+        if index == self.index + 1 and self.image is not None and self.image.shape == crop.shape:
+            delta = cv2.absdiff(crop[::4, ::4], self.image[::4, ::4])
+            steady = cv2.inRange(delta, (0, 0, 0), (8, 8, 8))
+            self.confirmed = cv2.countNonZero(steady) >= .97 * steady.size
+        self.image = crop.copy()
+        self.index = index
+        self.checked = False
+
+    def restore(self, crop, index, mask, boxes):
+        if not self.confirmed or not 0 < index - self.index <= self.max_age or not boxes:
+            return False
+        # Keep scene cuts and movement out of the reference. The pixels between the
+        # printed letters must also agree, even when the inpaint mask is a rectangle.
+        delta = cv2.absdiff(crop, self.image)
+        matched = cv2.inRange(delta, (0, 0, 0), (14, 14, 14))
+        outside = cv2.bitwise_not(cv2.dilate(mask, np.ones((5, 5), np.uint8)))
+        visible = cv2.countNonZero(outside)
+        if visible < .15 * mask.size or cv2.countNonZero(matched & outside) < .97 * visible:
+            self.confirmed = False
+            return False
+        # A cached frame on which OCR missed the same line must not reinsert it.
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        donor_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        dark = cv2.erode(gray, np.ones((7, 7), np.uint8))
+        bright = cv2.inRange(crop, (157, 157, 157), (255, 255, 255))
+        bright |= cv2.inRange(crop, (0, 145, 175), (140, 255, 255))
+        ink = bright & cv2.inRange(cv2.subtract(gray, dark), 42, 255) & mask
+        removed = cv2.inRange(cv2.subtract(gray, donor_gray), 35, 255) & ink
+        for x, y, r, b in boxes:
+            region = np.s_[y:b, x:r]
+            count = cv2.countNonZero(ink[region])
+            if (count < max(12, .008 * (b-y) * (r-x))
+                    or cv2.countNonZero(removed[region]) < .85 * count
+                    or cv2.countNonZero(matched[region]) < .44 * (b-y) * (r-x)):
+                return False
+        # Changes remote from the subtitle strokes may be a hand or a prop crossing the band.
+        reach = max(3, min(11, round(.16 * max(b-y for _, y, _, b in boxes))))
+        near_ink = cv2.dilate(ink, np.ones((2*reach+1, 2*reach+1), np.uint8))
+        unexplained = cv2.bitwise_not(matched | near_ink) & mask
+        if cv2.countNonZero(unexplained) > max(12, .009 * cv2.countNonZero(mask)):
+            return False
+        if not self.checked:
+            if self.contains_text(self.image):
+                self.confirmed = False
+                return False
+            self.checked = True
+        with span('lite_static_background', device='cpu', frame=index, source_frame=self.index,
+                  recovered_pixels=cv2.countNonZero(mask)):
+            cv2.copyTo(self.image, mask, crop)
+        return True
