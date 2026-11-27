@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
-from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights, locate_chip
+from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, locate_chip, scaled_word_chip, word_highlights
 from lite_reuse import inference_frames
 from lite_reveal import StaticSubtitleBackground, VisibleCardBackground, restore_from_source
 from lite_gradient import GradientPanel
@@ -333,14 +333,21 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
             if reveal is not None and len(card_boxes) >= 3 and key not in originals:
                 visible_card = light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True)
             dialogue = profile.dialogue_rows(local) if profile is not None else []
+            enlarged_chip = None
             if profile is not None:
                 selected = dialogue or profile.select(local)
                 if options.follow_wrapped_rows and not dialogue and len(selected) < len(local):
                     dialogue = profile.wrapped_dialogue(crop, local, selected, group_words=options.group_wrapped_words)
                 if options.follow_scaled_rows:
-                    dialogue = profile.scaled_dialogue(crop, local, dialogue or selected) or dialogue
+                    scaled = profile.scaled_dialogue(crop, local, dialogue or selected)
+                    if scaled and profile.chip is not None:
+                        enlarged_chip = scaled_word_chip(crop, scaled, profile.chip)
+                    if scaled and (profile.chip is None or enlarged_chip is not None):
+                        dialogue = scaled
                 local = dialogue or selected
             chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
+            if enlarged_chip is not None:
+                chip = enlarged_chip if chip is None else cv2.bitwise_or(chip, enlarged_chip)
             highlight = (profile.highlight.mask(frame, key, track=options.track_highlight_edges)
                          if profile is not None and profile.highlight is not None and key not in originals else None)
             focused = options.mask_mode in ('focused_cards', 'tracked_cards')
@@ -397,7 +404,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
                     mask |= outline
             for x, y, r, b in local:
                 area = mask[y:b, x:r]
-                preserve_gaps = focused and (profile is None or profile.chip is None)
+                preserve_gaps = focused and (profile is None or profile.chip is None or enlarged_chip is not None)
                 strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding,
                                              complete_flat_strokes=options.complete_flat_strokes) if preserve_gaps else None
                 if strokes is None:

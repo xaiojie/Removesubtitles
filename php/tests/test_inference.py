@@ -16,6 +16,47 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_enlarged_word_highlight_confirms_caption_rows_without_erasing_unrelated_print(self):
+        from lite_profile import BandProfile
+
+        width, height = 820, 360
+        roi = (0, 0, width, height)
+        font = cv2.FONT_HERSHEY_DUPLEX
+        fill = (65, 47, 32)
+        painter = SimpleNamespace(device='cpu', _inpaint_batch=lambda images, masks: [
+            np.full_like(image, 19) for image in images
+        ])
+        options = LiteOptions(mask_mode='tracked_cards', layout_profile=True, follow_scaled_rows=True)
+        for color in [(46, 168, 61), (178, 63, 144)]:
+            hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_BGR2HSV)[0, 0].tolist()
+            profile = BandProfile(width, height, [(185, 38), (228, 38)], None, (*hsv, 270, 35))
+            for backing in ['word', 'unrelated', 'whole-scene']:
+                with self.subTest(color=color, backing=backing):
+                    image = np.full((height, width, 3), color if backing == 'whole-scene' else fill, np.uint8)
+                    boxes = []
+                    for words, baseline in [(('FAST', 'MOVING'), 166), (('TRAIN', 'TODAY'), 239)]:
+                        sizes = [cv2.getTextSize(word, font, 2.5, 3)[0] for word in words]
+                        x = (width-sum(w for w, _ in sizes)-25)//2
+                        for word, (w, h) in zip(words, sizes):
+                            if word == 'FAST' and backing == 'word':
+                                cv2.rectangle(image, (x-12, baseline-h-11), (x+w+12, baseline+10), color, -1)
+                            cv2.putText(image, word, (x, baseline), font, 2.5, (245, 245, 245), 3, cv2.LINE_AA)
+                            boxes.append((x-5, baseline-h-6, x+w+5, baseline+8))
+                            x += w+25
+                    if backing == 'unrelated':
+                        cv2.rectangle(image, (12, 100), (145, 175), color, -1)
+                    original = image.copy()
+                    self.assertFalse(profile.dialogue_rows(boxes) or profile.select(boxes))
+                    restore_joint([image], [boxes], [roi], painter, options, profiles={roi: profile})
+                    if backing == 'word':
+                        letters = np.all(original > 225, axis=2)
+                        panel = np.all(original == color, axis=2)
+                        self.assertTrue(np.all(image[letters] == 19))
+                        self.assertTrue(np.all(image[panel] == 19))
+                        np.testing.assert_array_equal(image[:78], original[:78])
+                    else:
+                        np.testing.assert_array_equal(image, original)
+
     def test_new_caption_size_and_extra_row_keep_only_matching_print(self):
         from lite_profile import BandProfile
 

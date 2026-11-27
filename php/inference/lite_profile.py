@@ -205,7 +205,9 @@ class BandProfile:
 
     def scaled_dialogue(self, frame, boxes, selected):
         """Follow matching adjacent print when an established multiline subtitle changes size or wraps again."""
-        if len(self.rows) < 2 or len(boxes) < 2 or len(selected) == len(boxes) or self.panel or self.chip or self.highlight:
+        if len(self.rows) < 2 or len(boxes) < 2 or len(selected) == len(boxes) or self.panel or self.highlight:
+            return []
+        if self.chip is not None and selected:
             return []
         lines = [(bounds, words) for bounds, words in word_lines(boxes)
                  if bounds[2]-bounds[0] >= 1.65*(bounds[3]-bounds[1])

@@ -270,3 +270,31 @@ def locate_chip(crop,template):
         pad=max(3,round(.12*ch))
         result[max(0,t+y-pad):min(h,t+y+ch+pad),max(0,x-pad):min(w,x+cw+pad)]=255
     return result
+
+
+def scaled_word_chip(crop, boxes, template):
+    """Confirm a learned highlight behind a word at its current size and position."""
+    height, width = crop.shape[:2]
+    result = None
+    for x, y, right, bottom in boxes:
+        depth = bottom-y
+        margin = max(4, depth//2)
+        left, top = max(0, x-margin), max(0, y-margin)
+        patch = crop[top:min(height, bottom+margin), left:min(width, right+margin)]
+        current = (*template[:3], (y+bottom)/2-top, depth)
+        mask = locate_chip(patch, current)
+        if mask is None:
+            continue
+        for contour in cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]:
+            cx, cy, w, h = cv2.boundingRect(contour)
+            # A colored surface continuing on either side is insufficient evidence of a word tile.
+            if cx == 0 or cx+w == patch.shape[1]:
+                continue
+            l, t = left+cx, top+cy
+            overlap = max(0, min(l+w, right)-max(l, x)) * max(0, min(t+h, bottom)-max(t, y))
+            if overlap < .5*max(w*h, (right-x)*depth):
+                continue
+            if result is None:
+                result = np.zeros((height, width), np.uint8)
+            result[t:t+h, l:l+w] = 255
+    return result
