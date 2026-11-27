@@ -1,0 +1,154 @@
+{
+  "role": "Previously examined holdout sources, now used as regression checks. No conclusions about commercial pass rate.",
+  "criteria": "Any visible target caption text, reappearance or background plate fails the full clip.",
+  "tested": 4,
+  "passed": 0,
+  "aggregate_seconds": {
+    "v4": 260.116,
+    "v5": 255.972
+  },
+  "new_time_fraction": 0.98407,
+  "rows": {
+    "P05": {
+      "input_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+      "frames": 720,
+      "frame_rate": "24",
+      "seconds": 30.0,
+      "passed": false,
+      "failure": "backing",
+      "checked_failure_frames": [
+        22,
+        205,
+        719
+      ],
+      "visual_observation": "0.92 秒、8.54 秒和真实末帧，字已擦除，半透明灰底仍盖在衣服和手上。",
+      "bit_identical_v4": true,
+      "runs": {
+        "v4": {
+          "seconds": 51.56,
+          "peak_vram_mib": 5080,
+          "mean_gpu_percent": 16.6,
+          "gpu_samples": 50,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7"
+        },
+        "v5": {
+          "seconds": 47.851,
+          "peak_vram_mib": 5080,
+          "mean_gpu_percent": 22.7,
+          "gpu_samples": 49,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7"
+        }
+      }
+    },
+    "P08": {
+      "input_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+      "frames": 900,
+      "frame_rate": "30",
+      "seconds": 30.0,
+      "passed": false,
+      "failure": "readable_text",
+      "checked_failure_frames": [
+        126,
+        132
+      ],
+      "visual_observation": "4.20 秒、4.40 秒，镜头里变大的两行 “TOO MANY / STILL DON’T” 整句仍然可读，附近小字号字幕可擦除。",
+      "bit_identical_v4": true,
+      "runs": {
+        "v4": {
+          "seconds": 79.373,
+          "peak_vram_mib": 5320,
+          "mean_gpu_percent": 14.6,
+          "gpu_samples": 82,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f"
+        },
+        "v5": {
+          "seconds": 77.652,
+          "peak_vram_mib": 5320,
+          "mean_gpu_percent": 15.0,
+          "gpu_samples": 83,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f"
+        }
+      }
+    },
+    "B04": {
+      "input_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+      "frames": 750,
+      "frame_rate": "25",
+      "seconds": 30.0,
+      "passed": false,
+      "failure": "readable_text",
+      "checked_failure_frames": [
+        0,
+        102,
+        725,
+        738,
+        749
+      ],
+      "visual_observation": "首帧留下黄字 YES，4.08 秒蓝板上仍留末行黄字，29 秒到真实末帧还能读到 IMPOSED FINES ON。",
+      "bit_identical_v4": true,
+      "runs": {
+        "v4": {
+          "seconds": 84.936,
+          "peak_vram_mib": 8102,
+          "mean_gpu_percent": 22.2,
+          "gpu_samples": 88,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783"
+        },
+        "v5": {
+          "seconds": 85.941,
+          "peak_vram_mib": 8102,
+          "mean_gpu_percent": 15.5,
+          "gpu_samples": 89,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783"
+        }
+      }
+    },
+    "N02": {
+      "input_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+      "frames": 750,
+      "frame_rate": "25",
+      "seconds": 30.0,
+      "passed": false,
+      "failure": "readable_text",
+      "checked_failure_frames": [
+        57,
+        107,
+        311
+      ],
+      "visual_observation": "2.28 秒和 4.28 秒，上行 “Imagine all of Europe,” 仍完整可读。12.44 秒保留 “limit…”。",
+      "bit_identical_v4": false,
+      "runs": {
+        "v4": {
+          "seconds": 44.247,
+          "peak_vram_mib": 4272,
+          "mean_gpu_percent": 12.3,
+          "gpu_samples": 45,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0b773fa03dd31bf671b8c47a9a176ebe9001c572e1163ef77625cb817a31028f"
+        },
+        "v5": {
+          "seconds": 44.528,
+          "peak_vram_mib": 4272,
+          "mean_gpu_percent": 14.2,
+          "gpu_samples": 45,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1e40a34f8fc4ad1afc444ff562007a1941b89dd11cc6c7973968325c08cf1eaf"
+        }
+      }
+    }
+  }
+}
