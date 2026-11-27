@@ -13,7 +13,7 @@ def edge_rows(edges):
     return [int(a + np.argmax(counts[a:b])) for a, b in intervals(counts >= threshold)]
 
 
-def black_caption_cards(crop, boxes):
+def black_caption_cards(crop, boxes, previous_band=None):
     height, width = crop.shape[:2]
     if min(width, height) < 16:
         return None
@@ -45,7 +45,11 @@ def black_caption_cards(crop, boxes):
             side = cv2.morphologyEx(side[None], cv2.MORPH_CLOSE, np.ones((1, 5), np.uint8))[0]
             for left, right in intervals(side):
                 span = right-left
-                if span < max(25, 1.8*depth):
+                # A short single-word card has the same top and bottom edges as the preceding line.
+                same_band = previous_band is not None and all(
+                    abs(a-b) <= max(3, .17*depth)
+                    for a,b in zip((top,bottom), (previous_band[0]*scale,previous_band[1]*scale)))
+                if span < max(15 if same_band else 25, (.65 if same_band else 1.8)*depth):
                     continue
                 if min(np.count_nonzero(enter[top,left:right]), np.count_nonzero(leave[bottom,left:right])) < .43*span:
                     continue
@@ -69,3 +73,90 @@ def black_caption_cards(crop, boxes):
                 x1,y1 = min(width,int(np.ceil(right/scale))+pad),min(height,int(np.ceil((bottom+1)/scale))+pad)
                 result[y0:y1,x0:x1]=255
     return result
+
+
+class DarkCardTrack:
+    """Remember confirmed horizontal card edges across short gaps between caption lines."""
+
+    def __init__(self):
+        self.band = None
+        self.missing_frames = 0
+
+    def update(self, crop, boxes):
+        card = black_caption_cards(crop, boxes, self.band)
+        if card is not None:
+            x,y,w,h = cv2.boundingRect(card)
+            # The geometric detector pads each edge by a tenth of the unpadded height.
+            inset = max(3, round(h/12))
+            if w >= h*.65 and abs(x+w/2-crop.shape[1]/2) < crop.shape[1]*.24:
+                self.band = (y+inset, y+h-inset-1)
+                self.missing_frames = 0
+        else:
+            self.missing_frames += 1
+            if self.missing_frames > 48:
+                self.band = None
+        if self.band is None:
+            return boxes, card
+        top, bottom = self.band
+        mid = (top+bottom)/2
+        # Small off-line printing on objects stays visible between statements.
+        filtered = [box for box in boxes if box[2]-box[0] >= .24*crop.shape[1]
+                    or abs((box[1]+box[3])/2-mid) <= .30*(bottom-top)]
+        return filtered, card
+
+
+def anchored_brush_card(crop, boxes):
+    """Find broad, opaque colored bands behind OCR lines, including soft brush edges."""
+    height, width = crop.shape[:2]
+    if width < height*2 or not boxes:
+        return None
+    lines = [(x,y,r,b) for x,y,r,b in boxes if r-x >= max(.34*width, 3*(b-y))]
+    if not lines:
+        return None
+    scale = min(1., 384/width)
+    small = cv2.resize(crop, (round(width*scale), max(1,round(height*scale))), interpolation=cv2.INTER_AREA)
+    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
+    h,w = hsv.shape[:2]
+    result = np.zeros((height,width), np.uint8)
+    for x,y,r,b in lines:
+        x,y,r,b = max(0,int(x*scale)), max(0,int(y*scale)), min(w,int(np.ceil(r*scale))), min(h,int(np.ceil(b*scale)))
+        depth = b-y
+        if depth < 5:
+            continue
+        near = hsv[max(0,y-depth//3):min(h,b+depth//2),x:r]
+        color = (near[...,1]>=42) & (near[...,2]>=100)
+        hues = near[...,0][color]
+        if len(hues) < .20*near.shape[0]*near.shape[1]:
+            continue
+        counts = np.bincount(hues//6, minlength=30)
+        peak = int(np.argmax(counts))
+        if counts[[(peak-1)%30,peak,(peak+1)%30]].sum() < .24*near.shape[0]*near.shape[1]:
+            continue
+        samples = near[color & (near[...,0]//6==peak)]
+        hue,sat,val = np.median(samples,axis=0)
+        delta = abs(hsv[...,0].astype(np.int16)-int(hue))
+        close = ((np.minimum(delta,180-delta)<=6) &
+                 (abs(hsv[...,1].astype(np.int16)-int(sat))<=32) &
+                 (abs(hsv[...,2].astype(np.int16)-int(val))<=35)).astype(np.uint8)
+        merged = cv2.morphologyEx(close,cv2.MORPH_CLOSE,np.ones((3,5),np.uint8))
+        contours,_ = cv2.findContours(merged,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            l,t,cw,ch = cv2.boundingRect(contour)
+            if cw < max(.74*(r-x),3*ch) or not .31*depth <= ch <= 1.8*depth:
+                continue
+            if min(r,l+cw)-max(x,l) < .68*(r-x) or min(b,t+ch)-max(y,t) < .17*depth:
+                continue
+            if (t <= 0 and t+ch >= h) or cv2.contourArea(contour) < .39*cw*ch:
+                continue
+            patch = close[t:t+ch,l:l+cw]
+            # A plate has a long, almost uniform horizontal edge outside the lettering.
+            if patch.mean()<.40 or np.count_nonzero(patch.mean(axis=1)>.82)<max(2,.09*ch):
+                continue
+            outer = [close[a:z,l:l+cw] for a,z in ((max(0,t-3),t),(t+ch,min(h,t+ch+3))) if z>a]
+            if not outer or min(strip.mean() for strip in outer)>.32:
+                continue
+            pad = max(3,round(ch*.08/scale))
+            xl,yt = max(0,int(l/scale)-pad),max(0,int(t/scale)-pad)
+            xr,yb = min(width,int(np.ceil((l+cw)/scale))+pad),min(height,int(np.ceil((t+ch)/scale))+pad)
+            result[yt:yb,xl:xr] = 255
+    return result if result.any() else None

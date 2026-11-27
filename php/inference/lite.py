@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
-from lite_masks import black_caption_cards
+from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards
 from lite_tracking import track_block
 from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
@@ -35,7 +35,7 @@ class LiteOptions:
             raise ValueError('Lite 检测间隔、检测尺寸和批量大小须大于零')
         if min(self.box_padding, self.context_padding) < 0 or not 0 <= self.export_crf <= 51:
             raise ValueError('Lite 扩框或编码参数无效')
-        if self.mask_mode not in ('boxes', 'joint', 'joint_cards', 'focused_cards'):
+        if self.mask_mode not in ('boxes', 'joint', 'joint_cards', 'focused_cards', 'tracked_cards'):
             raise ValueError('Lite 遮罩模式无效')
         if type(self.inpaint_max_side) is not int or self.inpaint_max_side < 0:
             raise ValueError('Lite 局部推理尺寸应为非负整数')
@@ -202,38 +202,64 @@ def outlined_text_mask(patch, padding):
     return cv2.dilate(strokes & close_to_line, kernel)
 
 
-def restore_joint(frames, boxes_by_frame, rois, lama, options):
+def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None):
     height, width = frames[0].shape[:2]
+    tracked = options.mask_mode == 'tracked_cards'
+    if tracks is None:
+        tracks = {}
+    # An overlapping region must be detected on original pixels even if a previous region has been repaired.
+    originals = {}
+    if tracked:
+        for index, (x,y,r,b) in enumerate(rois):
+            if any(x < rr and xx < r and y < bb and yy < b for xx,yy,rr,bb in rois[:index]):
+                originals[(x,y,r,b)] = [frame[y:b,x:r].copy() for frame in frames]
     for left, top, right, bottom in rois:
         active = []
+        key = (left,top,right,bottom)
+        if tracked and key not in tracks:
+            tracks[key] = DarkCardTrack()
         for index, (frame, boxes) in enumerate(zip(frames, boxes_by_frame)):
-            crop = frame[top:bottom, left:right]
+            crop = originals[key][index] if key in originals else frame[top:bottom, left:right]
             local = []
             for x, y, r, b in boxes:
                 x, y = max(x, left), max(y, top)
                 r, b = min(r, right), min(b, bottom)
                 if x < r and y < b:
                     local.append((x - left, y - top, r - left, b - top))
-            focused = options.mask_mode == 'focused_cards'
+            focused = options.mask_mode in ('focused_cards', 'tracked_cards')
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
                                      if focused else (0, right-left))
             if focused:
                 local = [box for box in local if left_edge <= box[0] and box[2] <= right_edge]
-            mask = caption_plates(crop, local)
-            if focused:
+            dark_card = None
+            if tracked:
+                local, dark_card = tracks[key].update(crop, local)
+            elif focused:
                 dark_card = black_caption_cards(crop, local)
-                if dark_card is not None:
-                    mask |= dark_card
-            if options.mask_mode in ('joint_cards', 'focused_cards'):
+            mask = caption_plates(crop, local)
+            if dark_card is not None:
+                mask |= dark_card
+            if options.mask_mode in ('joint_cards', 'focused_cards', 'tracked_cards'):
                 colored = colored_caption_cards(crop)
                 if colored is not None:
                     mask |= cv2.dilate(colored, np.ones((11, 11), np.uint8))
+            if tracked:
+                brush = anchored_brush_card(crop,local)
+                if brush is not None:
+                    mask |= brush
             cards = light_caption_cards(crop)
             if cards is not None:
                 mask |= cards
-            _, outline = large_caption_guidance(crop)
-            if outline is not None:
-                mask |= outline
+            if local or not tracked:
+                _, outline = large_caption_guidance(crop)
+                if outline is not None:
+                    if tracked:
+                        support = np.zeros_like(mask)
+                        for x,y,r,b in local:
+                            pad = options.box_padding
+                            support[max(0,y-pad):min(bottom-top,b+pad),max(0,x-pad):min(right-left,r+pad)] = 255
+                        outline &= support
+                    mask |= outline
             for x, y, r, b in local:
                 area = mask[y:b, x:r]
                 strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding) if focused else None
@@ -325,6 +351,7 @@ def run(folder, request):
         if not ok or list(first.shape[1::-1]) != request['dimensions']:
             raise ValueError('视频无法解码或显示尺寸不一致')
         anchor = find(first)
+        tracks = {}
         count = 0
         repaired_count = 0
         with encode(folder / 'result.mp4', source, request['dimensions'], fps, options.export_crf) as writer:
@@ -341,7 +368,7 @@ def run(folder, request):
                     first = frames.pop()
                 else:
                     boxes.append(anchor)
-                repaired = (restore_joint(frames, boxes, rois, lama, options) if options.mask_mode != 'boxes'
+                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(frame.tobytes())

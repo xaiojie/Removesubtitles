@@ -16,6 +16,41 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_tracked_card_handles_one_word_and_protects_print_during_the_gap(self):
+        from lite_masks import DarkCardTrack
+        track = DarkCardTrack()
+        for left,right,text in [(44,360,'VOICE OVER'),(168,230,'OK')]:
+            frame = np.full((135,400,3),110,np.uint8)
+            frame[42:92,left:right] = 0
+            cv2.putText(frame,text,(left+8,75),cv2.FONT_HERSHEY_SIMPLEX,.75,(222,222,222),2)
+            words = [(left+4,48,right-4,84)]
+            kept,mask = track.update(frame,words)
+            self.assertEqual(kept,words)
+            self.assertIsNotNone(mask)
+            self.assertTrue(np.all(mask[42:92,left:right]))
+        kept,mask = track.update(np.full_like(frame,110),[(33,0,68,25)])
+        self.assertEqual(kept,[])
+        self.assertIsNone(mask)
+
+    def test_brush_card_extends_past_the_last_character(self):
+        from lite_masks import anchored_brush_card
+        frame = np.full((110,520,3),54,np.uint8)
+        frame[45:95,10:505] = (185,250,250)
+        cv2.putText(frame,'TESTING THE BRUSH',(43,67),cv2.FONT_HERSHEY_SIMPLEX,1.25,(0,0,0),8)
+        cv2.putText(frame,'TESTING THE BRUSH',(43,67),cv2.FONT_HERSHEY_SIMPLEX,1.25,(248,248,248),2)
+        mask = anchored_brush_card(frame,[(38,22,460,79)])
+        self.assertIsNotNone(mask)
+        self.assertTrue(np.all(mask[80:94,12:502]))
+        self.assertFalse(mask[5].any())
+        self.assertIsNone(anchored_brush_card(frame,[]))
+
+    def test_caption_free_foreground_cannot_trigger_outline_repair(self):
+        frame = np.full((90,300,3),88,np.uint8)
+        original = frame.copy()
+        with patch('lite.large_caption_guidance',return_value=(True,np.full(frame.shape[:2],255,np.uint8))):
+            restore_joint([frame],[()],[(0,0,300,90)],None,LiteOptions(mask_mode='tracked_cards'))
+        self.assertTrue(np.array_equal(frame,original))
+
     def test_lama_resolution_limit_preserves_output_size_and_pixels_outside_mask(self):
         frame = np.full((160, 480, 3), (70, 110, 150), np.uint8)
         original = frame.copy()
