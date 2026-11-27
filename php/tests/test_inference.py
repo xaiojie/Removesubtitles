@@ -16,6 +16,30 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_centered_caption_band_can_contain_a_whole_multiline_white_card(self):
+        from subtitle_compositing import light_caption_cards
+
+        scene = np.full((250, 630, 3), 75, np.uint8)
+        scene[30:222, 28:602] = 249
+        boxes = []
+        for y, text in zip((83, 111, 139, 167), (
+                'A clear subtitle in this scene', 'a second sentence follows here',
+                'the third line in this dialogue', 'another part of the sentence')):
+            cv2.putText(scene, text, (47, y), cv2.FONT_HERSHEY_DUPLEX, .72,
+                        (11, 11, 11), 2, cv2.LINE_AA)
+            (width, height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, .72, 2)
+            boxes.append((43, y-height-4, 47+width+4, y+8))
+        self.assertIsNone(light_caption_cards(scene))
+        mask = light_caption_cards(scene, ocr_boxes=boxes)
+        self.assertIsNotNone(mask)
+        self.assertTrue(mask[30:222, 28:602].all())
+        self.assertEqual(mask[12, 100], 0)
+        self.assertIsNone(light_caption_cards(scene, ocr_boxes=[boxes[0]]))
+        self.assertIsNone(light_caption_cards(scene, ocr_boxes=[boxes[0]] * 4))
+        empty_screen = scene.copy()
+        empty_screen[30:222, 28:602] = 249
+        self.assertIsNone(light_caption_cards(empty_screen, ocr_boxes=boxes))
+
     def test_short_clip_graph_threshold_uses_the_decoded_duration(self):
         from lite import LiteOptions
 

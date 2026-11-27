@@ -129,7 +129,31 @@ def large_caption_guidance(crop, include_outlined=False):
     return True, cv2.dilate(mask, kernel)
 
 
-def light_caption_cards(crop):
+def multiline_card_rows(ink, origin, boxes):
+    """Confirm three separate printed rows on a bounded light rectangle."""
+    x, y = origin
+    height, width = ink.shape
+    rows = []
+    for left, top, right, bottom in sorted(boxes, key=lambda box: box[1] + box[3]):
+        l, t = max(0, left-x), max(0, top-y)
+        r, b = min(width, right-x), min(height, bottom-y)
+        if r-l < .22*width or not .07*height <= b-t <= .41*height:
+            continue
+        if (r-l)*(b-t) < .82*(right-left)*(bottom-top):
+            continue
+        center = (t+b)/2
+        if rows and center-rows[-1][0] < .53*min(b-t, rows[-1][1]):
+            continue
+        if .055 <= ink[t:b, l:r].mean() <= .50:
+            rows.append((center, b-t, l, (l+r)/2))
+    if len(rows) < 3:
+        return False
+    # Captions may be left-aligned or centered. Ordinary scattered print is ambiguous.
+    return any(sum(abs(row[index]-other[index]) <= .08*width for other in rows) >= 3
+               for row in rows for index in (2, 3))
+
+
+def light_caption_cards(crop, *, ocr_boxes=(), require_multiline=False):
     """Locate bounded light cards containing an aligned row of dark lettering."""
     light = cv2.inRange(crop, (230, 230, 230), (255, 255, 255))
     contours, _ = cv2.findContours(light, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -146,8 +170,10 @@ def light_caption_cards(crop):
         glyphs = [int(gy + gh) for gx, gy, gw, gh, area in stats[1:count]
                   if gx > 0 and gx + gw < w and gy > 0 and gy + gh < h
                   and .16 * h < gh < .93 * h and .05 * gh < gw < 3.2 * gh and area >= gh]
-        if not any(sum(abs(base - other) <= .16 * h for other in glyphs) >= 3 for base in glyphs):
-            continue
+        if require_multiline or not any(sum(abs(base - other) <= .16 * h for other in glyphs) >= 3 for base in glyphs):
+            if (len(ocr_boxes) < 3 or x < 2 or y < 2 or x+w+2 > crop.shape[1] or y+h+2 > crop.shape[0]
+                    or cv2.contourArea(contour) < .94*w*h or not multiline_card_rows(ink, (x, y), ocr_boxes)):
+                continue
         if mask is None:
             mask = np.zeros(crop.shape[:2], np.uint8)
         cv2.drawContours(mask, [contour], -1, 255, cv2.FILLED)

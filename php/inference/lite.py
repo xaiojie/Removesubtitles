@@ -42,6 +42,7 @@ class LiteOptions:
     optimize_lama_graph: bool = True
     variable_line_panels: bool = False
     skip_graph_up_to_seconds: int = 0
+    multiline_light_cards: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -304,6 +305,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     local = profile.panel.fallback_boxes(key, local)
                     if not local:
                         continue
+            card_boxes = local if options.multiline_light_cards else ()
             dialogue = profile.dialogue_rows(local) if profile is not None else []
             if profile is not None:
                 local = dialogue or profile.select(local)
@@ -324,6 +326,10 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
             elif focused:
                 dark_card = black_caption_cards(crop, local)
             if profile is not None and not local and dark_card is None and chip is None and highlight is None:
+                if len(card_boxes) >= 3:
+                    card = light_caption_cards(crop, ocr_boxes=card_boxes, require_multiline=True)
+                    if card is not None:
+                        active.append((index, card))
                 continue
             mask = caption_plates(crop, local)
             if dark_card is not None:
@@ -339,7 +345,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 highlights = word_highlights(crop,local)
                 if highlights is not None:
                     mask |= highlights
-            cards = light_caption_cards(crop)
+            cards = light_caption_cards(crop, ocr_boxes=card_boxes)
             if cards is not None:
                 mask |= cards
             if local or not tracked:
