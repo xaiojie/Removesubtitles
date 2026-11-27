@@ -1,0 +1,586 @@
+{
+  "candidate_revision": "264cbe77f5cf742cb3f3af38ed5d051faf3384c6",
+  "switches": {
+    "group_wrapped_words": true,
+    "follow_scaled_rows": true
+  },
+  "base_config": "lite-v5.json",
+  "data_use": "Repeated, known-source regression checks. N03 was used for development.",
+  "cases": {
+    "P08": {
+      "source_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+      "selection": [
+        {
+          "type": "subtitle",
+          "roi": [
+            33,
+            1230,
+            1045,
+            1570
+          ]
+        }
+      ],
+      "runs": {
+        "clear-fast": {
+          "seconds": 648.673,
+          "peak_vram_mib": 15608,
+          "mean_gpu_percent": 61.2,
+          "gpu_samples": 722,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "ee44a3d38c54da84f6398d9d88fc2ecbc4ce2b538b01ef633c0e6376cf7f5d33",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "ocr-lama": {
+          "seconds": 245.662,
+          "peak_vram_mib": 3504,
+          "mean_gpu_percent": 8.7,
+          "gpu_samples": 275,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "22558ab755e349f9976127f9860b1b36427663ebc5c179e1fd70590239bce791",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "lama-v5": {
+          "seconds": 77.652,
+          "peak_vram_mib": 5320,
+          "mean_gpu_percent": 15.0,
+          "gpu_samples": 83,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "lama-card-rows-eval": {
+          "seconds": 79.589,
+          "peak_vram_mib": 5320,
+          "mean_gpu_percent": 15.9,
+          "gpu_samples": 82,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      },
+      "identical_to_v5": true,
+      "measures": {
+        "upper_line": {
+          "frames": 50,
+          "above_half": {
+            "clear-fast": 0,
+            "ocr-lama": 0,
+            "lama-v5": 50,
+            "lama-card-rows-eval": 50
+          },
+          "source_pixel_count_min_max": [
+            13040,
+            13063
+          ]
+        },
+        "lower_line": {
+          "frames": 50,
+          "above_half": {
+            "clear-fast": 0,
+            "ocr-lama": 0,
+            "lama-v5": 49,
+            "lama-card-rows-eval": 49
+          },
+          "source_pixel_count_min_max": [
+            14523,
+            15395
+          ]
+        },
+        "blue_backing": {
+          "frames": 50,
+          "above_half": {
+            "clear-fast": 50,
+            "ocr-lama": 33,
+            "lama-v5": 40,
+            "lama-card-rows-eval": 40
+          },
+          "source_pixel_count_min_max": [
+            16802,
+            23609
+          ]
+        }
+      }
+    },
+    "B04": {
+      "source_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+      "selection": [
+        {
+          "type": "subtitle",
+          "roi": [
+            65,
+            1090,
+            1020,
+            1530
+          ]
+        }
+      ],
+      "runs": {
+        "clear-fast": {
+          "seconds": 455.325,
+          "peak_vram_mib": 17420,
+          "mean_gpu_percent": 38.3,
+          "gpu_samples": 505,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "b2baf267cd9796dd0c0bc03e4c5b9b7e35324079c5f89a17cf1fb9077be45144",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "ocr-lama": {
+          "seconds": 272.951,
+          "peak_vram_mib": 3700,
+          "mean_gpu_percent": 7.0,
+          "gpu_samples": 304,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "218ce60ad3bbdcfa05ca19c0758610faafa921cd95f353d9846f14951dca9df5",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "lama-v5": {
+          "seconds": 85.941,
+          "peak_vram_mib": 8102,
+          "mean_gpu_percent": 15.5,
+          "gpu_samples": 89,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "lama-card-rows-eval": {
+          "seconds": 97.057,
+          "peak_vram_mib": 7488,
+          "mean_gpu_percent": 15.5,
+          "gpu_samples": 102,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "491ff461a17d92685b8917467856f2e38d61cb0c9bd155b2688aef9bc4ace747",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        }
+      },
+      "identical_to_v5": false,
+      "measures": {
+        "lower_at_start": {
+          "frames": 96,
+          "range": [
+            18,
+            113
+          ],
+          "above_half": {
+            "clear-fast": 0,
+            "ocr-lama": 0,
+            "lama-v5": 96,
+            "lama-card-rows-eval": 0
+          }
+        },
+        "middle_at_end": {
+          "frames": 53,
+          "range": [
+            697,
+            749
+          ],
+          "above_half": {
+            "clear-fast": 43,
+            "ocr-lama": 0,
+            "lama-v5": 52,
+            "lama-card-rows-eval": 0
+          }
+        },
+        "below_selection": {
+          "frames": 53,
+          "range": [
+            697,
+            749
+          ],
+          "above_half": {
+            "clear-fast": 53,
+            "ocr-lama": 53,
+            "lama-v5": 53,
+            "lama-card-rows-eval": 53
+          }
+        }
+      }
+    },
+    "N02": {
+      "source_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+      "selection": [
+        {
+          "type": "subtitle",
+          "roi": [
+            80,
+            794,
+            1370,
+            986
+          ]
+        }
+      ],
+      "runs": {
+        "clear-fast": {
+          "seconds": 417.062,
+          "peak_vram_mib": 12710,
+          "mean_gpu_percent": 72.9,
+          "gpu_samples": 457,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "febcccfed936e2d095f0819904e0990a4a2dbb57e7d1fa6d20a6e5f9389feba5",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "ocr-lama": {
+          "seconds": 91.567,
+          "peak_vram_mib": 3672,
+          "mean_gpu_percent": 12.2,
+          "gpu_samples": 99,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1cb503918cda85251ecd5c3b92844d1b9b7ff497f049fd6a5f7daa424d36d52d",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "lama-v5": {
+          "seconds": 44.528,
+          "peak_vram_mib": 4272,
+          "mean_gpu_percent": 14.2,
+          "gpu_samples": 45,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1e40a34f8fc4ad1afc444ff562007a1941b89dd11cc6c7973968325c08cf1eaf",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "lama-card-rows-eval": {
+          "seconds": 45.137,
+          "peak_vram_mib": 3714,
+          "mean_gpu_percent": 14.2,
+          "gpu_samples": 46,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "eed8386a0fb6e7dce33ea23d225a560796de9b9bc53116fafb0d49858767b8aa",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        }
+      },
+      "identical_to_v5": false,
+      "identical_to_grouped_word_run": "eed8386a0fb6e7dce33ea23d225a560796de9b9bc53116fafb0d49858767b8aa"
+    },
+    "P05": {
+      "source_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+      "selection": [
+        {
+          "type": "subtitle",
+          "roi": [
+            28,
+            910,
+            697,
+            1190
+          ]
+        }
+      ],
+      "runs": {
+        "clear-fast": {
+          "seconds": 309.882,
+          "peak_vram_mib": 9382,
+          "mean_gpu_percent": 59.4,
+          "gpu_samples": 345,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "6777cd2cd76a51d28afc7680a2f5175ea08460fb65f00d4c35fb064009b2b170",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "ocr-lama": {
+          "seconds": 171.658,
+          "peak_vram_mib": 2748,
+          "mean_gpu_percent": 7.5,
+          "gpu_samples": 190,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "c191455cb01f3aa8bc897dc2ca7a9ee032c3801c8616692eab63bc53cfdcaf49",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "lama-v5": {
+          "seconds": 47.851,
+          "peak_vram_mib": 5080,
+          "mean_gpu_percent": 22.7,
+          "gpu_samples": 49,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "lama-card-rows-eval": {
+          "seconds": 51.431,
+          "peak_vram_mib": 5080,
+          "mean_gpu_percent": 15.7,
+          "gpu_samples": 50,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        }
+      },
+      "identical_to_v5": true
+    }
+  },
+  "N03_static_development": {
+    "source_sha256": "ac9e1995ad0eeb64eb90b7aac4a0b47795b3eef87ba6ecf45f01978ef6db0910",
+    "selection": [
+      {
+        "type": "subtitle",
+        "roi": [
+          36,
+          455,
+          927,
+          542
+        ]
+      }
+    ],
+    "runs": {
+      "clear-fast": {
+        "seconds": 155.154,
+        "peak_vram_mib": 6014,
+        "mean_gpu_percent": 47.9,
+        "gpu_samples": 168,
+        "monitor_errors": 0,
+        "other_compute_samples": 0,
+        "sha256": "5ed854c035928c1a63f0ceeb7e279802e14652bf231208f8515f02eae77f8f3a",
+        "video": {
+          "width": 968,
+          "height": 544,
+          "frames": 750,
+          "fps": "25"
+        },
+        "text_rows": [
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          },
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          }
+        ],
+        "bolt_mean_luma_error": 19.968,
+        "bolt_matching_edges_median": 0.8642
+      },
+      "ocr-lama": {
+        "seconds": 66.066,
+        "peak_vram_mib": 1206,
+        "mean_gpu_percent": 10.8,
+        "gpu_samples": 70,
+        "monitor_errors": 0,
+        "other_compute_samples": 0,
+        "sha256": "8ddfae6537e438e8965c024ddfff0b3fadb35c0d47ac59d9bb166b62aca3e62e",
+        "video": {
+          "width": 968,
+          "height": 544,
+          "frames": 750,
+          "fps": "25"
+        },
+        "text_rows": [
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 12,
+            "median_retained_fraction": 0.1995
+          },
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 53,
+            "median_retained_fraction": 0.7961
+          }
+        ],
+        "bolt_mean_luma_error": 45.375,
+        "bolt_matching_edges_median": 0.9321
+      },
+      "lama-v5": {
+        "seconds": 34.97,
+        "peak_vram_mib": 2778,
+        "mean_gpu_percent": 18.6,
+        "gpu_samples": 31,
+        "monitor_errors": 0,
+        "other_compute_samples": 0,
+        "sha256": "4c960e1eee1e9e462a7f7b98144e38020906144cb27c817253d096629e87c2cd",
+        "video": {
+          "width": 968,
+          "height": 544,
+          "frames": 750,
+          "fps": "25"
+        },
+        "text_rows": [
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          },
+          {
+            "eligible": 59,
+            "at_least_25pct_source_strokes": 0,
+            "median_retained_fraction": 0.0
+          }
+        ],
+        "bolt_mean_luma_error": 3.544,
+        "bolt_matching_edges_median": 0.9644
+      }
+    },
+    "display_geometry": {
+      "coded_dimensions": [
+        960,
+        544
+      ],
+      "coded_regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            36,
+            455,
+            927,
+            542
+          ]
+        }
+      ],
+      "sample_aspect_ratio": "136:135",
+      "rotation_ccw_degrees": 0,
+      "display_dimensions": [
+        967,
+        544
+      ],
+      "display_regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            36,
+            455,
+            934,
+            542
+          ]
+        }
+      ],
+      "encoded_dimensions": [
+        968,
+        544
+      ]
+    },
+    "reference_source_frame": 620,
+    "interval": [
+      559,
+      618
+    ],
+    "row_rectangles": [
+      [
+        234,
+        469,
+        725,
+        495
+      ],
+      [
+        234,
+        497,
+        725,
+        523
+      ]
+    ],
+    "bolt_rectangle": [
+      519,
+      468,
+      607,
+      519
+    ],
+    "reference_edges": 921,
+    "measurement": "Two bright caption rows measured against the same static shot when uncovered. Each row has 59 frames with at least 65 labeled pixels. The bolt luminance error and edge recall cover the separate bolt rectangle. The reference frame is for assessment only."
+  },
+  "P08_original_CLEAR_screen": {
+    "frames": 900,
+    "errors": 0,
+    "source_text_match_frames": 144,
+    "visual_checks": [
+      234,
+      671,
+      672,
+      687,
+      713,
+      742,
+      753,
+      754,
+      899
+    ]
+  }
+}
