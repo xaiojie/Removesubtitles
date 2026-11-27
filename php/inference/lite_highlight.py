@@ -1,5 +1,6 @@
 """Learn moving translucent word highlights from matching top and bottom edges in the subtitle band."""
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 from itertools import permutations, product
 
 import cv2
@@ -87,21 +88,39 @@ class MovingHighlight:
     second: int
     transmission: float
     offset: np.ndarray
+    recent_strong: deque = field(default_factory=lambda: deque(maxlen=4), init=False, repr=False)
+    previous_scene: np.ndarray = field(default=None, init=False, repr=False)
 
-    def mask(self, frame, roi):
+    def mask(self, frame, roi, *, track=False):
         wx, wy, wr, wb = self.window
         x, y, right, bottom = roi
         image = cv2.resize(frame[wy:wb,wx:wr],self.size,interpolation=cv2.INTER_AREA)
         steps = color_steps(image[None],self.first,self.second)[0]
         sx, sy = (wr-wx)/self.size[0], (wb-wy)/self.size[1]
         height = self.bottom-self.top
+        if track:
+            scene = cv2.resize(image, (40, 14), interpolation=cv2.INTER_AREA)
+            if self.previous_scene is not None and cv2.absdiff(scene, self.previous_scene).mean() > 27:
+                self.recent_strong.clear()
+            self.previous_scene = scene
+        confirmed = []
         result = None
         for left,end in segments(steps,self.top,self.bottom):
             outside,inside = border_observations(image,self.top,self.bottom,left,end)
             half = len(outside)//2
-            if min(blend_quality(outside[edge],inside[edge],self.transmission,self.offset)
-                   for edge in (slice(None,half),slice(half,None))) < .38:
-                continue
+            scores = [blend_quality(outside[edge], inside[edge], self.transmission, self.offset)
+                      for edge in (slice(None, half), slice(half, None))]
+            if min(scores) >= .38:
+                confirmed.append((left, end))
+            else:
+                # Keep a briefly obscured border only if this frame still contains both
+                # colour steps at the same word, with strong support on at least one side.
+                if not track or min(scores) < .12 or max(scores) < .55:
+                    continue
+                if not any(max(abs(left-a), abs(end-b)) <= .14*height and
+                           min(end,b)-max(left,a) >= .8*max(end-left,b-a)
+                           for spans in self.recent_strong for a,b in spans):
+                    continue
             # Account for rounded corners and the soft border beyond the flat parts of the two edges.
             l = max(x, wx+int(np.floor((left-.15*height-1)*sx)))
             r = min(right, wx+int(np.ceil((end+.15*height+1)*sx)))
@@ -111,6 +130,8 @@ class MovingHighlight:
                 if result is None:
                     result = np.zeros((bottom-y,right-x),np.uint8)
                 result[t-y:b-y,l-x:r-x] = 255
+        if track:
+            self.recent_strong.append(confirmed)
         return result
 
 

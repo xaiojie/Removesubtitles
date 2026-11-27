@@ -35,6 +35,7 @@ class LiteOptions:
     layout_profile: bool = False
     frame_tolerance: int = 0
     repair_gradient_edges: bool = False
+    track_highlight_edges: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -267,7 +268,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
             if profile is not None:
                 local = dialogue or profile.select(local)
             chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
-            highlight = (profile.highlight.mask(frame, key)
+            highlight = (profile.highlight.mask(frame, key, track=options.track_highlight_edges)
                          if profile is not None and profile.highlight is not None and key not in originals else None)
             focused = options.mask_mode in ('focused_cards', 'tracked_cards')
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)

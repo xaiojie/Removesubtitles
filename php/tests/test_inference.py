@@ -16,6 +16,28 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_weak_highlight_requires_current_edges_and_a_recent_match_in_this_shot(self):
+        from lite_highlight import MovingHighlight
+
+        model = MovingHighlight((0, 0, 128, 60), (128, 60), 14, 44, 0, 2, .6,
+                                np.array([75, 48, 12], np.float32))
+        frame = np.full((60, 128, 3), 80, np.uint8)
+
+        def detect(scores, span=(25, 55), shot=frame):
+            with patch('lite_highlight.segments', return_value=[span] if span else []), \
+                 patch('lite_highlight.blend_quality', side_effect=scores):
+                return model.mask(shot, (0, 0, 128, 60), track=True)
+
+        self.assertIsNone(detect([.8, .20]))
+        self.assertIsNotNone(detect([.8, .7]))
+        self.assertIsNone(detect([.9, .22], span=(74, 105)))
+        self.assertIsNotNone(detect([.8, .20]))
+        self.assertIsNone(detect([], span=None))
+        self.assertIsNotNone(detect([.8, .20]))
+        self.assertIsNone(detect([.8, .20]))
+        self.assertIsNotNone(detect([.8, .7]))
+        self.assertIsNone(detect([.8, .20], shot=np.full_like(frame, 160)))
+
     def test_tint_fringe_is_removed_only_on_a_supported_smooth_edge(self):
         from lite_gradient import reduce_edge_fringe
 
