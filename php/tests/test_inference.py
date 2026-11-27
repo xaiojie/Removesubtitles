@@ -16,6 +16,27 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_flat_outlined_glyph_is_kept_whole_between_letters(self):
+        from lite import outlined_text_mask
+
+        def patch_with_bar(outlined):
+            patch = np.full((76, 210, 3), 150, np.uint8)
+            for x in (9, 34, 119, 146, 173, 192):
+                cv2.rectangle(patch, (x-2, 13), (x+7, 60), (10, 10, 10), -1)
+                cv2.rectangle(patch, (x, 17), (x+5, 56), (245, 245, 245), -1)
+            if outlined:
+                cv2.rectangle(patch, (73, 32), (115, 42), (8, 8, 8), -1)
+            cv2.rectangle(patch, (76, 36), (112, 38), (245, 245, 245), -1)
+            return patch
+
+        patch = patch_with_bar(True)
+        prior = outlined_text_mask(patch, 9)
+        self.assertIsNotNone(prior)
+        self.assertFalse(prior[37, 76])
+        self.assertTrue(outlined_text_mask(patch, 9, complete_flat_strokes=True)[32:43, 73:116].all())
+        unbordered = patch_with_bar(False)
+        self.assertFalse(outlined_text_mask(unbordered, 9, complete_flat_strokes=True)[37, 76])
+
     def test_weak_highlight_requires_current_edges_and_a_recent_match_in_this_shot(self):
         from lite_highlight import MovingHighlight
 

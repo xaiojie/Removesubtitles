@@ -36,6 +36,7 @@ class LiteOptions:
     frame_tolerance: int = 0
     repair_gradient_edges: bool = False
     track_highlight_edges: bool = False
+    complete_flat_strokes: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -179,7 +180,7 @@ def caption_band(boxes, width, height, padding):
     return start, end
 
 
-def outlined_text_mask(patch, padding):
+def outlined_text_mask(patch, padding, *, complete_flat_strokes=False):
     """Cover confirmed light text and its dark outline while preserving gaps between glyphs."""
     height, width = patch.shape[:2]
     glyph_height = height-2*padding
@@ -209,9 +210,31 @@ def outlined_text_mask(patch, padding):
     # Include detached dots, accents and punctuation near the supported text.
     extent = max(2, round(.40*glyph_height))
     close_to_line = cv2.dilate(seed, np.ones((2*extent+1, 2*extent+1), np.uint8))
+    supported = strokes & close_to_line
+    if complete_flat_strokes:
+        # A thin glyph such as 一 can be wider than the reach of either adjacent letter.
+        widths, heights, areas = stats[:, 2], stats[:, 3], stats[:, 4]
+        candidates = ((widths >= .30*glyph_height) & (widths <= 1.25*glyph_height) &
+                      (widths >= 3*heights) & (heights <= .18*glyph_height) &
+                      (areas >= .60*widths*heights))
+        rim = max(2, round(.09*glyph_height))
+        for component in np.flatnonzero(candidates):
+            x, y, w, h, _ = stats[component]
+            if y < rim or y+h+rim > height or not .25*height <= y+h/2 <= .75*height:
+                continue
+            region = np.s_[y:y+h, x:x+w]
+            core = labels[region] == component
+            overlap = close_to_line[region][core]
+            if not overlap.any() or overlap.all():
+                continue
+            # Require a dark printed rim on both sides along the same columns.
+            above = gray[y-rim:y, x:x+w].min(axis=0)
+            below = gray[y+h:y+h+rim, x:x+w].min(axis=0)
+            if np.count_nonzero((above < 96) & (below < 96)) >= .70*w:
+                supported[region][core] = 255
     radius = max(3, min(18, round(.17*glyph_height)+2))
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
-    return cv2.dilate(strokes & close_to_line, kernel)
+    return cv2.dilate(supported, kernel)
 
 
 def include_punctuation(mask,patch,padding):
@@ -315,7 +338,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
             for x, y, r, b in local:
                 area = mask[y:b, x:r]
                 preserve_gaps = focused and (profile is None or profile.chip is None)
-                strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding) if preserve_gaps else None
+                strokes = outlined_text_mask(crop[y:b, x:r], options.box_padding,
+                                             complete_flat_strokes=options.complete_flat_strokes) if preserve_gaps else None
                 if strokes is None:
                     area[:] = 255
                 else:
