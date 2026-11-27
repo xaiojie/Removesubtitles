@@ -29,6 +29,7 @@ class LiteOptions:
     adaptive_ocr: bool = False
     inpaint_max_side: int = 0
     compact_transfer: bool = False
+    ocr_backend: str = 'paddle'
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -39,6 +40,8 @@ class LiteOptions:
             raise ValueError('Lite 遮罩模式无效')
         if type(self.inpaint_max_side) is not int or self.inpaint_max_side < 0:
             raise ValueError('Lite 局部推理尺寸应为非负整数')
+        if self.ocr_backend not in ('paddle','onnx_cuda'):
+            raise ValueError('Lite 字幕定位后端无效')
 
 
 def detect(frame, rois, detector, options=LiteOptions()):
@@ -49,7 +52,8 @@ def detect(frame, rois, detector, options=LiteOptions()):
         if scale < 1:
             crop = cv2.resize(crop, (max(1, round((r - x) * scale)), max(1, round((b - y) * scale))))
         sx, sy = (r - x) / crop.shape[1], (b - y) / crop.shape[0]
-        with span('lite_ocr', device='cpu', width=crop.shape[1], height=crop.shape[0]):
+        with span('lite_ocr', device=getattr(detector,'inference_device','cpu'),
+                  width=crop.shape[1], height=crop.shape[0]):
             predictions = list(detector.predict(crop))
         for result in predictions:
             for polygon in result['dt_polys']:
@@ -329,6 +333,9 @@ def load_models(options=LiteOptions()):
             cpu_threads=3,
             enable_mkldnn=False,
         )
+    if options.ocr_backend == 'onnx_cuda':
+        from lite_ocr import cuda_detector
+        detector = cuda_detector(detector,ocr_path)
     device = os.getenv('LITE_DEVICE', 'cuda')
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
