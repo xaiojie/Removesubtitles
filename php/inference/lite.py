@@ -432,7 +432,18 @@ def load_models(options=LiteOptions()):
         detector = cuda_detector(detector,ocr_path)
     if device.startswith('cuda') and not torch.cuda.is_available():
         raise RuntimeError('Lite 未检测到 CUDA；CPU 测试可设置 LITE_DEVICE=cpu')
-    with span('lite_lama_load', device=device):
+    checkpoint_info = {}
+    if os.getenv('LITE_BENCH_LAMA'):
+        import hashlib
+        weights = Path(os.environ['LITE_BENCH_LAMA']).resolve(strict=True)
+        with weights.open('rb') as reader:
+            sha = hashlib.sha256()
+            for block in iter(lambda: reader.read(1 << 20), b''):
+                sha.update(block)
+        if sha.hexdigest() != os.environ.get('LITE_BENCH_LAMA_SHA256'):
+            raise ValueError('试验 LaMa 权重摘要不匹配')
+        checkpoint_info['checkpoint_sha256'] = sha.hexdigest()
+    with span('lite_lama_load', device=device, **checkpoint_info):
         lama = LamaInpaint(torch.device(device), str(weights), batch_size=options.batch_size,
                            compact_transfer=options.compact_transfer)
     return detector, lama

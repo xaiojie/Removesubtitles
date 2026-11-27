@@ -172,19 +172,22 @@ def run(args):
                         "SUBTITLE_TRACE_FILE": str(output / "stages.jsonl"), "PYTHONUNBUFFERED": "1"}
     env.pop("CLEAR_BENCH_LORA", None)
     env.pop("CLEAR_BENCH_LORA_SHA256", None)
+    env.pop("LITE_BENCH_LAMA", None)
+    env.pop("LITE_BENCH_LAMA_SHA256", None)
     knobs = json.loads(args.options)
     if args.candidate == "baseline" and (knobs or args.checkpoint):
         raise ValueError("基线不可覆盖参数或权重")
     checkpoint_hash = None
     if args.checkpoint:
-        if args.candidate == "ocr-lama":
-            raise ValueError("LaMa 不加载 CLEAR 权重")
         checkpoint = args.checkpoint.resolve(strict=True)
-        if checkpoint.suffix != ".safetensors":
-            raise ValueError("独立权重须为 safetensors")
-        checkpoint_hash = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
-        env["CLEAR_BENCH_LORA"] = str(checkpoint)
-        env["CLEAR_BENCH_LORA_SHA256"] = checkpoint_hash
+        is_lama = args.candidate == "ocr-lama"
+        extension = ".pt" if is_lama else ".safetensors"
+        if checkpoint.suffix != extension:
+            raise ValueError(f"该模型的试验权重须为 {extension}")
+        checkpoint_hash = fingerprint(checkpoint)
+        key = "LITE_BENCH_LAMA" if is_lama else "CLEAR_BENCH_LORA"
+        env[key] = str(checkpoint)
+        env[key + "_SHA256"] = checkpoint_hash
     if args.candidate in PROFILES or args.candidate == "clear-custom":
         preset = PROFILES.get(args.candidate, "balanced")
         common = {k: knobs[k] for k in ("start_seconds", "duration_seconds", "export_crf") if k in knobs}
@@ -258,7 +261,8 @@ def run(args):
     if checkpoint_hash:
         trace = output / "stages.jsonl"
         events = (json.loads(v) for v in trace.read_text().splitlines()) if trace.is_file() else ()
-        if not any(e["stage"] == "clear_adapter_load" and e.get("ok") and
+        load_stage = "lite_lama_load" if args.candidate == "ocr-lama" else "clear_adapter_load"
+        if not any(e["stage"] == load_stage and e.get("ok") and
                    e.get("checkpoint_sha256") == checkpoint_hash for e in events):
             raise RuntimeError("任务未记录实际加载的试验权重，不能作为权重对照")
     raw, final = video_info(src), video_info(result)
