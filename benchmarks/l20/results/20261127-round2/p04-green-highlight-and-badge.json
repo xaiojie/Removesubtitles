@@ -1,0 +1,110 @@
+{
+  "clip": "P04",
+  "role": "development",
+  "source_sha256": "0b4980d61dedb59730549616a8148d870ada2dd344d744f55b7de3bd68e0aafe",
+  "selection": [
+    {
+      "type": "subtitle",
+      "roi": [
+        8,
+        386,
+        353,
+        476
+      ]
+    }
+  ],
+  "decoded_frames": 900,
+  "runs": {
+    "clear-fast": {
+      "seconds": 111.169,
+      "peak_vram_mib": 5996,
+      "mean_gpu_percent": 32.4,
+      "gpu_samples": 115,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "f4875dbaae5298b40239bd295b009a682866336444399a3d9de48935881b9059",
+      "video": {
+        "width": 360,
+        "height": 640,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "ocr-lama": {
+      "seconds": 60.066,
+      "peak_vram_mib": 900,
+      "mean_gpu_percent": 7.5,
+      "gpu_samples": 60,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "b5b6de63bf8a65e68a352c201ccaabbb1175557bb76ee1fce3039ae3dd6549ab",
+      "video": {
+        "width": 360,
+        "height": 640,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "lama-v5": {
+      "seconds": 24.621,
+      "peak_vram_mib": 1624,
+      "mean_gpu_percent": 20.3,
+      "gpu_samples": 23,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "8111044fa05675a2a2aa2f06d70040ff4be85785aa233ebcc81f98f556e79239",
+      "video": {
+        "width": 360,
+        "height": 640,
+        "frames": 900,
+        "fps": "30"
+      }
+    }
+  },
+  "source_green_test": "source G>125, G-R and G-B>55. At least 350 px. Candidate G>105, G-R and G-B>36 in at least 25% of source pixels.",
+  "whole_frame_negative_control": "At least 80% of the whole source frame (sampled every 4th pixel in each axis) meets the strict source green thresholds.",
+  "full_green_scene_inclusive": [
+    406,
+    506
+  ],
+  "whole_green_scene_frames": 101,
+  "eligible_including_scene": 828,
+  "eligible_excluding_scene": 727,
+  "interview_green_above_threshold_frames": {
+    "clear-fast": 0,
+    "ocr-lama": 0,
+    "lama-v5": 0
+  },
+  "ocr": {
+    "clear-fast": {
+      "matching_frames": 0,
+      "ocr_error_frames": 0,
+      "source_readable_frames": 758,
+      "output_readable_frames": 0
+    },
+    "ocr-lama": {
+      "matching_frames": 0,
+      "ocr_error_frames": 0,
+      "source_readable_frames": 758,
+      "output_readable_frames": 0
+    },
+    "lama-v5": {
+      "matching_frames": 0,
+      "ocr_error_frames": 0,
+      "source_readable_frames": 758,
+      "output_readable_frames": 0
+    }
+  },
+  "native_checks": [
+    0,
+    128,
+    188,
+    385,
+    406,
+    450,
+    506,
+    507,
+    665,
+    899
+  ]
+}
