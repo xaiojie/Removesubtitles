@@ -39,6 +39,7 @@ class LiteOptions:
     track_highlight_edges: bool = False
     complete_flat_strokes: bool = False
     optimize_lama_graph: bool = True
+    variable_line_panels: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -463,7 +464,7 @@ def run(folder, request):
     if options.layout_profile:
         from lite_profile import profile_source
         with span('lite_layout_probe',device='cpu'):
-            profiles = profile_source(source,rois,find)
+            profiles = profile_source(source, rois, find, variable_line_panels=options.variable_line_panels)
     jit_settings = nullcontext()
     if not options.optimize_lama_graph:
         import torch

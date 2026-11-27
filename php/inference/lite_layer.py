@@ -149,7 +149,10 @@ class Panel:
         error = abs(inside-(self.transmission*outside+self.offset)).mean(axis=1)
         if np.median(error)+3 >= .68*np.median(control) or np.median(error)>15:
             return None
-        l,t,r,b = self.native_box or self.estimated_bounds()
+        return self.restore_bounds(frame, roi, boxes, self.native_box or self.estimated_bounds())
+
+    def restore_bounds(self, frame, roi, boxes, bounds):
+        l,t,r,b = bounds
         x,y,rr,bb = roi
         left,top = max(x,l),max(y,t)
         right,bottom = min(rr,r),min(bb,b)

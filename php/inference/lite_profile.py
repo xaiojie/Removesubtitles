@@ -106,7 +106,7 @@ class BandProfile:
         return confirmed
 
 
-def profile_source(path,rois,find):
+def profile_source(path,rois,find,*,variable_line_panels=False):
     sampler=open_video_capture(path)
     grids={tuple(roi):[] for roi in rois}
     samples={key:[] for key in grids}
@@ -142,6 +142,9 @@ def profile_source(path,rois,find):
         result[key]=BandProfile(r-x,b-y,find_rows(samples[key],r-x,b-y),panel,repeated_chips(chips[key]))
         if panel is None and len(thumbs) >= 5 and sum(bool(values) for values in samples[key]) >= 4:
             result[key].highlight = learn_highlight(thumbs, windows[key])
+            if variable_line_panels and result[key].highlight is None:
+                from lite_line_panel import learn_line_panel
+                result[key].panel = learn_line_panel(thumbs, windows[key])
     panels = {key: profile.panel for key, profile in result.items() if profile.panel is not None}
     if panels:
         # One additional sparse decode for all candidate panels. Keep just four coordinates per sample.
