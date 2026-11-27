@@ -1,0 +1,247 @@
+{
+  "revision": "6f19bdb7ba787b419d0a004afa26edfb0b9dbc3c",
+  "catalog_sha256": "d431d5cb6fdec555266d25a8c2403855a8dfe257212e593ba8a587a29d76379b",
+  "batch": {
+    "queue-1": {
+      "seconds": 89.572,
+      "model_call_overlap_seconds": 0,
+      "technical_failures": 0,
+      "finished_input_minutes_per_hour": 40.19,
+      "highest_card_memory_mib": 5804,
+      "jobs": {
+        "U02": {
+          "source_seconds": 30.0,
+          "sha256": "5f503bead4beb1ac7d637706a3a60c3429b38b5806dab8d19de4e513f87a5238",
+          "processing_seconds": 43.572,
+          "peaks": {
+            "job_gpu_mib": 2992,
+            "job_rss_mib": 2652.46875,
+            "job_cpu_pct": 391.9365172112434,
+            "job_disk_growth_mib": 10.83203125,
+            "gpu_util_pct": 70,
+            "card_used_mib": 3610,
+            "card_util_mean_pct": 17.22
+          }
+        },
+        "B03": {
+          "source_seconds": 30.0,
+          "sha256": "ed8b5670262194bea454f6717057eae80e689fb7f4835250f7593baaaa3e23cd",
+          "processing_seconds": 38.918,
+          "peaks": {
+            "job_gpu_mib": 5186,
+            "job_rss_mib": 2727.953125,
+            "job_cpu_pct": 398.24001567505996,
+            "job_disk_growth_mib": 6.80078125,
+            "gpu_util_pct": 95,
+            "card_used_mib": 5804,
+            "card_util_mean_pct": 11.58
+          }
+        }
+      }
+    },
+    "queue-2": {
+      "seconds": 48.264,
+      "model_call_overlap_seconds": 3.711,
+      "technical_failures": 0,
+      "finished_input_minutes_per_hour": 74.59,
+      "highest_card_memory_mib": 8802,
+      "jobs": {
+        "U02": {
+          "source_seconds": 30.0,
+          "sha256": "5f503bead4beb1ac7d637706a3a60c3429b38b5806dab8d19de4e513f87a5238",
+          "processing_seconds": 44.727,
+          "peaks": {
+            "job_gpu_mib": 2992,
+            "job_rss_mib": 2652.4140625,
+            "job_cpu_pct": 390.78081324032644,
+            "job_disk_growth_mib": 10.33203125,
+            "gpu_util_pct": 100,
+            "card_used_mib": 8802,
+            "card_util_mean_pct": 30.36
+          }
+        },
+        "B03": {
+          "source_seconds": 30.0,
+          "sha256": "ed8b5670262194bea454f6717057eae80e689fb7f4835250f7593baaaa3e23cd",
+          "processing_seconds": 39.511,
+          "peaks": {
+            "job_gpu_mib": 5186,
+            "job_rss_mib": 2727.0234375,
+            "job_cpu_pct": 396.5887139536049,
+            "job_disk_growth_mib": 5.765625,
+            "gpu_util_pct": 99,
+            "card_used_mib": 8802,
+            "card_util_mean_pct": 30.03
+          }
+        }
+      }
+    }
+  },
+  "movies": {
+    "U02": {
+      "source_sha256": "1d1974c98e6ee0cf04404dc8613e0ea6ab48fa3b2dcf2c268406d508a8199fbe",
+      "queue_sha256": "5f503bead4beb1ac7d637706a3a60c3429b38b5806dab8d19de4e513f87a5238",
+      "single_sha256": "73c95692df4e03933a524bfb7d6f9d426618f26014ee5593cb02260711e72dad",
+      "frames": 900,
+      "roi": [
+        140,
+        600,
+        1150,
+        685
+      ],
+      "output_ocr_errors": 0,
+      "matched_strings": {
+        "卡尔": 103,
+        "邦州込小年": 55,
+        "邦州込小": 26,
+        "邦州込小香": 11
+      },
+      "rendered_vs_single_roi": {
+        "mean_mae": 0.6980590219806294,
+        "max_frame_mae": 1.3670976509415647,
+        "maximum_fraction_pixels_exceeding_24": 9.3185789167152e-05,
+        "worst_mae_frame": 32
+      },
+      "snapshot_frames": [
+        0,
+        150,
+        300,
+        450,
+        580,
+        662,
+        705,
+        708,
+        792,
+        815,
+        817,
+        854,
+        875,
+        899
+      ],
+      "matches_in_central_dialogue_screen": 0,
+      "matches_in_any_position_frames": 123,
+      "matching_output_bytes_across_scheduling_limits": true,
+      "single_worker_trial_vs_queue_different_decoded_frames": 900,
+      "eight_game_ui_frames_vs_original_mae": {
+        "705": 0.8139329805996472,
+        "706": 0.8237591332829428,
+        "707": 0.81859410430839,
+        "708": 0.8237591332829428,
+        "815": 1.0550925925925927,
+        "816": 1.0554012345679011,
+        "853": 1.2148148148148148,
+        "854": 1.185956790123457
+      },
+      "visual": "26.40、27.17、28.47 和 29.97 秒保住右侧通知。27.23 秒开始的新对白和末帧对白均擦掉。单路与两路成片摘要相同。"
+    },
+    "B03": {
+      "source_sha256": "a27a2a553e9b1c1f859507855c216d26ad51fb1f3dd6121e574e06dd7e709e69",
+      "queue_sha256": "ed8b5670262194bea454f6717057eae80e689fb7f4835250f7593baaaa3e23cd",
+      "single_sha256": "301c33e1e01aad48ec24fde78d860cb12b3739380d3280e8e65ae5c9e6ca69de",
+      "frames": 900,
+      "roi": [
+        12,
+        1045,
+        708,
+        1208
+      ],
+      "output_ocr_errors": 0,
+      "matched_strings": {},
+      "rendered_vs_single_roi": {
+        "mean_mae": 0.4519320452248313,
+        "max_frame_mae": 1.4494364525303811,
+        "maximum_fraction_pixels_exceeding_24": 4.4073055496791485e-05,
+        "worst_mae_frame": 70
+      },
+      "snapshot_frames": [
+        0,
+        60,
+        150,
+        198,
+        199,
+        200,
+        274,
+        275,
+        276,
+        320,
+        322,
+        400,
+        600,
+        750,
+        875,
+        899
+      ],
+      "matches_in_central_dialogue_screen": 0,
+      "matches_in_any_position_frames": 0,
+      "matching_output_bytes_across_scheduling_limits": true,
+      "single_worker_trial_vs_queue_different_decoded_frames": 900,
+      "visual": "6.60～6.67 秒切镜前后与 10.73 秒，双行对白均已擦掉。9.13～9.17 秒衣服中央的波点发浅并改变轮廓。"
+    }
+  },
+  "scope": "Measured finished-input throughput for one 30-second U02 and one 30-second B03. These output-specific checks scan both entire 900-frame selections with OCR and compare identified risks visually. Commercially qualified throughput requires a separate full-motion quality determination. Single-worker trials and actual service movies have separate hashes.",
+  "web_and_php_lite": {
+    "clip": "U02",
+    "result_sha256": "5f503bead4beb1ac7d637706a3a60c3429b38b5806dab8d19de4e513f87a5238",
+    "checks": {
+      "catalog": true,
+      "submitted_via": true,
+      "requested_mode": true,
+      "requested_regions": true,
+      "both_done": true,
+      "plans": true,
+      "execution": true,
+      "identical_download": true,
+      "web_used_plan": true,
+      "api_used_plan": true
+    },
+    "endpoints": {
+      "web": {
+        "seconds": 45.13,
+        "queue_seconds": 3.68,
+        "upload_seconds": 0.3431,
+        "model_calls": {
+          "lite_ocr_inference": {
+            "calls": 277,
+            "started_at": 1795789569.996622,
+            "finished_at": 1795789605.430157
+          },
+          "lite_lama": {
+            "calls": 113,
+            "started_at": 1795789574.2451842,
+            "finished_at": 1795789605.5592291
+          }
+        }
+      },
+      "api": {
+        "seconds": 45.65,
+        "queue_seconds": 5.98,
+        "upload_seconds": 1.2643,
+        "model_calls": {
+          "lite_ocr_inference": {
+            "calls": 277,
+            "started_at": 1795789572.2907474,
+            "finished_at": 1795789609.177622
+          },
+          "lite_lama": {
+            "calls": 113,
+            "started_at": 1795789576.6819751,
+            "finished_at": 1795789609.3047554
+          }
+        }
+      }
+    }
+  },
+  "P08_repeat_check": {
+    "source_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+    "output_sha256": "b1f0cf7e5e591f62cee426a8a6fc23e8521ede7cb78d2d8ef2ec4665b9cfa7f9",
+    "seconds": 84.034,
+    "same_output_as_word_shade_trial": true,
+    "quality": "failed",
+    "examples_seconds": [
+      5.0,
+      22.4,
+      23.77
+    ],
+    "reason": "5.00 秒两行大字仍可读，22.40 和 23.77 秒仍有第三行。"
+  }
+}
