@@ -133,6 +133,26 @@ class InferenceTests(unittest.TestCase):
         self.assertCountEqual(profile.dialogue_rows([print_on_shirt,*fragments]), fragments)
         self.assertEqual(profile.dialogue_rows([title,print_on_shirt]), [])
 
+    def test_translucent_word_highlight_can_move_outside_current_ocr_bounds(self):
+        from lite_highlight import learn_highlight
+        rng = np.random.default_rng(33)
+        frames, scenes = [], []
+        positions = [18,64,121,158,85,20,126,47,155,90,21]
+        for left in positions:
+            clean = cv2.resize(rng.integers(32,230,(4,6,3),dtype=np.uint8),(244,84))
+            source = clean.copy()
+            cv2.putText(source,'WORD',(left+2,50),cv2.FONT_HERSHEY_SIMPLEX,.45,(248,248,248),1)
+            chip = source[25:59,left:left+68].astype(np.float32)
+            source[25:59,left:left+68] = np.clip(.53*chip+[93,46,14],0,255).astype(np.uint8)
+            frames.append(source)
+            scenes.append(clean)
+        model = learn_highlight(frames, (0,0,244,84))
+        self.assertIsNotNone(model)
+        mask = model.mask(frames[2], (0,0,244,84))
+        self.assertTrue(np.all(mask[25:59,122:187]))
+        self.assertFalse(mask[:15].any())
+        self.assertIsNone(model.mask(scenes[2], (0,0,244,84)))
+
     def test_transient_pruning_preserves_confirmed_neighbors_and_clip_ends(self):
         from lite_tracking import reject_transient_skin
         frames=[np.full((45,100,3),(130,163,211),np.uint8) for _ in range(3)]

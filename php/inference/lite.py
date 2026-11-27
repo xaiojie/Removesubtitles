@@ -263,6 +263,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
             if profile is not None:
                 local = dialogue or profile.select(local)
             chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
+            highlight = (profile.highlight.mask(frame, key)
+                         if profile is not None and profile.highlight is not None and key not in originals else None)
             focused = options.mask_mode in ('focused_cards', 'tracked_cards')
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
                                      if focused else (0, right-left))
@@ -276,7 +278,7 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                     local = dialogue
             elif focused:
                 dark_card = black_caption_cards(crop, local)
-            if profile is not None and not local and dark_card is None and chip is None:
+            if profile is not None and not local and dark_card is None and chip is None and highlight is None:
                 continue
             mask = caption_plates(crop, local)
             if dark_card is not None:
@@ -330,6 +332,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
             if focused:
                 mask[:, :left_edge] = 0
                 mask[:, right_edge:] = 0
+            if highlight is not None:
+                mask |= highlight
             if mask.any():
                 active.append((index, mask))
 

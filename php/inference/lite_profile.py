@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from video_capture import open_video_capture
 from lite_layer import learn_panel
+from lite_highlight import learn_highlight
 from lite_masks import chip_examples, repeated_chips
 
 
@@ -40,6 +41,7 @@ class BandProfile:
     rows: list
     panel: object
     chip: object = None
+    highlight: object = None
 
     def dialogue_rows(self, boxes):
         """Recognize multiple centered dialogue rows moving together, including one-word lines."""
@@ -138,6 +140,8 @@ def profile_source(path,rois,find):
         x,y,r,b=key
         panel=learn_panel(thumbs,windows[key]) if len(thumbs)>=5 else None
         result[key]=BandProfile(r-x,b-y,find_rows(samples[key],r-x,b-y),panel,repeated_chips(chips[key]))
+        if panel is None and len(thumbs) >= 5 and sum(bool(values) for values in samples[key]) >= 4:
+            result[key].highlight = learn_highlight(thumbs, windows[key])
     panels = {key: profile.panel for key, profile in result.items() if profile.panel is not None}
     if panels:
         # One additional sparse decode for all candidate panels. Keep just four coordinates per sample.

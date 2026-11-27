@@ -49,7 +49,7 @@ def record_execution(folder, request, mode, task):
     entries = {
         'ocr_lama': ['php/inference/lite.py','php/inference/lite_masks.py','php/inference/lite_tracking.py',
                      'php/inference/lite_profile.py','php/inference/lite_layer.py','php/inference/lite_gradient.py',
-                     'php/inference/lite_ocr.py','php/inference/lite_reuse.py',
+                     'php/inference/lite_highlight.py','php/inference/lite_ocr.py','php/inference/lite_reuse.py',
                      'video-subtitle-remover/backend/inpaint/lama_inpaint.py'],
         'clear': ['CLEAR-web/worker.py'],
         'propainter': ['CLEAR-web/propainter_worker.py'],
