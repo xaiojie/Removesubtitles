@@ -151,7 +151,7 @@ class Panel:
             return None
         return self.restore_bounds(frame, roi, boxes, self.native_box or self.estimated_bounds())
 
-    def restore_bounds(self, frame, roi, boxes, bounds):
+    def restore_bounds(self, frame, roi, boxes, bounds, *, cover_words=False):
         l,t,r,b = bounds
         x,y,rr,bb = roi
         left,top = max(x,l),max(y,t)
@@ -171,7 +171,12 @@ class Panel:
                 continue
             region = foreground[by:bt,bx:br]
             if region.size and cv2.countNonZero(region) >= max(6,.008*region.size):
-                ink[by:bt,bx:br] |= region
+                if cover_words:
+                    # Compression and antialiasing can place the edges of printed
+                    # letters inside the transmission range of the background.
+                    ink[max(by, top-y):min(bt, bottom-y), max(bx, left-x):min(br, right-x)] = 255
+                else:
+                    ink[by:bt,bx:br] |= region
                 accepted += 1
         if not accepted:
             return None

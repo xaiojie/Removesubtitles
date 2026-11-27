@@ -52,6 +52,21 @@ def fit_edges(images, top, bottom):
 
 
 class LinePanel(Panel):
+    def fallback_boxes(self, roi, boxes):
+        # Words entering the selection from outside the measured backing are
+        # often scene signs. Keep full words available for a change of style.
+        _, y, _, end = roi
+        _, top, _, bottom = self.native_box
+        height = bottom - top
+        keep = []
+        for box in boxes:
+            _, a, _, b = box
+            clipped = a <= 1 or b >= end-y-1
+            overlap = max(0, min(y+b, bottom) - max(y+a, top))
+            if not clipped or overlap >= .68*(b-a) and b-a <= 1.12*height:
+                keep.append(box)
+        return keep
+
     def measure_edges(self, frame):
         left, top, right, bottom = self.estimated_bounds()
         step = max(1, (right - left) // 130)
@@ -125,7 +140,7 @@ class LinePanel(Panel):
         gains = edge_gain(outside, inside, self.transmission, self.offset)
         if (gains > 3).mean(axis=1).min() < .27:
             return None
-        return self.restore_bounds(frame, roi, boxes, (l, top, r, bottom))
+        return self.restore_bounds(frame, roi, boxes, (l, top, r, bottom), cover_words=True)
 
 
 def learn_line_panel(thumbnails, window):
