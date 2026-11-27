@@ -1,0 +1,344 @@
+{
+  "candidate_revision": "658dc025a66c506700b6e3ddd1b44b3c497de51b",
+  "clip": "P08",
+  "input_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+  "roi": [
+    33,
+    1230,
+    1045,
+    1570
+  ],
+  "frames": 900,
+  "frame_window": [
+    126,
+    175
+  ],
+  "measure": "Count frames in the pre-recorded 50-frame interval where more than half of the original line or blue backing pixels remain. Individual image readings and a complete encode provide separate evidence.",
+  "retained_frames": {
+    "upper_line": {
+      "clear-fast": 0,
+      "ocr-lama": 0,
+      "lama-v5": 50,
+      "lama-word-shades-eval": 17,
+      "lama-sized-word-chip-eval": 27
+    },
+    "lower_line": {
+      "clear-fast": 0,
+      "ocr-lama": 0,
+      "lama-v5": 49,
+      "lama-word-shades-eval": 17,
+      "lama-sized-word-chip-eval": 27
+    },
+    "blue_backing": {
+      "clear-fast": 50,
+      "ocr-lama": 33,
+      "lama-v5": 40,
+      "lama-word-shades-eval": 19,
+      "lama-sized-word-chip-eval": 29
+    }
+  },
+  "runs": {
+    "clear-fast": {
+      "seconds": 648.673,
+      "peak_vram_mib": 15608,
+      "mean_gpu_percent": 61.2,
+      "gpu_samples": 722,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "ee44a3d38c54da84f6398d9d88fc2ecbc4ce2b538b01ef633c0e6376cf7f5d33",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "ocr-lama": {
+      "seconds": 245.662,
+      "peak_vram_mib": 3504,
+      "mean_gpu_percent": 8.7,
+      "gpu_samples": 275,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "22558ab755e349f9976127f9860b1b36427663ebc5c179e1fd70590239bce791",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "lama-v5": {
+      "seconds": 77.652,
+      "peak_vram_mib": 5320,
+      "mean_gpu_percent": 15.0,
+      "gpu_samples": 83,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "lama-word-shades-eval": {
+      "seconds": 84.137,
+      "peak_vram_mib": 4914,
+      "mean_gpu_percent": 14.3,
+      "gpu_samples": 87,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "b1f0cf7e5e591f62cee426a8a6fc23e8521ede7cb78d2d8ef2ec4665b9cfa7f9",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "lama-sized-word-chip-eval": {
+      "seconds": 79.895,
+      "peak_vram_mib": 5572,
+      "mean_gpu_percent": 15.7,
+      "gpu_samples": 84,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "5d85a4615b0d2f712c89b31deac80517279fd84ab073ad387c0a8ecb91e7708b",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    }
+  },
+  "native_visual": {
+    "126_132": "Both enlarged lines and their word backing are removed. The left sleeve softens.",
+    "150": "Both lines and the blue word tile are clearly present.",
+    "175": "The two lines are erased but a blue patch remains near the sleeve and arm.",
+    "672_713": "The third line CYBERBULLYING remains legible.",
+    "899": "Both caption rows are removed. The original Add a comment prompt and icons remain visible."
+  },
+  "development_and_repeat_clips": {
+    "P04": {
+      "input_sha256": "0b4980d61dedb59730549616a8148d870ada2dd344d744f55b7de3bd68e0aafe",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            8,
+            386,
+            353,
+            476
+          ]
+        }
+      ],
+      "split": "tune",
+      "seconds": 24.312,
+      "peak_vram_mib": 1624,
+      "mean_gpu_percent": 20.5,
+      "gpu_samples": 22,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "8111044fa05675a2a2aa2f06d70040ff4be85785aa233ebcc81f98f556e79239",
+      "video": {
+        "width": 360,
+        "height": 640,
+        "frames": 900,
+        "fps": "30"
+      },
+      "previous": "lama-sized-word-chip",
+      "identical_to_previous": true,
+      "identical_to_v5": true
+    },
+    "P03": {
+      "input_sha256": "ee164423db016c25fe46aaeb3fd1165cbaf87216bd136a35243d6889aa29e310",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            28,
+            1145,
+            1035,
+            1455
+          ]
+        }
+      ],
+      "split": "tune",
+      "seconds": 80.742,
+      "peak_vram_mib": 3680,
+      "mean_gpu_percent": 10.5,
+      "gpu_samples": 85,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "04d702774a1e46153436322fd441300f5b51d88e65a53ac5f230a6516ed49aec",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      },
+      "previous": "lama-sized-word-chip",
+      "identical_to_previous": true,
+      "identical_to_v5": true
+    },
+    "P09": {
+      "input_sha256": "3044d3b8b109cdeb09812129eb3d87edd642ac79760fbd0ab02402b8c72ad997",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            75,
+            1460,
+            1550,
+            1950
+          ]
+        }
+      ],
+      "split": "tune",
+      "seconds": 154.937,
+      "peak_vram_mib": 7050,
+      "mean_gpu_percent": 8.8,
+      "gpu_samples": 168,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "9d828d15ec9bf754aa648a5c7d4651376253b6e59d3c94a5792fb2825a7c58f2",
+      "video": {
+        "width": 1620,
+        "height": 2880,
+        "frames": 900,
+        "fps": "30"
+      },
+      "previous": "lama-sized-word-chip",
+      "identical_to_previous": true,
+      "identical_to_v5": true
+    },
+    "P08": {
+      "input_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            33,
+            1230,
+            1045,
+            1570
+          ]
+        }
+      ],
+      "split": "holdout",
+      "seconds": 84.137,
+      "peak_vram_mib": 4914,
+      "mean_gpu_percent": 14.3,
+      "gpu_samples": 87,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "b1f0cf7e5e591f62cee426a8a6fc23e8521ede7cb78d2d8ef2ec4665b9cfa7f9",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      },
+      "previous": "lama-sized-word-chip-eval",
+      "identical_to_previous": false,
+      "identical_to_v5": false
+    },
+    "B04": {
+      "input_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            65,
+            1090,
+            1020,
+            1530
+          ]
+        }
+      ],
+      "split": "holdout",
+      "seconds": 93.218,
+      "peak_vram_mib": 7488,
+      "mean_gpu_percent": 10.4,
+      "gpu_samples": 101,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "491ff461a17d92685b8917467856f2e38d61cb0c9bd155b2688aef9bc4ace747",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      },
+      "previous": "lama-sized-word-chip-eval",
+      "identical_to_previous": true,
+      "identical_to_v5": false
+    },
+    "N02": {
+      "input_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            80,
+            794,
+            1370,
+            986
+          ]
+        }
+      ],
+      "split": "holdout",
+      "seconds": 45.24,
+      "peak_vram_mib": 3714,
+      "mean_gpu_percent": 17.1,
+      "gpu_samples": 46,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "eed8386a0fb6e7dce33ea23d225a560796de9b9bc53116fafb0d49858767b8aa",
+      "video": {
+        "width": 1440,
+        "height": 1080,
+        "frames": 750,
+        "fps": "25"
+      },
+      "previous": "lama-sized-word-chip-eval",
+      "identical_to_previous": true,
+      "identical_to_v5": false
+    },
+    "P05": {
+      "input_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+      "regions": [
+        {
+          "type": "subtitle",
+          "roi": [
+            28,
+            910,
+            697,
+            1190
+          ]
+        }
+      ],
+      "split": "holdout",
+      "seconds": 50.112,
+      "peak_vram_mib": 5080,
+      "mean_gpu_percent": 22.6,
+      "gpu_samples": 50,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7",
+      "video": {
+        "width": 720,
+        "height": 1280,
+        "frames": 720,
+        "fps": "24"
+      },
+      "previous": "lama-sized-word-chip-eval",
+      "identical_to_previous": true,
+      "identical_to_v5": true
+    }
+  },
+  "status": "P08 fails first-pass removal. Repeat regression on known sources, not an unseen-source pass rate."
+}
