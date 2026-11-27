@@ -75,6 +75,16 @@ def word_lines(boxes):
     return lines
 
 
+def next_subtitle_row(above, below, width):
+    x, y, r, b = above
+    left, top, right, bottom = below
+    depth, other_depth = b-y, bottom-top
+    spacing = (top+bottom-y-b) / 2
+    return (.73*depth <= other_depth <= 1.37*depth
+            and .66*min(depth, other_depth) < spacing < 1.45*max(depth, other_depth)
+            and abs(left+right-x-r) <= .22*width)
+
+
 @dataclass
 class BandProfile:
     width: int
@@ -172,6 +182,45 @@ class BandProfile:
                     best = [box for _,_,line in matches for box in line]
                     best_score = score
         return best
+
+    def scaled_dialogue(self, frame, boxes, selected):
+        """Follow matching adjacent print when an established multiline subtitle changes size or wraps again."""
+        if len(self.rows) < 2 or len(boxes) < 2 or len(selected) == len(boxes) or self.panel or self.chip or self.highlight:
+            return []
+        lines = [(bounds, words) for bounds, words in word_lines(boxes)
+                 if bounds[2]-bounds[0] >= 1.65*(bounds[3]-bounds[1])
+                 and abs(bounds[0]+bounds[2]-self.width) < .32*self.width]
+        lines.sort(key=lambda line: line[0][1]+line[0][3])
+        # Check actual glyphs only for geometric neighbours that could extend the mask.
+        styles = {}
+        groups = []
+        for index, (bounds, _) in enumerate(lines):
+            if index and next_subtitle_row(lines[index-1][0], bounds, self.width):
+                for i in (index-1, index):
+                    if i not in styles:
+                        styles[i] = printed_row_style(frame, lines[i][0])
+                previous, current = styles[index-1], styles[index]
+                if (previous is not None and current is not None
+                        and .73*previous[0] <= current[0] <= 1.38*previous[0]
+                        and np.abs(previous[1]-current[1]).max() < 31):
+                    groups[-1].append(index)
+                    continue
+            groups.append([index])
+        kept = set(selected)
+        for group in groups:
+            if len(group) < 2:
+                continue
+            words = {box for i in group for box in lines[i][1]}
+            if words <= kept:
+                continue
+            bounds = [lines[i][0] for i in group]
+            # A newly scaled block still crosses the normal subtitle band.
+            near_band = any(abs((y+b)/2-center) <= .75*max(b-y, size)
+                            for _, y, _, b in bounds for center, size in self.rows)
+            if (words.intersection(selected) or (not selected and near_band)) and any(
+                    r-x >= .35*self.width for x, _, r, _ in bounds):
+                kept.update(words)
+        return [box for box in boxes if box in kept] if len(kept) > len(selected) else []
 
     def select(self,boxes):
         if not self.rows or not boxes:

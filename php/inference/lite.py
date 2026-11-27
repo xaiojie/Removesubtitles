@@ -52,6 +52,7 @@ class LiteOptions:
     alternate_line_heights: bool = False
     split_ocr_shapes: bool = False
     group_wrapped_words: bool = False
+    follow_scaled_rows: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -336,6 +337,8 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
                 selected = dialogue or profile.select(local)
                 if options.follow_wrapped_rows and not dialogue and len(selected) < len(local):
                     dialogue = profile.wrapped_dialogue(crop, local, selected, group_words=options.group_wrapped_words)
+                if options.follow_scaled_rows:
+                    dialogue = profile.scaled_dialogue(crop, local, dialogue or selected) or dialogue
                 local = dialogue or selected
             chip = locate_chip(crop,profile.chip) if profile is not None and profile.chip is not None else None
             highlight = (profile.highlight.mask(frame, key, track=options.track_highlight_edges)

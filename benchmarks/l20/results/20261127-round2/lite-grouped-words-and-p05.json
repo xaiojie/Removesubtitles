@@ -1,0 +1,194 @@
+{
+  "P05": {
+    "clip": "P05",
+    "source_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+    "full_frames": 720,
+    "fps": "24",
+    "source_title_frames": 90,
+    "first_and_last_measured_frame": [
+      36,
+      125
+    ],
+    "original_dark_pixels": 433606,
+    "retained_dark_fraction": {
+      "clear-fast": 0.39774,
+      "ocr-lama": 5e-05,
+      "lama-v5": 0.97781
+    },
+    "method": "In original frames with both native title lines independently located, pool originally dark characters (gray <=144) next to their white card (7x7 maximum >=230). Measure the fraction still dark (gray <=160) at the same coordinates. This measures preserving native printing. The gray dialogue backing is checked separately in decoded images.",
+    "full_runs": {
+      "clear-fast": {
+        "seconds": 309.882,
+        "peak_vram_mib": 9382,
+        "mean_gpu_percent": 59.4,
+        "gpu_samples": 345,
+        "monitor_errors": 0,
+        "other_compute_samples": 0,
+        "sha256": "6777cd2cd76a51d28afc7680a2f5175ea08460fb65f00d4c35fb064009b2b170"
+      },
+      "ocr-lama": {
+        "seconds": 171.658,
+        "peak_vram_mib": 2748,
+        "mean_gpu_percent": 7.5,
+        "gpu_samples": 190,
+        "monitor_errors": 0,
+        "other_compute_samples": 0,
+        "sha256": "c191455cb01f3aa8bc897dc2ca7a9ee032c3801c8616692eab63bc53cfdcaf49"
+      },
+      "lama-v5": {
+        "seconds": 47.851,
+        "peak_vram_mib": 5080,
+        "mean_gpu_percent": 22.7,
+        "gpu_samples": 49,
+        "monitor_errors": 0,
+        "other_compute_samples": 0,
+        "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7"
+      }
+    },
+    "visual_check_frames": [
+      0,
+      22,
+      65,
+      205,
+      386,
+      580,
+      719
+    ],
+    "visual": "Gray backing remains over the clothing and hands at 0.92, 8.54 and 29.96 seconds in CLEAR fast. Original LaMa leaves part of the backing, including at the last frame, and erases the native job-title printing. Lite v5 preserves the title and leaves the backing."
+  },
+  "grouped_words": {
+    "revision": "2b50afd97d5aec2cc9d6b3923bb5bbf928aa27fb",
+    "results": {
+      "B03": {
+        "frames": 900,
+        "input_sha256": "a27a2a553e9b1c1f859507855c216d26ad51fb1f3dd6121e574e06dd7e709e69",
+        "runs": {
+          "lama-v5": {
+            "seconds": 36.117,
+            "peak_vram_mib": 5186,
+            "mean_gpu_percent": 21.1,
+            "gpu_samples": 36,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "301c33e1e01aad48ec24fde78d860cb12b3739380d3280e8e65ae5c9e6ca69de"
+          },
+          "lama-grouped-words": {
+            "seconds": 36.446,
+            "peak_vram_mib": 5186,
+            "mean_gpu_percent": 15.6,
+            "gpu_samples": 36,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "301c33e1e01aad48ec24fde78d860cb12b3739380d3280e8e65ae5c9e6ca69de"
+          }
+        },
+        "same_as_v5": true
+      },
+      "U04": {
+        "frames": 900,
+        "input_sha256": "548b68e766e1d447532d0b005ec339a7703f44f3873404cbb64ec9a484269b8f",
+        "runs": {
+          "lama-v5": {
+            "seconds": 60.55,
+            "peak_vram_mib": 2660,
+            "mean_gpu_percent": 17.6,
+            "gpu_samples": 60,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "c1926dde2a71700aab6f111fa6fa27d6b9c9954f9dcc912181978a1249b23631"
+          },
+          "lama-grouped-words": {
+            "seconds": 56.503,
+            "peak_vram_mib": 2660,
+            "mean_gpu_percent": 14.5,
+            "gpu_samples": 59,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "c1926dde2a71700aab6f111fa6fa27d6b9c9954f9dcc912181978a1249b23631"
+          }
+        },
+        "same_as_v5": true
+      },
+      "B01": {
+        "frames": 900,
+        "input_sha256": "cd583e655bbabf2338a421de05c3b41e4fac4ab472fbbf03aa29f945e7fa300d",
+        "runs": {
+          "lama-v5": {
+            "seconds": 85.717,
+            "peak_vram_mib": 6148,
+            "mean_gpu_percent": 15.2,
+            "gpu_samples": 89,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "7845f32d9e60f461fb0b81e0347996b2829fd9f4b54f734fc81d47320746ba9b"
+          },
+          "lama-grouped-words": {
+            "seconds": 85.926,
+            "peak_vram_mib": 6148,
+            "mean_gpu_percent": 16.3,
+            "gpu_samples": 89,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "7845f32d9e60f461fb0b81e0347996b2829fd9f4b54f734fc81d47320746ba9b"
+          }
+        },
+        "same_as_v5": true
+      },
+      "N02": {
+        "frames": 750,
+        "input_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+        "runs": {
+          "lama-v5": {
+            "seconds": 44.528,
+            "peak_vram_mib": 4272,
+            "mean_gpu_percent": 14.2,
+            "gpu_samples": 45,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "1e40a34f8fc4ad1afc444ff562007a1941b89dd11cc6c7973968325c08cf1eaf"
+          },
+          "lama-grouped-words-eval": {
+            "seconds": 47.55,
+            "peak_vram_mib": 3714,
+            "mean_gpu_percent": 10.0,
+            "gpu_samples": 47,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "eed8386a0fb6e7dce33ea23d225a560796de9b9bc53116fafb0d49858767b8aa"
+          },
+          "ocr-lama": {
+            "seconds": 91.567,
+            "peak_vram_mib": 3672,
+            "mean_gpu_percent": 12.2,
+            "gpu_samples": 99,
+            "monitor_errors": 0,
+            "other_compute_samples": 0,
+            "sha256": "1cb503918cda85251ecd5c3b92844d1b9b7ff497f049fd6a5f7daa424d36d52d"
+          }
+        },
+        "same_as_v5": false,
+        "upper_row_source_frames": 57,
+        "output_retains_majority": {
+          "ocr-lama": 0,
+          "lama-v5": 57,
+          "lama-grouped-words-eval": 0
+        },
+        "checkpoint_fractions": {
+          "57": {
+            "ocr-lama": 0.0,
+            "lama-v5": 0.98236,
+            "lama-grouped-words-eval": 0.0
+          },
+          "107": {
+            "ocr-lama": 0.0,
+            "lama-v5": 0.97669,
+            "lama-grouped-words-eval": 0.0
+          }
+        }
+      }
+    },
+    "role": "Repeated N02 regression under frozen code and group_wrapped_words=true. B03, U04 and B01 are development controls.",
+    "visual": "At 2.28 and 4.28 seconds the upper line is gone. Two small punctuation marks at 2.28 seconds and the readable word limit at 12.44 seconds remain. The full clip fails.",
+    "stroke_method": "Independent source OCR identifies the upper sentence. For its 57 measurable source frames count outputs that keep over half of the original high-contrast white or yellow cores. See lite-v5-row-selection.json for the pixel rule."
+  }
+}

@@ -16,6 +16,41 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_new_caption_size_and_extra_row_keep_only_matching_print(self):
+        from lite_profile import BandProfile
+
+        width, height = 820, 360
+        font = cv2.FONT_HERSHEY_DUPLEX
+        profile = BandProfile(width, height, [(185, 38), (228, 38)], None)
+        image = np.full((height, width, 3), (56, 41, 35), np.uint8)
+
+        def put_words(words, baseline, scale, colour):
+            widths = [cv2.getTextSize(word, font, scale, 3)[0][0] for word in words]
+            gap = round(10*scale)
+            x = (width-sum(widths)-(len(words)-1)*gap)//2
+            result = []
+            for word, span in zip(words, widths):
+                cap_height = cv2.getTextSize(word, font, scale, 3)[0][1]
+                cv2.putText(image, word, (x, baseline), font, scale, colour, 3, cv2.LINE_AA)
+                result.append((x-5, baseline-cap_height-6, x+span+5, baseline+8))
+                x += span+gap
+            return result
+
+        white = (242, 242, 242)
+        large = put_words(['FAST', 'MOVING'], 166, 2.5, white)
+        large += put_words(['TRAIN', 'TODAY'], 239, 2.5, white)
+        self.assertEqual(profile.dialogue_rows(large) or profile.select(large), [])
+        self.assertCountEqual(profile.scaled_dialogue(image, large, []), large)
+
+        image[:] = (56, 41, 35)
+        first = put_words(['EVENING', 'SERVICE'], 194, 1.3, white)
+        second = put_words(['TOWN', 'CENTRE'], 237, 1.3, white)
+        third = put_words(['LAST', 'STOP'], 280, 1.3, white)
+        scene_text = put_words(['STATION'], 323, 1.3, (45, 55, 190))
+        selected = first + second
+        self.assertCountEqual(profile.scaled_dialogue(image, selected+third+scene_text, selected),
+                              selected+third)
+
     def test_centered_dialogue_with_a_row_split_into_word_boxes(self):
         from lite_profile import BandProfile
 
