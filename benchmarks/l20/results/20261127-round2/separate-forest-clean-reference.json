@@ -1,0 +1,174 @@
+{
+  "clip": "G01",
+  "input_sha256": "6765a7dda1c7fc73d145d04e53c3f7d43fd51e072814e89f6ad8e5be4cced39f",
+  "reference_sha256": "a6fa0204526197e08541e58f75efa9d1456fef38a267391fb5f2242f567f15f7",
+  "evaluation_mask_sha256": "709dc5bbf001034d4431b92e21f75180cb0b70f0a70f0b62201a67ff1106256d",
+  "regions": [
+    {
+      "type": "subtitle",
+      "roi": [
+        130,
+        369,
+        1260,
+        646
+      ]
+    }
+  ],
+  "evaluation_plate_xyxy": [
+    142,
+    366,
+    1257,
+    592
+  ],
+  "frames": 899,
+  "native_alignment": {
+    "mean_by_lag": {
+      "-2": 5.0106135398500395,
+      "-1": 4.0135360320416185,
+      "0": 2.8532497315085767,
+      "1": 4.494572655257013,
+      "2": 5.455687461204221
+    },
+    "lowest_lag_counts": {
+      "-2": 0,
+      "-1": 0,
+      "0": 895,
+      "1": 0,
+      "2": 0
+    },
+    "zero_within_0_05_of_best_frames": 895,
+    "scored_frames": 895
+  },
+  "runs": {
+    "ocr-lama": {
+      "seconds": 203.839,
+      "peak_vram_mib": 3728,
+      "mean_gpu_percent": 19.0,
+      "gpu_samples": 224,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "ba4d39e5f85eb4cda9542a315578015f107bb0ab0442c70e5056aba58f81a124",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 899,
+        "fps": "30000/1001"
+      },
+      "code_revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8"
+    },
+    "lama-v5": {
+      "seconds": 73.243,
+      "peak_vram_mib": 3302,
+      "mean_gpu_percent": 16.7,
+      "gpu_samples": 75,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "18bf91e609d2edd1bca46292e0e1dcc787d0af172511f0238a55836d9d133eb0",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 899,
+        "fps": "30000/1001"
+      },
+      "code_revision": "c45733606cf023e44118ebeb7e240192e14960d2"
+    }
+  },
+  "zone_measurements": {
+    "ocr-lama": {
+      "covered": {
+        "result_ref_mae": 30.2122,
+        "result_edge_strength_ratio": 0.1335,
+        "temporal_result_ref_mae": 5.2003
+      },
+      "glyph": {
+        "result_ref_mae": 29.7918,
+        "result_edge_strength_ratio": 0.1024,
+        "temporal_result_ref_mae": 5.1676
+      },
+      "plate_without_glyph": {
+        "result_ref_mae": 30.328,
+        "result_edge_strength_ratio": 0.1392,
+        "temporal_result_ref_mae": 5.2147
+      },
+      "clean": {
+        "result_ref_mae": 3.4281,
+        "result_edge_strength_ratio": 0.9223,
+        "temporal_result_ref_mae": 2.2155
+      },
+      "plate_outside_roi": {
+        "result_ref_mae": 66.6705,
+        "result_edge_strength_ratio": 0.3144,
+        "temporal_result_ref_mae": 3.4341
+      }
+    },
+    "lama-v5": {
+      "covered": {
+        "result_ref_mae": 7.6983,
+        "result_edge_strength_ratio": 0.7352,
+        "temporal_result_ref_mae": 3.3935
+      },
+      "glyph": {
+        "result_ref_mae": 11.3358,
+        "result_edge_strength_ratio": 0.3835,
+        "temporal_result_ref_mae": 3.885
+      },
+      "plate_without_glyph": {
+        "result_ref_mae": 7.0367,
+        "result_edge_strength_ratio": 0.7966,
+        "temporal_result_ref_mae": 3.3059
+      },
+      "clean": {
+        "result_ref_mae": 3.1341,
+        "result_edge_strength_ratio": 0.9434,
+        "temporal_result_ref_mae": 2.0347
+      },
+      "plate_outside_roi": {
+        "result_ref_mae": 66.7452,
+        "result_edge_strength_ratio": 1.2121,
+        "temporal_result_ref_mae": 3.5057
+      }
+    }
+  },
+  "paired_frame_comparisons": {
+    "covered": {
+      "v5_lower_error_frames": 899,
+      "v5_higher_error_frames": 0,
+      "tied_frames": 0,
+      "v5_highest_error_frame": 27,
+      "highest_frame_v5_error": 8.26009
+    },
+    "glyph": {
+      "v5_lower_error_frames": 899,
+      "v5_higher_error_frames": 0,
+      "tied_frames": 0,
+      "v5_highest_error_frame": 25,
+      "highest_frame_v5_error": 12.99685
+    },
+    "plate_without_glyph": {
+      "v5_lower_error_frames": 899,
+      "v5_higher_error_frames": 0,
+      "tied_frames": 0,
+      "v5_highest_error_frame": 27,
+      "highest_frame_v5_error": 7.42824
+    },
+    "clean": {
+      "v5_lower_error_frames": 899,
+      "v5_higher_error_frames": 0,
+      "tied_frames": 0,
+      "v5_highest_error_frame": 611,
+      "highest_frame_v5_error": 3.29614
+    },
+    "plate_outside_roi": {
+      "v5_lower_error_frames": 286,
+      "v5_higher_error_frames": 613,
+      "tied_frames": 0,
+      "v5_highest_error_frame": 573,
+      "highest_frame_v5_error": 69.90045
+    }
+  },
+  "purpose": "G01 is the separate paired texture check. Both routes used only the video and its subtitle rectangle. The reference and official mask were used only for evaluation.",
+  "native_review": {
+    "ocr-lama": "首帧和 29.96 秒真实末帧，字幕位置均留有大片灰色模糊，河面上的树木倒影丢失。整片 899 帧原遮挡区对干净原片的平均亮度误差为 30.21。",
+    "lama-v5": "首帧和 29.96 秒真实末帧恢复了树木倒影，细纹偏软。899 帧中每帧原遮挡区均比原 LaMa 更接近干净原片，平均亮度误差 7.70。选框上缘外仍可见三行像素高的暗底。"
+  }
+}

@@ -1,0 +1,198 @@
+{
+  "clip": "P09",
+  "input_sha256": "3044d3b8b109cdeb09812129eb3d87edd642ac79760fbd0ab02402b8c72ad997",
+  "selection": [
+    {
+      "type": "subtitle",
+      "roi": [
+        75,
+        1460,
+        1550,
+        1950
+      ]
+    }
+  ],
+  "runs": {
+    "clear-fast": {
+      "seconds": 1044.669,
+      "peak_vram_mib": 10022,
+      "mean_gpu_percent": 30.1,
+      "gpu_samples": 1158,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "28ab01d52f27ac74da49cd01e9b0688559a1dffe8a5f9cb4f46f6631717c23b5",
+      "video": {
+        "width": 1620,
+        "height": 2880,
+        "frames": 900,
+        "fps": "30"
+      },
+      "revision": "b7f26f203dbb6f6a4b780a051d7b147c8023d30d"
+    },
+    "ocr-lama": {
+      "seconds": 325.08,
+      "peak_vram_mib": 6352,
+      "mean_gpu_percent": 13.2,
+      "gpu_samples": 362,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "a6368c19b4ddc689d1ca94d8fc3cbe418e87851e1632dee0f32cd5fa8641697d",
+      "video": {
+        "width": 1620,
+        "height": 2880,
+        "frames": 900,
+        "fps": "30"
+      },
+      "revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8"
+    },
+    "lama-v5": {
+      "seconds": 154.999,
+      "peak_vram_mib": 7050,
+      "mean_gpu_percent": 10.4,
+      "gpu_samples": 168,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "9d828d15ec9bf754aa648a5c7d4651376253b6e59d3c94a5792fb2825a7c58f2",
+      "video": {
+        "width": 1620,
+        "height": 2880,
+        "frames": 900,
+        "fps": "30"
+      },
+      "revision": "c45733606cf023e44118ebeb7e240192e14960d2"
+    }
+  },
+  "hair_window_xyxy": [
+    418,
+    1598,
+    586,
+    1770
+  ],
+  "hair_area_pixels": 28896,
+  "hair_color_measure": "OpenCV B minus R > 12 and B > G at the same source coordinates. Color is evidence of a tint and cannot establish natural hair texture.",
+  "native_frame_numbers": [
+    0,
+    315,
+    390,
+    509,
+    510,
+    511,
+    512,
+    513,
+    514,
+    515,
+    859,
+    898,
+    899
+  ],
+  "hair_measurements_by_frame": {
+    "source": {
+      "510": {
+        "cool_pixels": 13442,
+        "median_blue_minus_red": 10.0
+      },
+      "511": {
+        "cool_pixels": 7144,
+        "median_blue_minus_red": 0.0
+      },
+      "512": {
+        "cool_pixels": 9334,
+        "median_blue_minus_red": 0.0
+      },
+      "513": {
+        "cool_pixels": 9414,
+        "median_blue_minus_red": 0.0
+      },
+      "514": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": 0.0
+      }
+    },
+    "clear-fast": {
+      "510": {
+        "cool_pixels": 5794,
+        "median_blue_minus_red": -8.0
+      },
+      "511": {
+        "cool_pixels": 4665,
+        "median_blue_minus_red": -12.0
+      },
+      "512": {
+        "cool_pixels": 7345,
+        "median_blue_minus_red": 1.0
+      },
+      "513": {
+        "cool_pixels": 1356,
+        "median_blue_minus_red": -20.0
+      },
+      "514": {
+        "cool_pixels": 1188,
+        "median_blue_minus_red": -51.0
+      }
+    },
+    "ocr-lama": {
+      "510": {
+        "cool_pixels": 26471,
+        "median_blue_minus_red": 23.0
+      },
+      "511": {
+        "cool_pixels": 13336,
+        "median_blue_minus_red": 10.0
+      },
+      "512": {
+        "cool_pixels": 12824,
+        "median_blue_minus_red": 9.0
+      },
+      "513": {
+        "cool_pixels": 10732,
+        "median_blue_minus_red": 3.0
+      },
+      "514": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": -51.0
+      }
+    },
+    "lama-v5": {
+      "510": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": -62.0
+      },
+      "511": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": -61.0
+      },
+      "512": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": -61.0
+      },
+      "513": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": -58.0
+      },
+      "514": {
+        "cool_pixels": 0,
+        "median_blue_minus_red": -64.0
+      }
+    }
+  },
+  "ocr_all_900_frames": {
+    "clear-fast": {
+      "all_same_text_frames_including_scene_signs": 219,
+      "reader_error_frames": 0
+    },
+    "ocr-lama": {
+      "all_same_text_frames_including_scene_signs": 75,
+      "reader_error_frames": 0
+    },
+    "lama-v5": {
+      "all_same_text_frames_including_scene_signs": 143,
+      "reader_error_frames": 0
+    }
+  },
+  "ocr_interpretation": "The submitted box includes signs behind the subtitle. At 10.50 s on the fifth run, the match includes the printed URL on the sign after the subtitle has disappeared. Match counts do not measure failed subtitle frames.",
+  "native_review": {
+    "clear-fast": "10.50 秒、28.63 秒还能读到字幕 Wir/wir。17.03～17.10 秒，头发上出现蓝色模糊块。29.97 秒真实末帧仍有蓝底和横向涂抹。",
+    "ocr-lama": "10.50 秒、28.63 秒还能读到字幕 Wir/wir，13.00 秒也留有字尾和蓝块。17.03～17.10 秒蓝底盖在头发上。末帧已去字，手部和手机旁有灰雾。",
+    "lama-v5": "10.50、13.00、28.63 秒去掉了字和蓝色词块，边上的原生告示仍在。17.03～17.10 秒已无蓝块，发丝仍偏软。29.97 秒末帧去掉了原来的蓝底，手与手机交界处有涂抹。"
+  }
+}

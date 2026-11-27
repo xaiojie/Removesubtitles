@@ -1,0 +1,118 @@
+{
+  "clip": "R01",
+  "source_sha256": "f0fa39a718188b72fe632f4139f4f3bfc948755fe0f2149f03c06526d02b6299",
+  "regions": [
+    {
+      "type": "subtitle",
+      "roi": [
+        540,
+        106,
+        720,
+        923
+      ]
+    },
+    {
+      "type": "subtitle",
+      "roi": [
+        56,
+        629,
+        666,
+        743
+      ]
+    }
+  ],
+  "source_frames": 821,
+  "duration_seconds": 27.366667,
+  "test_set": "separate tail regression",
+  "metric": "Fraction of original pale yellow brush pixels retained at the same positions in the second selection. Measured at 560 pixels wide. The first 716 frames and the vertical selection were decoded but are not scored by this color metric.",
+  "window": [
+    716,
+    820
+  ],
+  "runs": {
+    "ocr-lama": {
+      "seconds": 185.967,
+      "peak_vram_mib": 1746,
+      "mean_gpu_percent": 8.8,
+      "gpu_samples": 207,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "cf3960f10286f6c40fa75a00f0cd25c14ead5500978196cc8bd9e62219768d2d",
+      "video": {
+        "width": 720,
+        "height": 1280,
+        "frames": 821,
+        "fps": "30"
+      },
+      "code_revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8"
+    },
+    "lama-v5": {
+      "seconds": 66.772,
+      "peak_vram_mib": 3144,
+      "mean_gpu_percent": 23.1,
+      "gpu_samples": 71,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "85da7c70a84b596c5ffd71a0336c1345d4301e338671f8dd7993dc597d321ea7",
+      "video": {
+        "width": 720,
+        "height": 1280,
+        "frames": 821,
+        "fps": "30"
+      },
+      "code_revision": "c45733606cf023e44118ebeb7e240192e14960d2"
+    }
+  },
+  "summary": {
+    "ocr-lama": {
+      "frames_over_60_percent": [
+        716,
+        717,
+        718,
+        719,
+        720,
+        723,
+        728,
+        737,
+        740,
+        741,
+        744,
+        745,
+        746,
+        749,
+        751,
+        752,
+        754,
+        755,
+        779,
+        780,
+        783,
+        784,
+        786,
+        803,
+        804,
+        806,
+        807,
+        808,
+        809,
+        810,
+        811,
+        812,
+        813,
+        814,
+        815
+      ],
+      "maximum": 0.99691,
+      "true_last_frame": 0.00475
+    },
+    "lama-v5": {
+      "frames_over_60_percent": [],
+      "maximum": 0.01152,
+      "true_last_frame": 0.0009
+    }
+  },
+  "native_review": {
+    "ocr-lama": "9.83 秒，握杯的手指被抹掉。24.97 秒字已擦掉，空黄底仍在。结尾 105 帧中有 35 帧保留超过六成原黄底。27.33 秒的真实末帧已去掉字幕。",
+    "lama-v5": "9.83 秒保住了握杯手指。结尾 105 帧每帧保留的原黄底像素均低于 1.2%。24.97 秒和 27.33 秒末帧都没有整条黄底，原先遮挡处衣纹偏软。"
+  }
+}
