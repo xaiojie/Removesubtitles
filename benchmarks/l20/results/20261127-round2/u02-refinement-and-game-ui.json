@@ -1,0 +1,241 @@
+{
+  "clip": "U02",
+  "source_sha256": "1d1974c98e6ee0cf04404dc8613e0ea6ab48fa3b2dcf2c268406d508a8199fbe",
+  "upload_regions": [
+    {
+      "type": "subtitle",
+      "roi": [
+        140,
+        600,
+        1150,
+        685
+      ]
+    }
+  ],
+  "runs": {
+    "lama-v5": {
+      "seconds": 39.768,
+      "peak_vram_mib": 2992,
+      "mean_gpu_percent": 17.5,
+      "gpu_samples": 40,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "af889516c2a12a8fb97930cb7d2329d8eb73257902b668338cd210244130b6be",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "product-pro": {
+      "seconds": 362.546,
+      "peak_vram_mib": 8990,
+      "mean_gpu_percent": 62.6,
+      "gpu_samples": 401,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "1c87ffcd75d49e53cb873d6b56c544a54e719f062e1e0941388b6cb0d2e9f4af",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "product-max": {
+      "seconds": 409.352,
+      "peak_vram_mib": 9106,
+      "mean_gpu_percent": 67.3,
+      "gpu_samples": 452,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "fa2a64c1418f517cd1029566f1f6b9ccc42e281ee3503246143461e97f017c6a",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "clear-quality": {
+      "seconds": 699.175,
+      "peak_vram_mib": 9890,
+      "mean_gpu_percent": 78.5,
+      "gpu_samples": 783,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "8376a06255bcbe6b7b877be004266ed8fcb10e0c1a4fc0df73c17de17059627b",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "pro-selective": {
+      "seconds": 539.974,
+      "peak_vram_mib": 8990,
+      "mean_gpu_percent": 59.5,
+      "gpu_samples": 528,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "83b43d70618fbb26d9b9675c580e0acdf1a879e6a9887b3842c4e6c37c5b52c4",
+      "video": {
+        "width": 1280,
+        "height": 720,
+        "frames": 900,
+        "fps": "30"
+      }
+    }
+  },
+  "time_relative_to_pro": {
+    "lama-v5": 0.10969,
+    "product-pro": 1.0,
+    "product-max": 1.1291,
+    "clear-quality": 1.92851,
+    "pro-selective": 1.48939
+  },
+  "ocr_screen": {
+    "lama-v5": {
+      "matched_frames": 130,
+      "recognized_strings": [
+        [
+          "卡尔",
+          114
+        ],
+        [
+          "邦州込小",
+          49
+        ],
+        [
+          "邦州込小年",
+          19
+        ],
+        [
+          "邦州込小香",
+          13
+        ],
+        [
+          "柳卡尔",
+          1
+        ]
+      ]
+    },
+    "product-pro": {
+      "matched_frames": 4,
+      "recognized_strings": [
+        [
+          "卡尔",
+          4
+        ]
+      ]
+    },
+    "product-max": {
+      "matched_frames": 4,
+      "recognized_strings": [
+        [
+          "卡尔",
+          4
+        ],
+        [
+          "邦州込小香",
+          1
+        ]
+      ]
+    },
+    "clear-quality": {
+      "matched_frames": 4,
+      "recognized_strings": [
+        [
+          "卡尔",
+          4
+        ],
+        [
+          "邦州込小香",
+          1
+        ]
+      ]
+    },
+    "pro-selective": {
+      "matched_frames": 5,
+      "recognized_strings": [
+        [
+          "卡尔",
+          3
+        ],
+        [
+          "邦州会小香",
+          1
+        ],
+        [
+          "邦州会公小香",
+          1
+        ],
+        [
+          "邦州込小香",
+          1
+        ]
+      ]
+    }
+  },
+  "localized_refinement": {
+    "calls": 14,
+    "steps": 12,
+    "model_input_frames_including_padding": 158
+  },
+  "clean_game_ui": {
+    "xyxy": [
+      1062,
+      637,
+      1142,
+      664
+    ],
+    "frames_inclusive": [
+      792,
+      899
+    ],
+    "samples": 108,
+    "measure": "mean absolute 8-bit BGR difference from the source in the same visible UI area",
+    "means": {
+      "lama-v5": 1.943,
+      "product-pro": 13.413,
+      "product-max": 13.314,
+      "clear-quality": 21.717,
+      "pro-selective": 14.336
+    },
+    "per_frame_examples": {
+      "792": {
+        "lama-v5": 1.044,
+        "product-pro": 13.671,
+        "product-max": 13.64,
+        "clear-quality": 22.889,
+        "pro-selective": 14.254
+      },
+      "815": {
+        "lama-v5": 19.994,
+        "product-pro": 8.559,
+        "product-max": 8.673,
+        "clear-quality": 14.148,
+        "pro-selective": 9.742
+      },
+      "899": {
+        "lama-v5": 1.348,
+        "product-pro": 12.687,
+        "product-max": 12.811,
+        "clear-quality": 15.355,
+        "pro-selective": 13.489
+      }
+    }
+  },
+  "native_checks": {
+    "662": "Central dialogue erased at the sampled frame. Lite retains the game settings label and icon. Pro, direct 12-step and selective outputs visibly damage the icon and small print.",
+    "792": "The game notice is independent of the centre dialogue. Lite preserves its avatar. Direct 12-step adds orange to the avatar. Pro and selective blur it.",
+    "815": "No central subtitle in the source at 27.17s. Lite erases the in-game avatar and name together. Pro, selective and direct 12-step retain the name with varying damage to the avatar.",
+    "899": "True last frame: no central dialogue is readable in the four visually checked outputs. Original game notice is preserved most closely in Lite."
+  },
+  "limitations": [
+    "The error measures the unobscured game UI only; there is no clean original behind the burned-in subtitle.",
+    "Each route retains its recorded settings. Direct 12-step and selective differ in first pass, context and guidance, so this is an end-to-end comparison."
+  ]
+}
