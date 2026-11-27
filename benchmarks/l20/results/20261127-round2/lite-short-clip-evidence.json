@@ -1,0 +1,305 @@
+{
+  "cold_start_control": "657b2dc",
+  "fresh_worker_without_jit_optimization": "a796a13",
+  "full_clip_seconds_limit": 30,
+  "development": {
+    "U02": {
+      "frames": 900,
+      "runs": {
+        "lama-v3": {
+          "seconds": 51.645,
+          "lama_seconds": 18.056,
+          "gpu_mean_pct": 13.1,
+          "peak_job_mib": 3166,
+          "sha256": "be2b5e79db11086c59b46a32dbe254056a6663da575fc608eb73404712608634",
+          "outside_compute_samples": 0,
+          "missing_gpu_samples": 0
+        },
+        "lama-short-graph": {
+          "seconds": 42.723,
+          "lama_seconds": 8.455,
+          "gpu_mean_pct": 26.6,
+          "peak_job_mib": 3334,
+          "sha256": "f5808159ae1172bd6a7eef38c5337f80444b17891ef446f7175a5f5921d62043",
+          "outside_compute_samples": 0,
+          "missing_gpu_samples": 0
+        }
+      },
+      "input_sha256": "1d1974c98e6ee0cf04404dc8613e0ea6ab48fa3b2dcf2c268406d508a8199fbe",
+      "decoded_roi": {
+        "mean_abs_channel_delta": 0.6819567419487047,
+        "max_frame_mean": 1.2689963113958456,
+        "largest_frame_fraction_pixel_delta_over_12": 0.0028188701223063484,
+        "largest_frame_fraction_pixel_delta_over_24": 8.153756552125801e-05,
+        "frame_with_most_pixels_over_24": 609
+      }
+    },
+    "N01": {
+      "frames": 720,
+      "runs": {
+        "lama-v3": {
+          "seconds": 46.405,
+          "lama_seconds": 14.851,
+          "gpu_mean_pct": 11.3,
+          "peak_job_mib": 2624,
+          "sha256": "4352a281dfb5de7e2b396077f98f3b8ed5d2e3426ce1203ee15461d68f41cec3",
+          "outside_compute_samples": 0,
+          "missing_gpu_samples": 0
+        },
+        "lama-short-graph": {
+          "seconds": 34.472,
+          "lama_seconds": 5.298,
+          "gpu_mean_pct": 11.2,
+          "peak_job_mib": 2794,
+          "sha256": "1247767da637d0ff70d92464703ab28f423547c4fb16dc4f1cb6120c02f27d04",
+          "outside_compute_samples": 0,
+          "missing_gpu_samples": 0
+        }
+      },
+      "input_sha256": "5a6c954d11223df96b148d95a4c628e73198471ecd7977daf4e410fbe0004011",
+      "decoded_roi": {
+        "mean_abs_channel_delta": 0.2749477221279004,
+        "max_frame_mean": 0.6155263157894737,
+        "largest_frame_fraction_pixel_delta_over_12": 0.008310696095076401,
+        "largest_frame_fraction_pixel_delta_over_24": 0.0008573853989813243,
+        "frame_with_most_pixels_over_24": 310
+      }
+    },
+    "P04": {
+      "frames": 900,
+      "runs": {
+        "lama-v3": {
+          "seconds": 33.45,
+          "lama_seconds": 14.811,
+          "gpu_mean_pct": 12.7,
+          "peak_job_mib": 1498,
+          "sha256": "f9fa668041a77d6abfff03a9d3d7778b2ecaa7f1b0e72fbfc527d651a19ea296",
+          "outside_compute_samples": 0,
+          "missing_gpu_samples": 0
+        },
+        "lama-short-graph": {
+          "seconds": 27.866,
+          "lama_seconds": 5.831,
+          "gpu_mean_pct": 18.8,
+          "peak_job_mib": 1624,
+          "sha256": "8111044fa05675a2a2aa2f06d70040ff4be85785aa233ebcc81f98f556e79239",
+          "outside_compute_samples": 0,
+          "missing_gpu_samples": 0
+        }
+      },
+      "input_sha256": "0b4980d61dedb59730549616a8148d870ada2dd344d744f55b7de3bd68e0aafe",
+      "decoded_roi": {
+        "mean_abs_channel_delta": 1.6119441999165027,
+        "max_frame_mean": 2.4027589908749327,
+        "largest_frame_fraction_pixel_delta_over_12": 0.013687600644122383,
+        "largest_frame_fraction_pixel_delta_over_24": 0.0006441223832528181,
+        "frame_with_most_pixels_over_24": 754
+      },
+      "green_screen": {
+        "frames_with_green": 828,
+        "same_detected_indices_across_variants": true,
+        "control_native_title_card_range": [
+          406,
+          506
+        ],
+        "other_green_residual_frames": [
+          [],
+          []
+        ]
+      }
+    },
+    "U03": {
+      "input_sha256": "3ec3d90e3804ec91bc0dd6915ef9c994f455af25a05525b59e633b6ee13aacce",
+      "frames": 900,
+      "stroke_check": {
+        "lama-v3": {
+          "frames": 900,
+          "horizontal_stroke_frames": 0,
+          "covered": 74,
+          "peak_columns": 0,
+          "sha256": "dff5c58e567c077d388509d40f464f82f190e3e001f3039863587c3d4f660107",
+          "seconds": 55.114
+        },
+        "lama-short-graph": {
+          "frames": 900,
+          "horizontal_stroke_frames": 0,
+          "covered": 74,
+          "peak_columns": 0,
+          "sha256": "0be388f897a46c6263cb6af054838a96e72dc609cee2cb1a35c971ceaf4564aa",
+          "seconds": 44.421
+        }
+      }
+    }
+  },
+  "n01_clean_reference_luma_mae": {
+    "lama-v3": {
+      "covered": 7.297169962302647,
+      "clean": 2.3051899961912254
+    },
+    "lama-short-graph": {
+      "covered": 7.2942461569187556,
+      "clean": 2.305440013179618
+    }
+  },
+  "weights": {
+    "U02": {
+      "frames": 900,
+      "weights": {
+        "official": {
+          "seconds": 55.087,
+          "l20_vram_mib": 3166,
+          "output_sha256": "6b31ce21070cb1f71c76602faaace1e28344a5d12a40e68d0f0a1a6f0c23059c",
+          "weight_sha256": "7ba7aa7ac37a4d41fdbbeba3a2af7ead18058552997e3a3cd1a3b2210c9e6b4c",
+          "inference_seconds": 18.951604075,
+          "first_three_calls_seconds": [
+            1.174861642,
+            3.018977238,
+            2.587596576
+          ]
+        },
+        "folded": {
+          "seconds": 69.098,
+          "l20_vram_mib": 3130,
+          "output_sha256": "fed208a4fc56a52819826f451845cb0546bbda9cfd656abcd81d276e1e2461eb",
+          "weight_sha256": "c5f52340d230bdd5943a8e0c947d7e658378346be095087a4bf053c36faddf3c",
+          "inference_seconds": 31.876284411,
+          "first_three_calls_seconds": [
+            5.141426028,
+            12.077096364,
+            2.642110923
+          ]
+        }
+      },
+      "decoded_roi_mae": 0.680892784572575,
+      "maximum_frame_mae": 1.2551038633275091,
+      "maximum_fraction_over_12": 0.0032498543972044264,
+      "peak_frame": 609
+    },
+    "N01": {
+      "frames": 720,
+      "weights": {
+        "official": {
+          "seconds": 45.697,
+          "l20_vram_mib": 2624,
+          "output_sha256": "4352a281dfb5de7e2b396077f98f3b8ed5d2e3426ce1203ee15461d68f41cec3",
+          "weight_sha256": "7ba7aa7ac37a4d41fdbbeba3a2af7ead18058552997e3a3cd1a3b2210c9e6b4c",
+          "inference_seconds": 14.83533453,
+          "first_three_calls_seconds": [
+            1.275662458,
+            2.838116297,
+            2.451590748
+          ]
+        },
+        "folded": {
+          "seconds": 58.259,
+          "l20_vram_mib": 2594,
+          "output_sha256": "5f09a12a1afeaef79e224afd13f2a3baabef93523ebf4152ede1c62a67663327",
+          "weight_sha256": "c5f52340d230bdd5943a8e0c947d7e658378346be095087a4bf053c36faddf3c",
+          "inference_seconds": 26.050439588,
+          "first_three_calls_seconds": [
+            4.334585871,
+            9.366368414,
+            3.235116525
+          ]
+        }
+      },
+      "decoded_roi_mae": 0.2877651740237691,
+      "maximum_frame_mae": 0.5200905489530278,
+      "maximum_fraction_over_12": 0.0046095076400679115,
+      "peak_frame": 67
+    }
+  },
+  "web_and_api": {
+    "clip": "U03",
+    "checks": {
+      "catalog": true,
+      "submitted_via": true,
+      "both_done": true,
+      "plans": true,
+      "execution": true,
+      "identical_download": true
+    },
+    "entries": {
+      "web": {
+        "seconds": 56.09,
+        "sha256": "70a0239b44581234de7742b1273e64f8770bbf190efbadc2765f02cac4949387"
+      },
+      "api": {
+        "seconds": 54.29,
+        "sha256": "70a0239b44581234de7742b1273e64f8770bbf190efbadc2765f02cac4949387"
+      }
+    }
+  },
+  "v3_concurrency": {
+    "1": {
+      "seconds": 92.828,
+      "completed": 2,
+      "failed": 0,
+      "overlap_seconds": 0,
+      "completed_minutes_per_hour": 38.78,
+      "server_revision": "c14e68259cd542a8a6c2f923a78d7a95706f45af",
+      "catalog_sha256": "5a3eadab14a9736a834d29360b0981b89545bfb6a3dd13dc1d1e1074cfcc578b",
+      "jobs": {
+        "U02": {
+          "sha256": "76690d57925e6fbd0e9c2bcce4b2e97bcc79657c319941417d7e90264ae74bbd",
+          "peak": {
+            "job_gpu_mib": 3166,
+            "job_rss_mib": 2763.70703125,
+            "job_cpu_pct": 396.9760983998549,
+            "job_disk_growth_mib": 9.5390625,
+            "gpu_util_pct": 67,
+            "card_used_mib": 3784,
+            "card_util_mean_pct": 12.33
+          }
+        },
+        "P04": {
+          "sha256": "934b0141d65d4ed92012f59f19b166108ec5dc43676dfbd7d52007c8b5808aa1",
+          "peak": {
+            "job_gpu_mib": 1498,
+            "job_rss_mib": 2277.3203125,
+            "job_cpu_pct": 275.2921776467069,
+            "job_disk_growth_mib": 4.0546875,
+            "gpu_util_pct": 45,
+            "card_used_mib": 2116,
+            "card_util_mean_pct": 14.0
+          }
+        }
+      }
+    },
+    "2": {
+      "seconds": 58.285,
+      "completed": 2,
+      "failed": 0,
+      "overlap_seconds": 13.133,
+      "completed_minutes_per_hour": 61.77,
+      "server_revision": "c14e68259cd542a8a6c2f923a78d7a95706f45af",
+      "catalog_sha256": "5a3eadab14a9736a834d29360b0981b89545bfb6a3dd13dc1d1e1074cfcc578b",
+      "jobs": {
+        "U02": {
+          "sha256": "76690d57925e6fbd0e9c2bcce4b2e97bcc79657c319941417d7e90264ae74bbd",
+          "peak": {
+            "job_gpu_mib": 3166,
+            "job_rss_mib": 2757.1640625,
+            "job_cpu_pct": 394.62464662338124,
+            "job_disk_growth_mib": 11.734375,
+            "gpu_util_pct": 93,
+            "card_used_mib": 5286,
+            "card_util_mean_pct": 18.19
+          }
+        },
+        "P04": {
+          "sha256": "934b0141d65d4ed92012f59f19b166108ec5dc43676dfbd7d52007c8b5808aa1",
+          "peak": {
+            "job_gpu_mib": 1498,
+            "job_rss_mib": 2275.63671875,
+            "job_cpu_pct": 284.19324314105046,
+            "job_disk_growth_mib": 3.25,
+            "gpu_util_pct": 93,
+            "card_used_mib": 5286,
+            "card_util_mean_pct": 20.68
+          }
+        }
+      }
+    }
+  }
+}

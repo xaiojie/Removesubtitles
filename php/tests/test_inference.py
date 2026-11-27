@@ -16,6 +16,52 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_short_clip_graph_threshold_uses_the_decoded_duration(self):
+        from lite import LiteOptions
+
+        options = LiteOptions(skip_graph_up_to_seconds=30)
+        self.assertFalse(options.for_clip(720, 24).optimize_lama_graph)
+        self.assertFalse(options.for_clip(899, 30000/1001).optimize_lama_graph)
+        self.assertTrue(options.for_clip(900, 30000/1001).optimize_lama_graph)
+        self.assertTrue(options.for_clip(1, 30).optimize_lama_graph)
+        self.assertTrue(LiteOptions().for_clip(720, 24).optimize_lama_graph)
+
+    def test_translucent_line_backing_changes_width_and_disappears(self):
+        from lite_line_panel import learn_line_panel
+
+        height, width = 100, 380
+        top, bottom = 32, 67
+        x = np.arange(width)[None, :]
+        y = np.arange(height)[:, None]
+        frames, clean, spans = [], [], []
+        for index in range(13):
+            tone = np.clip(130 + 63*np.sin(x/70 + index*.6) + 23*np.sin(y/65), 0, 255)
+            background = np.stack([tone, tone*.73, tone*.87], axis=2).astype(np.uint8)
+            image = background.copy()
+            left = 35 + (index % 4)*16
+            right = width-left
+            if index:
+                image[top:bottom, left:right] = .54 * background[top:bottom, left:right] + 26
+                cv2.putText(image, 'SUBTITLE', (left+14, top+24), cv2.FONT_HERSHEY_SIMPLEX, .68,
+                            (248, 248, 248), 2, cv2.LINE_AA)
+            frames.append(image)
+            clean.append(background)
+            spans.append((left, right))
+        roi = (0, 0, width, height)
+        model = learn_line_panel(frames, roi)
+        self.assertIsNotNone(model)
+        self.assertTrue(model.calibrate([model.measure_edges(im) for im in frames[::2]]))
+        for i in (1, 3, 6, 8):
+            left, right = spans[i]
+            box = (left+6, top+4, right-6, bottom-4)
+            bounds, recovered, mask = model.restore(frames[i], roi, [box])
+            self.assertEqual(bounds, (left, top, right, bottom))
+            self.assertGreater(cv2.countNonZero(mask), 0)
+            unprinted = mask[top:bottom, left:right] == 0
+            error = cv2.absdiff(recovered, clean[i][top:bottom, left:right])
+            self.assertLess(error[unprinted].mean(), 4)
+            self.assertIsNone(model.restore(frames[0], roi, [box]))
+
     def test_flat_outlined_glyph_is_kept_whole_between_letters(self):
         from lite import outlined_text_mask
 

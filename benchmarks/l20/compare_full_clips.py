@@ -41,6 +41,14 @@ def timing(folder, clip, candidate, revision, frozen=None):
         raise ValueError(f"Trial or media differs from the selected full clip: {folder.name}")
     if frozen:
         plan = run["parameters"]["resolved_plan"]
+        ticket = read(folder.with_name(folder.name + ".conditions.json"))
+        conditions = ticket["conditions"]
+        if not (ticket.get("output_sha256") == sha and conditions["clip_sha"] == clip["sha256"]
+                and conditions["regions"] == clip["regions"] and conditions["revision"] == revision
+                and conditions["weights"] == frozen["weights"] and conditions["lite"] == frozen["parameters"]
+                and conditions["modes"] == plan["catalog_sha256"]
+                and conditions["ocr_graph_sha256"] == frozen["graph_sha256"]):
+            raise ValueError(f"Saved input, selection or loaded weight provenance mismatch: {folder.name}")
         events = [json.loads(line) for line in (folder / "stages.jsonl").read_text().splitlines()]
         ocr = [event for event in events if event["stage"] == "lite_ocr"]
         lama = [event for event in events if event["stage"] == "lite_lama"]
@@ -50,17 +58,20 @@ def timing(folder, clip, candidate, revision, frozen=None):
                 and loaded and ocr and lama and all(e.get("ok") and e["device"] == "cuda" for e in ocr + lama)):
             raise ValueError(f"Actual model or parameters differ from the frozen Lite preset: {folder.name}")
     samples = [json.loads(line) for line in (folder / "metrics.jsonl").read_text().splitlines()]
-    if not samples:
+    observations = [s for s in samples if "gpu_processes" in s and "job_gpu_mib" in s]
+    if not observations:
         raise ValueError(f"Missing GPU measurements for {folder.name}")
-    outsiders = sum(sum(s["gpu_processes"].values()) > s["job_gpu_mib"] for s in samples)
+    outsiders = sum(sum(s["gpu_processes"].values()) > s["job_gpu_mib"] for s in observations)
     return dict(seconds=run["elapsed_seconds"], peak_vram_mib=run["job_peak_vram_mib"],
-                mean_gpu_percent=run["gpu_util_mean_pct"], gpu_samples=len(samples),
+                mean_gpu_percent=run["gpu_util_mean_pct"], gpu_samples=len(observations),
+                monitor_errors=len(samples) - len(observations),
                 other_compute_samples=outsiders, sha256=sha)
 
 
 def paired_ratio(rows, faster, reference):
     common = [r for r in rows if r["split"] in ("tune", "holdout") and
-              all((r["runs"].get(k) or {}).get("other_compute_samples") == 0 for k in (faster, reference))]
+              all((r["runs"].get(k) or {}).get("other_compute_samples") == 0
+                  and not r["runs"][k]["monitor_errors"] for k in (faster, reference))]
     measured = sum(r["runs"][faster]["seconds"] for r in common)
     baseline = sum(r["runs"][reference]["seconds"] for r in common)
     return dict(clips=[r["id"] for r in common], seconds=round(measured, 3),

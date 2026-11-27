@@ -4,8 +4,8 @@ import math
 import os
 import sys
 from collections import defaultdict
-from contextlib import nullcontext
-from dataclasses import dataclass
+from contextlib import ExitStack
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import cv2
@@ -40,6 +40,7 @@ class LiteOptions:
     complete_flat_strokes: bool = False
     optimize_lama_graph: bool = True
     variable_line_panels: bool = False
+    skip_graph_up_to_seconds: int = 0
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -54,6 +55,14 @@ class LiteOptions:
             raise ValueError('Lite 字幕定位后端无效')
         if type(self.frame_tolerance) is not int or not 0<=self.frame_tolerance<=8:
             raise ValueError('相邻帧复用的像素容差须为 0 至 8')
+        if type(self.skip_graph_up_to_seconds) is not int or self.skip_graph_up_to_seconds < 0:
+            raise ValueError('短片图优化阈值须为非负整数秒数')
+
+    def for_clip(self, frame_count, fps):
+        # Some decoders use 0 or 1 when the length is unknown.
+        if self.optimize_lama_graph and 1 < frame_count <= self.skip_graph_up_to_seconds * fps:
+            return replace(self, optimize_lama_graph=False)
+        return self
 
 
 def detect(frame, rois, detector, options=LiteOptions()):
@@ -465,12 +474,13 @@ def run(folder, request):
         from lite_profile import profile_source
         with span('lite_layout_probe',device='cpu'):
             profiles = profile_source(source, rois, find, variable_line_panels=options.variable_line_panels)
-    jit_settings = nullcontext()
-    if not options.optimize_lama_graph:
-        import torch
-        jit_settings = torch.jit.optimized_execution(False)
-    with jit_settings, capture(source) as video:
+    with ExitStack() as resources:
+        video = resources.enter_context(capture(source))
         fps, total = geometry(video)
+        options = options.for_clip(video.get(cv2.CAP_PROP_FRAME_COUNT), fps)
+        if not options.optimize_lama_graph:
+            import torch
+            resources.enter_context(torch.jit.optimized_execution(False))
         ok, first = video.read()
         if not ok or list(first.shape[1::-1]) != request['dimensions']:
             raise ValueError('视频无法解码或显示尺寸不一致')
