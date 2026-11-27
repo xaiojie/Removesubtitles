@@ -52,6 +52,9 @@ def fit_edges(images, top, bottom):
 
 
 class LinePanel(Panel):
+    variable_edge = None
+    edge_positions = ()
+
     def scene_print(self, frame, quad):
         """Keep slanted print if the learned horizontal caption backing is absent."""
         if self.native_box is None or quad.shape != (4, 2):
@@ -126,6 +129,44 @@ class LinePanel(Panel):
         self.native_box = self.window[0], native[0], self.window[2], native[1]
         return True
 
+    def calibrate_heights(self, observations):
+        """Accept two repeatedly measured heights with one shared horizontal edge."""
+        pairs = np.asarray([pair for pair in observations if None not in pair], dtype=int)
+        if len(pairs) < 4:
+            return False
+        top, bottom = np.rint(np.median(pairs, axis=0)).astype(int)
+        spread = np.ptp(pairs, axis=0)
+        varying = int(np.argmax(spread))
+        if spread[1-varying] > 2 or not 3 <= spread[varying] <= .22*(bottom-top):
+            return False
+        positions = np.sort(pairs[:, varying])
+        split = int(np.argmax(np.diff(positions))) + 1
+        groups = (positions[:split], positions[split:])
+        if (positions[split] - positions[split-1] < 3
+                or any(len(group) < 2 or np.ptp(group) > 2 for group in groups)):
+            return False
+        self.native_box = self.window[0], top, self.window[2], bottom
+        self.variable_edge = varying
+        self.edge_positions = np.unique([int(p)+d for p in positions for d in (-1, 0, 1)])
+        return True
+
+    def measured_height(self, frame, left, right, top, bottom):
+        """Locate the learned boundary on the current frame before reversing the tint."""
+        positions = self.edge_positions
+        positions = positions[(positions >= 3) & (positions+2 < frame.shape[0])]
+        columns = np.arange(left+(right-left)//8, right-(right-left)//8, max(1, (right-left)//88))
+        if not len(positions) or not len(columns):
+            return top, bottom
+        direction = 1 if self.variable_edge == 0 else -1
+        outer = positions - int(direction == 1)
+        inner = outer + direction
+        def pixels(rows):
+            return frame[rows[:, None], columns].astype(np.float32)
+        broad = edge_gain(pixels(outer-direction), pixels(inner+direction), self.transmission, self.offset)
+        edge = edge_gain(pixels(outer), pixels(inner), self.transmission, self.offset)
+        winner = int(positions[np.argmax(np.median(broad+edge, axis=1))])
+        return (winner, bottom) if self.variable_edge == 0 else (top, winner)
+
     def restore(self, frame, roi, boxes, *, frame_index=None):
         xmin, top, xmax, bottom = self.native_box
         x, y, _, _ = roi
@@ -137,6 +178,9 @@ class LinePanel(Panel):
             return None
         left = x + min(box[0] for box in boxes)
         right = x + max(box[2] for box in boxes)
+        if self.variable_edge is not None:
+            top, bottom = self.measured_height(frame, left, right, top, bottom)
+            height = bottom - top
         # Search for each side beside the detected ink. This avoids confusing
         # letters and nearby scene objects with the boundary of the overlay.
         ys = np.arange(top + 3, bottom - 3, max(1, height // 34))
@@ -166,9 +210,10 @@ class LinePanel(Panel):
         verified = all(strong)
         if not verified:
             previous = getattr(self, '_verified_line', None)
-            if frame_index is None or previous is None or not 0 < frame_index-previous[0] <= 12:
+            if (frame_index is None or previous is None or not 0 < frame_index-previous[0] <= 12
+                    or (top, bottom) != previous[-2:]):
                 return None
-            _, old_left, old_right, old_text_left, old_text_right = previous
+            _, old_left, old_right, old_text_left, old_text_right, _, _ = previous
             # A background colour close to the panel tint can hide one edge.
             # The other three edges, word positions and current ink must still agree.
             if (sum(strong) < 3 or min(a, b) < 0 or min(upper, lower) < .12 or max(upper, lower) < .38
@@ -181,7 +226,7 @@ class LinePanel(Panel):
                 r = old_right
         restored = self.restore_bounds(frame, roi, boxes, (l, top, r, bottom), cover_words=True)
         if frame_index is not None and verified and restored is not None:
-            self._verified_line = frame_index, l, r, left, right
+            self._verified_line = frame_index, l, r, left, right, top, bottom
         return restored
 
 

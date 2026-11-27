@@ -160,7 +160,7 @@ class BandProfile:
         return confirmed
 
 
-def profile_source(path,rois,find,*,variable_line_panels=False):
+def profile_source(path,rois,find,*,variable_line_panels=False,alternate_line_heights=False):
     sampler=open_video_capture(path)
     grids={tuple(roi):[] for roi in rois}
     samples={key:[] for key in grids}
@@ -215,6 +215,11 @@ def profile_source(path,rois,find,*,variable_line_panels=False):
         finally:
             sampler.release()
         for key, panel in panels.items():
-            if not panel.calibrate(observations[key]):
-                result[key].panel = None
+            if panel.calibrate(observations[key]):
+                continue
+            if alternate_line_heights:
+                from lite_line_panel import LinePanel
+                if isinstance(panel, LinePanel) and panel.calibrate_heights(observations[key]):
+                    continue
+            result[key].panel = None
     return result

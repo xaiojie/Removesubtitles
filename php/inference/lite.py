@@ -49,6 +49,7 @@ class LiteOptions:
     native_thin_ocr: bool = False
     recover_static_text: bool = False
     track_line_panel_edges: bool = False
+    alternate_line_heights: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -520,7 +521,8 @@ def run(folder, request):
     if options.layout_profile:
         from lite_profile import profile_source
         with span('lite_layout_probe',device='cpu'):
-            profiles = profile_source(source, rois, find, variable_line_panels=options.variable_line_panels)
+            profiles = profile_source(source, rois, find, variable_line_panels=options.variable_line_panels,
+                                      alternate_line_heights=options.alternate_line_heights)
     with ExitStack() as resources:
         video = resources.enter_context(capture(source))
         fps, total = geometry(video)
