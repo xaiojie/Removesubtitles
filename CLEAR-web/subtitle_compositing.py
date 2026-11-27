@@ -162,9 +162,7 @@ def colored_caption_cards(crop):
     bins = sample.astype(np.uint16) // 24
     codes = bins[:, :, 0] * 121 + bins[:, :, 1] * 11 + bins[:, :, 2]
     counts = np.bincount(codes.ravel(), minlength=1331)
-    saturation = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)[:, :, 1]
     result = np.zeros((height, width), np.uint8)
-    light_ink = (crop.min(axis=2) >= 165) & (saturation <= 65)
     for index in np.argsort(counts)[-4:]:
         if counts[index] < .035 * codes.size:
             continue
@@ -193,7 +191,10 @@ def colored_caption_cards(crop):
             if not bands or min(band.mean() for band in bands) > .39:
                 continue
             top, bottom = max(0, y - h // 2), min(height, y + h + h // 4)
-            ink = (light_ink & ~similar)[top:bottom, x:x+w].astype(np.uint8)
+            patch = crop[top:bottom, x:x+w]
+            saturation = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)[:, :, 1]
+            bright = cv2.inRange(patch, (165, 165, 165), (255, 255, 255))
+            ink = ((bright != 0) & (saturation <= 65) & ~similar[top:bottom, x:x+w]).astype(np.uint8)
             count, _, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
             bases = [gy+gh for gx, gy, gw, gh, area in stats[1:count]
                      if .17*h <= gh <= 1.4*h and .12*gh <= gw <= 3.5*gh and area > gh]

@@ -171,7 +171,6 @@ def word_highlights(crop, boxes):
     small = cv2.resize(crop,(round(width*scale),max(1,round(height*scale))),interpolation=cv2.INTER_AREA)
     hsv = cv2.cvtColor(small,cv2.COLOR_BGR2HSV)
     saturated = (hsv[...,1]>=80) & (hsv[...,2]>=90)
-    ink = ((small.min(axis=2)>149) & (hsv[...,1]<75)) | (small.max(axis=2)<86)
     result = None
     for x,y,r,b in boxes:
         l,t = int(x*scale),int(y*scale)
@@ -197,7 +196,13 @@ def word_highlights(crop, boxes):
                 if overlap < .58*w*h or cv2.contourArea(contour)<.70*w*h:
                     continue
                 area = core[cy:cy+h,cx:cx+w]
-                if np.max(area.mean(axis=1))<.78 or ink[cy:cy+h,cx:cx+w].mean()<.045:
+                if np.max(area.mean(axis=1)) < .78:
+                    continue
+                patch = small[cy:cy+h, cx:cx+w]
+                light = cv2.inRange(patch, (150, 150, 150), (255, 255, 255))
+                dark = cv2.inRange(patch, (0, 0, 0), (85, 85, 85))
+                ink = ((light != 0) & (hsv[cy:cy+h, cx:cx+w, 1] < 75)) | (dark != 0)
+                if np.mean(ink) < .045:
                     continue
                 if result is None:
                     result = np.zeros((height,width),np.uint8)
