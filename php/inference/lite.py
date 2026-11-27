@@ -12,6 +12,7 @@ import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
 from lite_masks import DarkCardTrack, anchored_brush_card, black_caption_cards, word_highlights, locate_chip
+from lite_reuse import inference_frames
 from lite_tracking import reject_transient_skin, track_block
 from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
@@ -31,6 +32,7 @@ class LiteOptions:
     compact_transfer: bool = False
     ocr_backend: str = 'paddle'
     layout_profile: bool = False
+    frame_tolerance: int = 0
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -43,6 +45,8 @@ class LiteOptions:
             raise ValueError('Lite 局部推理尺寸应为非负整数')
         if self.ocr_backend not in ('paddle','onnx_cuda'):
             raise ValueError('Lite 字幕定位后端无效')
+        if type(self.frame_tolerance) is not int or not 0<=self.frame_tolerance<=8:
+            raise ValueError('相邻帧复用的像素容差须为 0 至 8')
 
 
 def detect(frame, rois, detector, options=LiteOptions()):
@@ -349,11 +353,18 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None,profi
                 size = (max(1, round((r-l)*scale)), max(1, round((b-t)*scale)))
                 input_crops = [cv2.resize(im,size,interpolation=cv2.INTER_AREA) for im in crops]
                 input_masks = [(cv2.resize(m,size,interpolation=cv2.INTER_AREA)>0).astype(np.uint8)*255 for m in masks]
-            with span('lite_lama', device=str(lama.device), frames=len(batch)):
-                outputs = lama._inpaint_batch(input_crops,input_masks)
-            for (index, _), mask, repaired in zip(batch, masks, outputs):
-                if scale < 1:
-                    repaired = cv2.resize(repaired, (r-l,b-t), interpolation=cv2.INTER_LINEAR)
+            anchors, order = inference_frames(crops, masks, options.frame_tolerance)
+            with span('lite_lama', device=str(lama.device), frames=len(anchors), output_frames=len(batch)):
+                repairs = lama._inpaint_batch([input_crops[i] for i in anchors], [input_masks[i] for i in anchors])
+            if scale < 1:
+                repairs = [cv2.resize(image, (r-l, b-t), interpolation=cv2.INTER_LINEAR) for image in repairs]
+            for i, ((index, _), mask) in enumerate(zip(batch, masks)):
+                slot = order[i]
+                repaired = repairs[slot]
+                if i != anchors[slot]:
+                    # Retain the source frame's own small color and lighting differences.
+                    delta = cv2.subtract(crops[i], crops[anchors[slot]], dtype=cv2.CV_16S)
+                    repaired = cv2.add(repaired, delta, dtype=cv2.CV_8U)
                 selected = mask != 0
                 frames[index][t:b, l:r][selected] = cv2.cvtColor(repaired, cv2.COLOR_RGB2BGR)[selected]
     return frames
@@ -433,7 +444,7 @@ def run(folder, request):
                     original_last = boxes[-1]
                     boxes = reject_transient_skin(frames,boxes,previous_boxes,anchor if ok else None)
                     previous_boxes = original_last
-                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks,profiles) if options.mask_mode != 'boxes'
+                repaired = (restore_joint(frames, boxes, rois, lama, options, tracks, profiles) if options.mask_mode != 'boxes'
                             else restore(frames, boxes, lama, options))
                 for frame in repaired:
                     writer.write(frame.tobytes())
@@ -442,7 +453,7 @@ def run(folder, request):
                 report(min(98, 4 + 94 * count / total), '裁带检测并逐句去字幕')
                 if not ok:
                     break
-    print(f'Lite: {repaired_count}/{count} 帧命中字幕框并调用 LaMa', flush=True)
+    print(f'Lite: {repaired_count}/{count} 帧命中 OCR', flush=True)
 
 
 if __name__ == '__main__' and sys.argv[1:] == ['--verify']:

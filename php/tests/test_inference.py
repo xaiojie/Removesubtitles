@@ -16,6 +16,15 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_similar_frames_require_matching_native_masks_and_stay_close_to_anchor(self):
+        from lite_reuse import inference_frames
+        images = [np.full((32, 56, 3), n, np.uint8) for n in (80, 82, 84, 86, 86, 86)]
+        masks = [np.full((32, 56), 255, np.uint8) for image in images]
+        masks[4][15, 12] = 0
+        images[5][2, 43] = 211
+        self.assertEqual(inference_frames(images, masks, 4), ([0, 3, 4, 5], [0, 0, 0, 1, 2, 3]))
+        self.assertEqual(inference_frames(images, masks, 0), (list(range(6)), list(range(6))))
+
     def test_known_highlight_can_catch_a_short_word_between_ocr_detections(self):
         from lite_masks import chip_examples,locate_chip,repeated_chips
         samples=[]
