@@ -1,0 +1,225 @@
+{
+  "clip": "P08",
+  "sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+  "roi": [
+    33,
+    1230,
+    1045,
+    1570
+  ],
+  "frames": 900,
+  "blue_source_negative_controls": {
+    "125": 0,
+    "178": 0
+  },
+  "matched_interval_frames": [
+    126,
+    175
+  ],
+  "runs": {
+    "clear-fast": {
+      "seconds": 648.673,
+      "peak_vram_mib": 15608,
+      "mean_gpu_percent": 61.2,
+      "gpu_samples": 722,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "ee44a3d38c54da84f6398d9d88fc2ecbc4ce2b538b01ef633c0e6376cf7f5d33",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "ocr-lama": {
+      "seconds": 245.662,
+      "peak_vram_mib": 3504,
+      "mean_gpu_percent": 8.7,
+      "gpu_samples": 275,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "22558ab755e349f9976127f9860b1b36427663ebc5c179e1fd70590239bce791",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    },
+    "lama-v5": {
+      "seconds": 77.652,
+      "peak_vram_mib": 5320,
+      "mean_gpu_percent": 15.0,
+      "gpu_samples": 83,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 900,
+        "fps": "30"
+      }
+    }
+  },
+  "summary": {
+    "upper_line": {
+      "frames": 50,
+      "above_half": {
+        "clear-fast": 0,
+        "ocr-lama": 0,
+        "lama-v5": 50
+      },
+      "source_pixel_count_min_max": [
+        13040,
+        13063
+      ],
+      "examples": [
+        {
+          "frame": 126,
+          "pixels": 13044,
+          "retained": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.99578
+          }
+        },
+        {
+          "frame": 132,
+          "pixels": 13051,
+          "retained": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.9951
+          }
+        },
+        {
+          "frame": 150,
+          "pixels": 13041,
+          "retained": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.99471
+          }
+        },
+        {
+          "frame": 175,
+          "pixels": 13049,
+          "retained": {
+            "clear-fast": 0.001,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.99762
+          }
+        }
+      ]
+    },
+    "lower_line": {
+      "frames": 50,
+      "above_half": {
+        "clear-fast": 0,
+        "ocr-lama": 0,
+        "lama-v5": 49
+      },
+      "source_pixel_count_min_max": [
+        14523,
+        15395
+      ],
+      "examples": [
+        {
+          "frame": 126,
+          "pixels": 14900,
+          "retained": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.99678
+          }
+        },
+        {
+          "frame": 132,
+          "pixels": 15024,
+          "retained": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.9972
+          }
+        },
+        {
+          "frame": 150,
+          "pixels": 14795,
+          "retained": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.99736
+          }
+        },
+        {
+          "frame": 175,
+          "pixels": 14841,
+          "retained": {
+            "clear-fast": 0.00121,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.9973
+          }
+        }
+      ]
+    },
+    "blue_backing": {
+      "frames": 50,
+      "above_half": {
+        "clear-fast": 50,
+        "ocr-lama": 33,
+        "lama-v5": 40
+      },
+      "source_pixel_count_min_max": [
+        16802,
+        23609
+      ],
+      "examples": [
+        {
+          "frame": 126,
+          "pixels": 16802,
+          "retained": {
+            "clear-fast": 0.6942,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.9797
+          }
+        },
+        {
+          "frame": 132,
+          "pixels": 19537,
+          "retained": {
+            "clear-fast": 0.99135,
+            "ocr-lama": 0.05881,
+            "lama-v5": 0.98674
+          }
+        },
+        {
+          "frame": 150,
+          "pixels": 21104,
+          "retained": {
+            "clear-fast": 0.58212,
+            "ocr-lama": 0.67191,
+            "lama-v5": 0.9828
+          }
+        },
+        {
+          "frame": 175,
+          "pixels": 23466,
+          "retained": {
+            "clear-fast": 0.93041,
+            "ocr-lama": 0.94601,
+            "lama-v5": 0.9778
+          }
+        }
+      ]
+    }
+  },
+  "method": {
+    "geometry": "Full matched 30 second sources, selections and native encodes, one fresh L20 worker, no sampled competing compute processes. Original export settings were preserved.",
+    "text": "Use the two source OCR boxes for TOO MANY and STILL DON in each of the 50 frames. Within each native rectangle mark light pixels (all BGR >=182 or B<=148, G>=165, R>=188) with local contrast of >=40 against the 9x9 eroded grayscale. Count a frame with more than half its source marks still present in the output.",
+    "backing": "In source and output within the user selection, mark BGR with B>=145, B-R>=94, B-G>=64, G<=115, R<=80. Count frames with more than half of the source blue pixels still marked. Frames 125 and 178 have zero marked source pixels as negative controls. This checks the vivid blue patch, not sleeve shape.",
+    "visual": "Looked at scene and text transitions, frames 0,125,126,132,175,178,899. Both original versions remove enlarged white print. The blue rectangle survives original CLEAR, and is less pronounced early on in original LaMa. Original CLEAR also changes the arm on the real last frame. Frozen Lite leaves both enlarged lines visible at 4.40 s.",
+    "holdout": "These EU samples had already been evaluated in earlier versions. Measurements are regressions and do not estimate unseen-source pass rates."
+  }
+}

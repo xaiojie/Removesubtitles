@@ -1,0 +1,225 @@
+{
+  "clip": "B04",
+  "source_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+  "roi": [
+    65,
+    1090,
+    1020,
+    1530
+  ],
+  "frames": 750,
+  "runs": {
+    "clear-fast": {
+      "seconds": 455.325,
+      "peak_vram_mib": 17420,
+      "mean_gpu_percent": 38.3,
+      "gpu_samples": 505,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "b2baf267cd9796dd0c0bc03e4c5b9b7e35324079c5f89a17cf1fb9077be45144",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "ocr-lama": {
+      "seconds": 272.951,
+      "peak_vram_mib": 3700,
+      "mean_gpu_percent": 7.0,
+      "gpu_samples": 304,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "218ce60ad3bbdcfa05ca19c0758610faafa921cd95f353d9846f14951dca9df5",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "lama-v5": {
+      "seconds": 85.941,
+      "peak_vram_mib": 8102,
+      "mean_gpu_percent": 15.5,
+      "gpu_samples": 89,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      }
+    }
+  },
+  "source_final_y_spans_half_open": [
+    [
+      1356,
+      1392
+    ],
+    [
+      1420,
+      1458
+    ],
+    [
+      1485,
+      1522
+    ],
+    [
+      1550,
+      1586
+    ],
+    [
+      1614,
+      1652
+    ]
+  ],
+  "summary": {
+    "lower_at_start": {
+      "frames": 96,
+      "range": [
+        18,
+        113
+      ],
+      "above_half": {
+        "clear-fast": 0,
+        "ocr-lama": 0,
+        "lama-v5": 96
+      },
+      "examples": [
+        {
+          "frame": 102,
+          "source_pixels": 13154,
+          "remaining": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.98791
+          }
+        }
+      ]
+    },
+    "middle_at_end": {
+      "frames": 53,
+      "range": [
+        697,
+        749
+      ],
+      "above_half": {
+        "clear-fast": 43,
+        "ocr-lama": 0,
+        "lama-v5": 52
+      },
+      "examples": [
+        {
+          "frame": 697,
+          "source_pixels": 10318,
+          "remaining": {
+            "clear-fast": 0.0,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.97936
+          }
+        },
+        {
+          "frame": 700,
+          "source_pixels": 9448,
+          "remaining": {
+            "clear-fast": 0.04519,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.0
+          }
+        },
+        {
+          "frame": 725,
+          "source_pixels": 8220,
+          "remaining": {
+            "clear-fast": 0.91667,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.97993
+          }
+        },
+        {
+          "frame": 738,
+          "source_pixels": 8216,
+          "remaining": {
+            "clear-fast": 0.91626,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.98077
+          }
+        },
+        {
+          "frame": 749,
+          "source_pixels": 8221,
+          "remaining": {
+            "clear-fast": 0.92033,
+            "ocr-lama": 0.0,
+            "lama-v5": 0.9809
+          }
+        }
+      ]
+    },
+    "below_selection": {
+      "frames": 53,
+      "range": [
+        697,
+        749
+      ],
+      "above_half": {
+        "clear-fast": 53,
+        "ocr-lama": 53,
+        "lama-v5": 53
+      },
+      "examples": [
+        {
+          "frame": 697,
+          "source_pixels": 25041,
+          "remaining": {
+            "clear-fast": 0.99473,
+            "ocr-lama": 0.98714,
+            "lama-v5": 0.98478
+          }
+        },
+        {
+          "frame": 700,
+          "source_pixels": 19734,
+          "remaining": {
+            "clear-fast": 0.99184,
+            "ocr-lama": 0.98439,
+            "lama-v5": 0.98961
+          }
+        },
+        {
+          "frame": 725,
+          "source_pixels": 16611,
+          "remaining": {
+            "clear-fast": 0.99759,
+            "ocr-lama": 0.99536,
+            "lama-v5": 0.9873
+          }
+        },
+        {
+          "frame": 738,
+          "source_pixels": 16623,
+          "remaining": {
+            "clear-fast": 0.99759,
+            "ocr-lama": 0.99537,
+            "lama-v5": 0.98671
+          }
+        },
+        {
+          "frame": 749,
+          "source_pixels": 16621,
+          "remaining": {
+            "clear-fast": 0.99795,
+            "ocr-lama": 0.99561,
+            "lama-v5": 0.98682
+          }
+        }
+      ]
+    }
+  },
+  "method": "The share of original bright character pixels that remain at the same location is measured separately per row and frame. The bottom two rows at the end are outside the user selection.",
+  "final_frame_visual": "末帧选框内前三行。原 CLEAR 快速保留三行可辨文字。原 OCR＋LaMa 擦净三行，空蓝底仍在。第五版剩第二、三行。选框以下两行三份成片均可辨。"
+}

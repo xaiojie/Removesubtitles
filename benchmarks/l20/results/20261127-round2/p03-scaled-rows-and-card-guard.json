@@ -1,0 +1,223 @@
+{
+  "clip": "P03",
+  "group": "tune",
+  "frames": 750,
+  "runs": {
+    "lama-v5": {
+      "seconds": 80.579,
+      "sha256": "04d702774a1e46153436322fd441300f5b51d88e65a53ac5f230a6516ed49aec",
+      "revision": "c45733606cf023e44118ebeb7e240192e14960d2"
+    },
+    "lama-scaled-rows": {
+      "seconds": 78.32,
+      "sha256": "b2a57addd19c0236ef93388d54b4cc5e47aeaaf4082b7a74c3f634d14c253352",
+      "revision": "68e7bc9df5eeb4e5dbfd9fc803f71c88b3ffef78"
+    }
+  },
+  "visual_check_frames": [
+    414,
+    416,
+    418,
+    419,
+    422,
+    423,
+    424,
+    426
+  ],
+  "measured_change": {
+    "frames": 750,
+    "minimum_intensity_change": 30,
+    "changes": [
+      {
+        "frame": 410,
+        "count": 3,
+        "rect": [
+          241,
+          44,
+          1,
+          5
+        ]
+      },
+      {
+        "frame": 411,
+        "count": 1,
+        "rect": [
+          241,
+          22,
+          1,
+          1
+        ]
+      },
+      {
+        "frame": 416,
+        "count": 7927,
+        "rect": [
+          116,
+          82,
+          696,
+          118
+        ]
+      },
+      {
+        "frame": 417,
+        "count": 6674,
+        "rect": [
+          114,
+          81,
+          696,
+          140
+        ]
+      },
+      {
+        "frame": 418,
+        "count": 20220,
+        "rect": [
+          115,
+          83,
+          650,
+          106
+        ]
+      },
+      {
+        "frame": 419,
+        "count": 8783,
+        "rect": [
+          115,
+          81,
+          679,
+          140
+        ]
+      },
+      {
+        "frame": 420,
+        "count": 4540,
+        "rect": [
+          115,
+          82,
+          679,
+          123
+        ]
+      },
+      {
+        "frame": 421,
+        "count": 4354,
+        "rect": [
+          115,
+          83,
+          727,
+          133
+        ]
+      },
+      {
+        "frame": 422,
+        "count": 6450,
+        "rect": [
+          115,
+          83,
+          649,
+          114
+        ]
+      },
+      {
+        "frame": 423,
+        "count": 78747,
+        "rect": [
+          114,
+          0,
+          651,
+          212
+        ]
+      },
+      {
+        "frame": 428,
+        "count": 2,
+        "rect": [
+          764,
+          9,
+          1,
+          2
+        ]
+      },
+      {
+        "frame": 429,
+        "count": 1,
+        "rect": [
+          763,
+          87,
+          1,
+          1
+        ]
+      },
+      {
+        "frame": 431,
+        "count": 2,
+        "rect": [
+          763,
+          87,
+          2,
+          2
+        ]
+      },
+      {
+        "frame": 432,
+        "count": 1,
+        "rect": [
+          763,
+          87,
+          1,
+          1
+        ]
+      },
+      {
+        "frame": 457,
+        "count": 2,
+        "rect": [
+          291,
+          83,
+          473,
+          5
+        ]
+      }
+    ]
+  },
+  "source_pixel_range": "Across the user selection count pixels with a difference in any BGR channel of 30 or more between the two outputs. This is a difference measure, not a text error count.",
+  "finding": "在第 423 帧（16.92 秒），实验版擦掉蓝底字幕时，也抹坏上方手机聊天中本来可见的原生字和界面；第五版保留这行。第 424 帧恢复，形成短暂闪变。选区内两版有 78,747 个像素的至少一个通道相差 30 级或更多。此实验参数暂不进入默认。",
+  "next": "继续在完整开发片上复核。",
+  "corrected_run": {
+    "seconds": 82.351,
+    "peak_vram_mib": 3680,
+    "mean_gpu_percent": 16.1,
+    "gpu_samples": 85,
+    "monitor_errors": 0,
+    "other_compute_samples": 0,
+    "sha256": "04d702774a1e46153436322fd441300f5b51d88e65a53ac5f230a6516ed49aec",
+    "video": {
+      "width": 1080,
+      "height": 1920,
+      "frames": 750,
+      "fps": "25"
+    }
+  },
+  "source_revision": "264cbe77f5cf742cb3f3af38ed5d051faf3384c6",
+  "full_output_identical_to_v5": true,
+  "diagnostic": {
+    "frames": 750,
+    "input_sha": "ee164423db016c25fe46aaeb3fd1165cbaf87216bd136a35243d6889aa29e310",
+    "backend": "cpu",
+    "changed_frames": [],
+    "expected_restored": 423
+  },
+  "source_sha256": "ee164423db016c25fe46aaeb3fd1165cbaf87216bd136a35243d6889aa29e310",
+  "roi": [
+    {
+      "type": "subtitle",
+      "roi": [
+        28,
+        1145,
+        1035,
+        1455
+      ]
+    }
+  ],
+  "scope": "One full development clip; only the extra loss of existing mobile UI content was assessed here."
+}
