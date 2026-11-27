@@ -1,0 +1,885 @@
+{
+  "frozen_revision": "c45733606cf023e44118ebeb7e240192e14960d2",
+  "original_ocr_revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8",
+  "scope": "Repeated full 30-second regressions. CUDA diagnostic replays are excluded from all timings. They use the source video, the original ROI, frozen options and the same detector weights.",
+  "stroke_measure": "The evaluation-only reference rectangles are independent source OCR readings of the specified phrases. In decoded BGR pixels, a bright core is neutral B/G/R >= 182 or yellow B <=148, G >=165, R >=188, with luma minus local 9x9 minimum >=40. Yellow and white thresholds are applied identically to source and outputs. Require >=80 source-core pixels. Tracked and selected counts describe frames whose rectangles cover at least half of measured source core pixels. Output counts describe frames retaining bright cores on more than half of those pixels. All figures are regional diagnostics rather than whole-clip quality ratings.",
+  "clips": {
+    "N02": {
+      "input_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+      "frames": 750,
+      "fps": "25",
+      "roi": [80, 794, 1370, 986],
+      "runs": {
+        "ocr-lama": {
+          "seconds": 91.567,
+          "peak_vram_mib": 3672,
+          "mean_gpu_percent": 12.2,
+          "gpu_samples": 99,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1cb503918cda85251ecd5c3b92844d1b9b7ff497f049fd6a5f7daa424d36d52d"
+        },
+        "lama-v5": {
+          "seconds": 44.528,
+          "peak_vram_mib": 4272,
+          "mean_gpu_percent": 14.2,
+          "gpu_samples": 45,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1e40a34f8fc4ad1afc444ff562007a1941b89dd11cc6c7973968325c08cf1eaf"
+        }
+      },
+      "detected_frames": 433,
+      "learned_rows": [
+        [152.5, 74.0]
+      ],
+      "inferred_panel": "NoneType",
+      "checkpoints": {
+        "57": {
+          "frame": 57,
+          "tracked_ocr": [
+            [376, 114, 648, 192],
+            [390, 52, 894, 133],
+            [612, 123, 733, 186],
+            [709, 116, 865, 192]
+          ],
+          "direct_ocr": [
+            [376, 114, 648, 192],
+            [390, 52, 894, 133],
+            [612, 123, 733, 186],
+            [709, 116, 865, 192]
+          ],
+          "after_row_selection": [
+            [376, 114, 648, 192],
+            [612, 123, 733, 186],
+            [709, 116, 865, 192]
+          ],
+          "after_horizontal_band": [
+            [376, 114, 648, 192],
+            [612, 123, 733, 186],
+            [709, 116, 865, 192]
+          ],
+          "final_text_boxes": [
+            [376, 114, 648, 192],
+            [612, 123, 733, 186],
+            [709, 116, 865, 192]
+          ],
+          "dark_card": null
+        },
+        "107": {
+          "frame": 107,
+          "tracked_ocr": [
+            [376, 113, 872, 192],
+            [390, 52, 908, 133]
+          ],
+          "direct_ocr": [
+            [376, 113, 865, 192],
+            [392, 57, 897, 131]
+          ],
+          "after_row_selection": [
+            [376, 113, 872, 192]
+          ],
+          "after_horizontal_band": [
+            [376, 113, 872, 192]
+          ],
+          "final_text_boxes": [
+            [376, 113, 872, 192]
+          ],
+          "dark_card": null
+        },
+        "311": {
+          "frame": 311,
+          "tracked_ocr": [
+            [252, 116, 887, 192]
+          ],
+          "direct_ocr": [
+            [252, 116, 885, 192]
+          ],
+          "after_row_selection": [
+            [252, 116, 887, 192]
+          ],
+          "after_horizontal_band": [
+            [252, 116, 887, 192]
+          ],
+          "final_text_boxes": [
+            [252, 116, 887, 192]
+          ],
+          "dark_card": null
+        },
+        "515": {
+          "frame": 515,
+          "tracked_ocr": [
+            [295, 120, 989, 190]
+          ],
+          "direct_ocr": [
+            [297, 123, 989, 190]
+          ],
+          "after_row_selection": [
+            [295, 120, 989, 190]
+          ],
+          "after_horizontal_band": [
+            [295, 120, 989, 190]
+          ],
+          "final_text_boxes": [
+            [295, 120, 989, 190]
+          ],
+          "dark_card": null
+        },
+        "749": {
+          "frame": 749,
+          "tracked_ocr": [],
+          "direct_ocr": [],
+          "after_row_selection": [],
+          "after_horizontal_band": [],
+          "final_text_boxes": [],
+          "dark_card": null
+        }
+      },
+      "stroke_counts": {
+        "upper row": {
+          "measured_frames": 57,
+          "first_and_last_frame": [57, 113],
+          "tracked_half_or_more": 57,
+          "selected_half_or_more": 0,
+          "original_output_bright_on_majority": 0,
+          "v5_output_bright_on_majority": 57,
+          "checkpoints": [
+            {
+              "frame": 57,
+              "pixels": 4874,
+              "tracked": 4874,
+              "selected": 89,
+              "old_bright": 0,
+              "v5_bright": 4788
+            },
+            {
+              "frame": 107,
+              "pixels": 5192,
+              "tracked": 5192,
+              "selected": 119,
+              "old_bright": 0,
+              "v5_bright": 5071
+            }
+          ]
+        },
+        "sentence end": {
+          "measured_frames": 62,
+          "first_and_last_frame": [269, 330],
+          "tracked_half_or_more": 62,
+          "selected_half_or_more": 62,
+          "original_output_bright_on_majority": 0,
+          "v5_output_bright_on_majority": 0,
+          "checkpoints": [
+            {
+              "frame": 311,
+              "pixels": 7286,
+              "tracked": 6294,
+              "selected": 6294,
+              "old_bright": 1034,
+              "v5_bright": 1047
+            }
+          ]
+        }
+      }
+    },
+    "P08": {
+      "input_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+      "frames": 900,
+      "fps": "30",
+      "roi": [33, 1230, 1045, 1570],
+      "runs": {
+        "ocr-lama": {
+          "seconds": 245.662,
+          "peak_vram_mib": 3504,
+          "mean_gpu_percent": 8.7,
+          "gpu_samples": 275,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "22558ab755e349f9976127f9860b1b36427663ebc5c179e1fd70590239bce791"
+        },
+        "lama-v5": {
+          "seconds": 77.652,
+          "peak_vram_mib": 5320,
+          "mean_gpu_percent": 15.0,
+          "gpu_samples": 83,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f"
+        }
+      },
+      "detected_frames": 869,
+      "learned_rows": [
+        [219.0, 72.0],
+        [267.5, 71.0]
+      ],
+      "inferred_panel": "NoneType",
+      "checkpoints": {
+        "0": {
+          "frame": 0,
+          "tracked_ocr": [
+            [290, 208, 708, 277],
+            [293, 256, 726, 329]
+          ],
+          "direct_ocr": [
+            [290, 208, 708, 277],
+            [293, 256, 726, 329]
+          ],
+          "after_row_selection": [
+            [290, 208, 708, 277],
+            [293, 256, 726, 329]
+          ],
+          "after_horizontal_band": [
+            [290, 208, 708, 277],
+            [293, 256, 726, 329]
+          ],
+          "final_text_boxes": [
+            [290, 208, 708, 277],
+            [293, 256, 726, 329]
+          ],
+          "dark_card": null
+        },
+        "114": {
+          "frame": 114,
+          "tracked_ocr": [
+            [296, 227, 740, 308]
+          ],
+          "direct_ocr": [
+            [297, 231, 739, 306]
+          ],
+          "after_row_selection": [
+            [296, 227, 740, 308]
+          ],
+          "after_horizontal_band": [
+            [296, 227, 740, 308]
+          ],
+          "final_text_boxes": [
+            [296, 227, 740, 308]
+          ],
+          "dark_card": null
+        },
+        "126": {
+          "frame": 126,
+          "tracked_ocr": [
+            [118, 103, 417, 245],
+            [124, 217, 445, 340],
+            [411, 109, 779, 237],
+            [444, 215, 820, 339]
+          ],
+          "direct_ocr": [
+            [118, 103, 417, 245],
+            [124, 217, 443, 340],
+            [411, 109, 779, 237],
+            [444, 215, 820, 339]
+          ],
+          "after_row_selection": [],
+          "after_horizontal_band": [],
+          "final_text_boxes": [],
+          "dark_card": null
+        },
+        "132": {
+          "frame": 132,
+          "tracked_ocr": [
+            [123, 104, 415, 242],
+            [124, 215, 448, 340],
+            [411, 106, 784, 238],
+            [443, 214, 822, 340]
+          ],
+          "direct_ocr": [
+            [123, 104, 415, 242],
+            [124, 217, 445, 340],
+            [412, 109, 781, 237],
+            [443, 214, 822, 340]
+          ],
+          "after_row_selection": [],
+          "after_horizontal_band": [],
+          "final_text_boxes": [],
+          "dark_card": null
+        },
+        "360": {
+          "frame": 360,
+          "tracked_ocr": [
+            [266, 231, 432, 304],
+            [407, 224, 768, 308]
+          ],
+          "direct_ocr": [
+            [266, 231, 432, 304],
+            [407, 224, 768, 308]
+          ],
+          "after_row_selection": [
+            [266, 231, 432, 304],
+            [407, 224, 768, 308]
+          ],
+          "after_horizontal_band": [
+            [266, 231, 432, 304],
+            [407, 224, 768, 308]
+          ],
+          "final_text_boxes": [
+            [266, 231, 432, 304],
+            [407, 224, 768, 308]
+          ],
+          "dark_card": null
+        },
+        "899": {
+          "frame": 899,
+          "tracked_ocr": [
+            [170, 0, 258, 41],
+            [241, 3, 272, 36],
+            [269, 259, 748, 328],
+            [304, 151, 474, 214],
+            [305, 207, 509, 277],
+            [498, 204, 691, 276],
+            [681, 198, 725, 244]
+          ],
+          "direct_ocr": [
+            [170, 0, 258, 41],
+            [241, 3, 272, 36],
+            [269, 259, 748, 328],
+            [304, 151, 474, 214],
+            [305, 207, 509, 277],
+            [498, 204, 691, 276],
+            [681, 198, 725, 244]
+          ],
+          "after_row_selection": [
+            [305, 207, 509, 277],
+            [269, 259, 748, 328]
+          ],
+          "after_horizontal_band": [
+            [305, 207, 509, 277],
+            [269, 259, 748, 328]
+          ],
+          "final_text_boxes": [
+            [305, 207, 509, 277],
+            [269, 259, 748, 328]
+          ],
+          "dark_card": null
+        }
+      },
+      "stroke_counts": {
+        "upper row": {
+          "measured_frames": 50,
+          "first_and_last_frame": [126, 175],
+          "tracked_half_or_more": 50,
+          "selected_half_or_more": 0,
+          "original_output_bright_on_majority": 0,
+          "v5_output_bright_on_majority": 50,
+          "checkpoints": [
+            {
+              "frame": 126,
+              "pixels": 13044,
+              "tracked": 13044,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 12989
+            },
+            {
+              "frame": 132,
+              "pixels": 13051,
+              "tracked": 13051,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 12987
+            }
+          ]
+        },
+        "lower row": {
+          "measured_frames": 50,
+          "first_and_last_frame": [126, 175],
+          "tracked_half_or_more": 50,
+          "selected_half_or_more": 0,
+          "original_output_bright_on_majority": 0,
+          "v5_output_bright_on_majority": 49,
+          "checkpoints": [
+            {
+              "frame": 126,
+              "pixels": 14900,
+              "tracked": 14900,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 14852
+            },
+            {
+              "frame": 132,
+              "pixels": 15024,
+              "tracked": 15024,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 14982
+            }
+          ]
+        }
+      }
+    },
+    "B04": {
+      "input_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+      "frames": 750,
+      "fps": "25",
+      "roi": [65, 1090, 1020, 1530],
+      "runs": {
+        "ocr-lama": {
+          "seconds": 272.951,
+          "peak_vram_mib": 3700,
+          "mean_gpu_percent": 7.0,
+          "gpu_samples": 304,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "218ce60ad3bbdcfa05ca19c0758610faafa921cd95f353d9846f14951dca9df5"
+        },
+        "lama-v5": {
+          "seconds": 85.941,
+          "peak_vram_mib": 8102,
+          "mean_gpu_percent": 15.5,
+          "gpu_samples": 89,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783"
+        }
+      },
+      "detected_frames": 710,
+      "learned_rows": [
+        [100.75, 105.0],
+        [206.0, 110.0]
+      ],
+      "inferred_panel": "NoneType",
+      "checkpoints": {
+        "0": {
+          "frame": 0,
+          "tracked_ocr": [
+            [211, 98, 737, 200],
+            [376, 225, 576, 344]
+          ],
+          "direct_ocr": [
+            [211, 98, 737, 200],
+            [378, 238, 576, 344]
+          ],
+          "after_row_selection": [
+            [211, 98, 737, 200]
+          ],
+          "after_horizontal_band": [
+            [211, 98, 737, 200]
+          ],
+          "final_text_boxes": [
+            [211, 98, 737, 200]
+          ],
+          "dark_card": null
+        },
+        "102": {
+          "frame": 102,
+          "tracked_ocr": [
+            [99, 318, 552, 390],
+            [131, 148, 256, 225],
+            [245, 230, 454, 307],
+            [248, 150, 422, 224],
+            [398, 151, 635, 224],
+            [449, 236, 707, 307],
+            [544, 321, 659, 387],
+            [630, 152, 822, 223],
+            [658, 317, 851, 390]
+          ],
+          "direct_ocr": [
+            [99, 318, 552, 390],
+            [131, 148, 256, 225],
+            [245, 230, 454, 307],
+            [248, 150, 422, 224],
+            [403, 151, 634, 224],
+            [449, 236, 707, 307],
+            [545, 321, 660, 387],
+            [630, 152, 822, 223],
+            [658, 317, 851, 390]
+          ],
+          "after_row_selection": [
+            [131, 148, 256, 225],
+            [248, 150, 422, 224],
+            [398, 151, 635, 224],
+            [630, 152, 822, 223],
+            [245, 230, 454, 307],
+            [449, 236, 707, 307]
+          ],
+          "after_horizontal_band": [
+            [131, 148, 256, 225],
+            [248, 150, 422, 224],
+            [398, 151, 635, 224],
+            [630, 152, 822, 223],
+            [245, 230, 454, 307],
+            [449, 236, 707, 307]
+          ],
+          "final_text_boxes": [
+            [131, 148, 256, 225],
+            [248, 150, 422, 224],
+            [398, 151, 635, 224],
+            [630, 152, 822, 223],
+            [245, 230, 454, 307],
+            [449, 236, 707, 307]
+          ],
+          "dark_card": null
+        },
+        "355": {
+          "frame": 355,
+          "tracked_ocr": [
+            [174, 130, 748, 253]
+          ],
+          "direct_ocr": [
+            [175, 131, 745, 250]
+          ],
+          "after_row_selection": [
+            [174, 130, 748, 253]
+          ],
+          "after_horizontal_band": [
+            [174, 130, 748, 253]
+          ],
+          "final_text_boxes": [
+            [174, 130, 748, 253]
+          ],
+          "dark_card": null
+        },
+        "605": {
+          "frame": 605,
+          "tracked_ocr": [
+            [73, 150, 284, 250],
+            [128, 44, 359, 143],
+            [270, 148, 871, 253],
+            [342, 49, 613, 138],
+            [603, 44, 820, 144]
+          ],
+          "direct_ocr": [
+            [85, 152, 284, 246],
+            [135, 45, 359, 143],
+            [269, 151, 549, 248],
+            [343, 47, 611, 140],
+            [525, 154, 863, 245],
+            [603, 47, 810, 143]
+          ],
+          "after_row_selection": [
+            [128, 44, 359, 143],
+            [342, 49, 613, 138],
+            [603, 44, 820, 144],
+            [73, 150, 284, 250],
+            [270, 148, 871, 253]
+          ],
+          "after_horizontal_band": [
+            [128, 44, 359, 143],
+            [342, 49, 613, 138],
+            [603, 44, 820, 144],
+            [73, 150, 284, 250],
+            [270, 148, 871, 253]
+          ],
+          "final_text_boxes": [
+            [128, 44, 359, 143],
+            [342, 49, 613, 138],
+            [603, 44, 820, 144],
+            [73, 150, 284, 250],
+            [270, 148, 871, 253]
+          ],
+          "dark_card": null
+        },
+        "725": {
+          "frame": 725,
+          "tracked_ocr": [
+            [91, 252, 244, 315],
+            [203, 253, 526, 314],
+            [227, 319, 484, 378],
+            [253, 381, 590, 440],
+            [480, 317, 652, 379],
+            [508, 253, 879, 315],
+            [573, 383, 706, 440],
+            [643, 317, 745, 380]
+          ],
+          "direct_ocr": [
+            [91, 252, 244, 315],
+            [203, 253, 526, 314],
+            [227, 319, 484, 378],
+            [253, 383, 590, 440],
+            [480, 317, 652, 379],
+            [508, 253, 878, 314],
+            [573, 383, 706, 440],
+            [646, 321, 743, 378]
+          ],
+          "after_row_selection": [],
+          "after_horizontal_band": [],
+          "final_text_boxes": [],
+          "dark_card": null
+        },
+        "738": {
+          "frame": 738,
+          "tracked_ocr": [
+            [91, 252, 526, 314],
+            [227, 319, 485, 378],
+            [253, 383, 590, 440],
+            [481, 319, 651, 378],
+            [508, 253, 878, 315],
+            [573, 383, 706, 440],
+            [646, 321, 743, 378]
+          ],
+          "direct_ocr": [
+            [93, 252, 526, 314],
+            [227, 319, 485, 378],
+            [253, 383, 590, 440],
+            [481, 319, 651, 378],
+            [508, 253, 878, 315],
+            [573, 383, 706, 440],
+            [646, 321, 743, 378]
+          ],
+          "after_row_selection": [],
+          "after_horizontal_band": [],
+          "final_text_boxes": [],
+          "dark_card": null
+        },
+        "749": {
+          "frame": 749,
+          "tracked_ocr": [
+            [91, 252, 528, 314],
+            [227, 319, 485, 376],
+            [253, 383, 706, 440],
+            [479, 315, 654, 380],
+            [488, 253, 878, 314],
+            [646, 321, 743, 378]
+          ],
+          "direct_ocr": [
+            [91, 252, 528, 314],
+            [227, 319, 485, 376],
+            [253, 383, 706, 440],
+            [479, 315, 654, 380],
+            [488, 253, 878, 314],
+            [646, 321, 743, 378]
+          ],
+          "after_row_selection": [
+            [91, 252, 528, 314],
+            [488, 253, 878, 314]
+          ],
+          "after_horizontal_band": [
+            [91, 252, 528, 314],
+            [488, 253, 878, 314]
+          ],
+          "final_text_boxes": [
+            [91, 252, 528, 314],
+            [488, 253, 878, 314]
+          ],
+          "dark_card": null
+        }
+      },
+      "stroke_counts": {
+        "middle row": {
+          "measured_frames": 53,
+          "first_and_last_frame": [697, 749],
+          "tracked_half_or_more": 53,
+          "selected_half_or_more": 0,
+          "original_output_bright_on_majority": 0,
+          "v5_output_bright_on_majority": 52,
+          "checkpoints": [
+            {
+              "frame": 725,
+              "pixels": 8220,
+              "tracked": 8220,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 8055
+            },
+            {
+              "frame": 738,
+              "pixels": 8216,
+              "tracked": 8216,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 8058
+            },
+            {
+              "frame": 749,
+              "pixels": 8221,
+              "tracked": 8221,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 8064
+            }
+          ]
+        },
+        "lower line": {
+          "measured_frames": 96,
+          "first_and_last_frame": [18, 113],
+          "tracked_half_or_more": 96,
+          "selected_half_or_more": 0,
+          "original_output_bright_on_majority": 0,
+          "v5_output_bright_on_majority": 96,
+          "checkpoints": [
+            {
+              "frame": 102,
+              "pixels": 13154,
+              "tracked": 13154,
+              "selected": 0,
+              "old_bright": 0,
+              "v5_bright": 12995
+            }
+          ]
+        }
+      }
+    },
+    "P05": {
+      "input_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+      "frames": 720,
+      "fps": "24",
+      "roi": [28, 910, 697, 1190],
+      "runs": {
+        "ocr-lama": {
+          "seconds": 171.658,
+          "peak_vram_mib": 2748,
+          "mean_gpu_percent": 7.5,
+          "gpu_samples": 190,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "c191455cb01f3aa8bc897dc2ca7a9ee032c3801c8616692eab63bc53cfdcaf49"
+        },
+        "lama-v5": {
+          "seconds": 47.851,
+          "peak_vram_mib": 5080,
+          "mean_gpu_percent": 22.7,
+          "gpu_samples": 49,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7"
+        }
+      },
+      "detected_frames": 694,
+      "learned_rows": [
+        [89.25, 68.0],
+        [140.0, 67.0]
+      ],
+      "inferred_panel": "NoneType",
+      "checkpoints": {
+        "0": {
+          "frame": 0,
+          "tracked_ocr": [
+            [166, 105, 490, 175],
+            [192, 56, 329, 126],
+            [287, 61, 474, 121]
+          ],
+          "direct_ocr": [
+            [166, 105, 490, 175],
+            [192, 56, 329, 126],
+            [287, 61, 474, 121]
+          ],
+          "after_row_selection": [
+            [192, 56, 329, 126],
+            [287, 61, 474, 121],
+            [166, 105, 490, 175]
+          ],
+          "after_horizontal_band": [
+            [192, 56, 329, 126],
+            [287, 61, 474, 121],
+            [166, 105, 490, 175]
+          ],
+          "final_text_boxes": [
+            [192, 56, 329, 126],
+            [287, 61, 474, 121],
+            [166, 105, 490, 175]
+          ],
+          "dark_card": null
+        },
+        "22": {
+          "frame": 22,
+          "tracked_ocr": [
+            [182, 86, 480, 163]
+          ],
+          "direct_ocr": [
+            [182, 87, 479, 162]
+          ],
+          "after_row_selection": [
+            [182, 86, 480, 163]
+          ],
+          "after_horizontal_band": [
+            [182, 86, 480, 163]
+          ],
+          "final_text_boxes": [
+            [182, 86, 480, 163]
+          ],
+          "dark_card": null
+        },
+        "65": {
+          "frame": 65,
+          "tracked_ocr": [
+            [62, 0, 523, 38],
+            [62, 24, 669, 79],
+            [110, 139, 552, 214],
+            [114, 89, 549, 155]
+          ],
+          "direct_ocr": [
+            [62, 0, 523, 38],
+            [62, 24, 669, 79],
+            [110, 139, 552, 214],
+            [114, 89, 549, 155]
+          ],
+          "after_row_selection": [
+            [114, 89, 549, 155],
+            [110, 139, 552, 214]
+          ],
+          "after_horizontal_band": [
+            [114, 89, 549, 155],
+            [110, 139, 552, 214]
+          ],
+          "final_text_boxes": [
+            [114, 89, 549, 155],
+            [110, 139, 552, 214]
+          ],
+          "dark_card": null
+        },
+        "205": {
+          "frame": 205,
+          "tracked_ocr": [
+            [76, 105, 338, 179],
+            [255, 53, 414, 126],
+            [316, 106, 588, 181]
+          ],
+          "direct_ocr": [
+            [76, 105, 337, 179],
+            [255, 53, 413, 125],
+            [316, 106, 588, 181]
+          ],
+          "after_row_selection": [
+            [255, 53, 414, 126],
+            [76, 105, 338, 179],
+            [316, 106, 588, 181]
+          ],
+          "after_horizontal_band": [
+            [255, 53, 414, 126],
+            [76, 105, 338, 179],
+            [316, 106, 588, 181]
+          ],
+          "final_text_boxes": [
+            [255, 53, 414, 126],
+            [76, 105, 338, 179],
+            [316, 106, 588, 181]
+          ],
+          "dark_card": null
+        },
+        "719": {
+          "frame": 719,
+          "tracked_ocr": [
+            [151, 50, 514, 127],
+            [200, 110, 462, 169],
+            [608, 83, 669, 138],
+            [619, 61, 669, 106]
+          ],
+          "direct_ocr": [
+            [151, 50, 514, 127],
+            [200, 110, 462, 169],
+            [608, 83, 669, 138],
+            [619, 61, 669, 106]
+          ],
+          "after_row_selection": [
+            [619, 61, 669, 106],
+            [151, 50, 514, 127],
+            [200, 110, 462, 169]
+          ],
+          "after_horizontal_band": [
+            [619, 61, 669, 106],
+            [151, 50, 514, 127],
+            [200, 110, 462, 169]
+          ],
+          "final_text_boxes": [
+            [619, 61, 669, 106],
+            [151, 50, 514, 127],
+            [200, 110, 462, 169]
+          ],
+          "dark_card": null
+        }
+      }
+    }
+  }
+}

@@ -16,6 +16,33 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_centered_dialogue_with_a_row_split_into_word_boxes(self):
+        from lite_profile import BandProfile
+
+        width, height = 860, 160
+        image = np.full((height, width, 3), 55, np.uint8)
+        font = cv2.FONT_HERSHEY_DUPLEX
+
+        def draw_row(text, baseline):
+            (span, cap_height), _ = cv2.getTextSize(text, font, 1.15, 2)
+            left = (width - span) // 2
+            cv2.putText(image, text, (left, baseline), font, 1.15, (242, 242, 242), 2, cv2.LINE_AA)
+            return (left-6, baseline-cap_height-6, left+span+6, baseline+7)
+
+        upper = draw_row('EVENING TRAIN', 63)
+        lower = draw_row('FREE RIDE', 104)
+        x, y, r, b = lower
+        split = x + 6 + cv2.getTextSize('FREE ', font, 1.15, 2)[0][0]
+        words = [(x, y, split+3, b), (split-3, y, r, b)]
+        native_label = (12, upper[1], 65, upper[3])
+        boxes = [native_label, upper, *words]
+        profile = BandProfile(width, height, [((y+b)/2, b-y)], None)
+        self.assertCountEqual(profile.select(boxes), words)
+        self.assertEqual(profile.wrapped_dialogue(image, boxes, words), [])
+        self.assertCountEqual(profile.wrapped_dialogue(image, boxes, words, group_words=True), [upper, *words])
+        image[:71] = 55
+        self.assertEqual(profile.wrapped_dialogue(image, boxes, words, group_words=True), [])
+
     def test_a_short_final_line_does_not_hide_the_matching_line_above_it(self):
         from lite_profile import BandProfile
 

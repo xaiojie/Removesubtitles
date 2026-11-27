@@ -51,7 +51,28 @@ def printed_row_style(frame, box):
                & (hh >= .22*height) & (hh < .90*height) & (ww < 2.3*hh) & (area >= hh))
     if np.count_nonzero(letters) < 3:
         return None
-    return float(np.median(hh[letters])), np.median(patch[letters[labels]], axis=0)
+    # An ascender still carries the font size in a mostly lowercase word.
+    glyph_height = float(np.percentile(hh[letters], 75))
+    return glyph_height, np.median(patch[letters[labels]], axis=0)
+
+
+def word_lines(boxes):
+    """Group nearby OCR words on a common baseline, retaining their individual boxes for masking."""
+    lines = []
+    for box in sorted(boxes):
+        x, y, right, bottom = box
+        for i, (bounds, words) in enumerate(lines):
+            left, top, end, low = bounds
+            depth = min(low-top, bottom-y)
+            if (max(low-top, bottom-y) > 1.52*depth or
+                    abs(top+low-y-bottom) > .56*depth or x-end > depth):
+                continue
+            words.append(box)
+            lines[i] = ((left, min(top, y), max(end, right), max(low, bottom)), words)
+            break
+        else:
+            lines.append((box, [box]))
+    return lines
 
 
 @dataclass
@@ -63,11 +84,22 @@ class BandProfile:
     chip: object = None
     highlight: object = None
 
-    def wrapped_dialogue(self, frame, boxes, selected):
+    def wrapped_dialogue(self, frame, boxes, selected, *, group_words=False):
         """Keep an adjacent row matching the font of an established, centred subtitle."""
-        if len(self.rows) != 1 or len(selected) != 1 or len(boxes) < 2 or self.panel or self.chip or self.highlight:
+        if len(self.rows) != 1 or not selected or len(selected) == len(boxes) or self.panel or self.chip or self.highlight:
             return []
-        anchor = selected[0]
+        others = [box for box in boxes if box not in selected]
+        if group_words:
+            anchors = word_lines(selected)
+            if len(anchors) != 1:
+                return []
+            anchor = anchors[0][0]
+            candidates = word_lines(others)
+        else:
+            if len(selected) != 1:
+                return []
+            anchor = selected[0]
+            candidates = [(box, [box]) for box in others]
         x, y, right, bottom = anchor
         height = bottom-y
         center = (x+right)/2
@@ -77,13 +109,15 @@ class BandProfile:
         if abs((y+bottom)/2-expected) > .45*size:
             return []
         anchor_style = None
-        for other in boxes:
+        for other, words in candidates:
             left, top, end, low = other
             depth = low-top
             distance = abs(top+low-y-bottom)/2
             if not .73*height <= depth <= 1.37*height or not .66*height < distance < 1.43*height:
                 continue
-            if min(right-x,end-left) < 1.65*min(height,depth) or max(right-x,end-left) < .42*self.width:
+            # A wide user selection can contain two fairly short, centred rows.
+            minimum_span = min(.42*self.width, 4*height) if group_words else .42*self.width
+            if min(right-x,end-left) < 1.65*min(height,depth) or max(right-x,end-left) < minimum_span:
                 continue
             if abs((left+end)/2-center) > .11*self.width or top <= 1 or low >= self.height-1:
                 continue
@@ -94,7 +128,7 @@ class BandProfile:
             style = printed_row_style(frame, other)
             if (style is not None and .73*anchor_style[0] <= style[0] <= 1.38*anchor_style[0]
                     and np.abs(style[1]-anchor_style[1]).max() < 31):
-                return [anchor, other]
+                return [*selected, *words]
         return []
 
     def dialogue_rows(self, boxes):
