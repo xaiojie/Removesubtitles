@@ -1,0 +1,119 @@
+{
+  "clip": "B03",
+  "split": "tune",
+  "input_sha256": "a27a2a553e9b1c1f859507855c216d26ad51fb1f3dd6121e574e06dd7e709e69",
+  "selection": [
+    {
+      "type": "subtitle",
+      "roi": [
+        12,
+        1045,
+        708,
+        1208
+      ]
+    }
+  ],
+  "runs": {
+    "clear-fast": {
+      "seconds": 182.359,
+      "peak_vram_mib": 7266,
+      "mean_gpu_percent": 58.7,
+      "gpu_samples": 199,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "bb64973f12c1643413140c71745183f7b4c5adfcf1a9f196308bbd1bf162205e",
+      "video": {
+        "width": 720,
+        "height": 1280,
+        "frames": 900,
+        "fps": "30"
+      },
+      "output_matching_frames": 78,
+      "inclusive_match_ranges": [
+        [
+          89,
+          89
+        ],
+        [
+          199,
+          228
+        ],
+        [
+          276,
+          322
+        ]
+      ],
+      "ocr_error_frames": 0,
+      "input_readable_frames": 487,
+      "output_readable_frames": 87
+    },
+    "ocr-lama": {
+      "seconds": 80.238,
+      "peak_vram_mib": 1994,
+      "mean_gpu_percent": 11.0,
+      "gpu_samples": 83,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "fe26d7b109181d131b53b556198004632dbbb51b3ee7ef0bb10f5427576cf260",
+      "video": {
+        "width": 720,
+        "height": 1280,
+        "frames": 900,
+        "fps": "30"
+      },
+      "output_matching_frames": 0,
+      "inclusive_match_ranges": [],
+      "ocr_error_frames": 0,
+      "input_readable_frames": 487,
+      "output_readable_frames": 0
+    },
+    "lama-v5": {
+      "seconds": 36.117,
+      "peak_vram_mib": 5186,
+      "mean_gpu_percent": 21.1,
+      "gpu_samples": 36,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "301c33e1e01aad48ec24fde78d860cb12b3739380d3280e8e65ae5c9e6ca69de",
+      "video": {
+        "width": 720,
+        "height": 1280,
+        "frames": 900,
+        "fps": "30"
+      },
+      "output_matching_frames": 0,
+      "inclusive_match_ranges": [],
+      "ocr_error_frames": 0,
+      "input_readable_frames": 487,
+      "output_readable_frames": 0
+    }
+  },
+  "native_review_frames": [
+    89,
+    198,
+    199,
+    214,
+    275,
+    276,
+    292,
+    322,
+    323,
+    671,
+    870,
+    899
+  ],
+  "original_clear_ocr_validation": {
+    "source": "bb64973f12c1643413140c71745183f7b4c5adfcf1a9f196308bbd1bf162205e",
+    "roi": [
+      12,
+      1045,
+      708,
+      1208
+    ],
+    "total": 900,
+    "reader_sha256": "f4c60cbbac22f063f28fca6c98b08e3df5f5358366385ff7eb14de0eb075153a",
+    "block": 75,
+    "error_frames": []
+  },
+  "method": "An OCR match requires agreement with text in the source region on the same frame. Native-frame inspection confirmed readable returns at the cuts. Frames without an OCR match are not counted as a visual pass."
+}

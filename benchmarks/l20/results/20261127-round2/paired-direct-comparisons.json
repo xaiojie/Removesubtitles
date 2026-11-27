@@ -623,6 +623,202 @@
         ],
         "native_review": "24.57 秒杯口和红色杯身较清楚，握杯手指仍糊。尾帧没有原 CLEAR 快速的大块黑影，原生标题被擦掉。"
       },
+      "product-max": {
+        "input_sha256": "cd583e655bbabf2338a421de05c3b41e4fac4ab472fbbf03aa29f945e7fa300d",
+        "reference_sha256": "172e744da879f0ce9ac5a8b27279d9cdaeae6fa2f929245cdeae331eb2a1ccab",
+        "output_sha256": "09eaab9e2d387d3c84f48b8dd28302cef3a3b4ffddbc073d1908653edd73da7a",
+        "revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8",
+        "seconds": 779.862,
+        "frames": 900,
+        "peak_gpu_mib": 10546,
+        "mean_gpu_percent": 48.5,
+        "regions": {
+          "clean": {
+            "luma_mae": 6.7325,
+            "temporal_luma_mae": 2.3727,
+            "pixels": 205035126
+          },
+          "covered": {
+            "luma_mae": 20.652,
+            "temporal_luma_mae": 4.7258,
+            "pixels": 29377589
+          }
+        },
+        "red_fraction_recovered": 0.97422,
+        "cup_eligible_frames": [
+          730,
+          731,
+          732,
+          733,
+          734,
+          735,
+          736,
+          737,
+          739,
+          740,
+          741,
+          742,
+          743,
+          744,
+          745
+        ],
+        "red_recovery_pixels": [
+          96658,
+          99216
+        ],
+        "tail_dark_pixels_by_frame": [
+          [
+            870,
+            23,
+            12416
+          ],
+          [
+            871,
+            18,
+            12407
+          ],
+          [
+            872,
+            3,
+            12409
+          ],
+          [
+            873,
+            8,
+            12408
+          ],
+          [
+            874,
+            5,
+            12391
+          ],
+          [
+            875,
+            4,
+            12394
+          ],
+          [
+            876,
+            1,
+            12398
+          ],
+          [
+            877,
+            5,
+            12402
+          ],
+          [
+            878,
+            0,
+            12376
+          ],
+          [
+            879,
+            0,
+            12389
+          ],
+          [
+            880,
+            0,
+            12385
+          ],
+          [
+            881,
+            0,
+            12383
+          ],
+          [
+            882,
+            0,
+            12376
+          ],
+          [
+            883,
+            0,
+            12372
+          ],
+          [
+            884,
+            0,
+            12387
+          ],
+          [
+            885,
+            0,
+            12383
+          ],
+          [
+            886,
+            0,
+            12378
+          ],
+          [
+            887,
+            0,
+            12383
+          ],
+          [
+            888,
+            0,
+            12386
+          ],
+          [
+            889,
+            0,
+            12383
+          ],
+          [
+            890,
+            1,
+            12387
+          ],
+          [
+            891,
+            0,
+            12386
+          ],
+          [
+            892,
+            0,
+            12394
+          ],
+          [
+            893,
+            0,
+            12390
+          ],
+          [
+            894,
+            510,
+            12385
+          ],
+          [
+            895,
+            542,
+            12379
+          ],
+          [
+            896,
+            0,
+            12393
+          ],
+          [
+            897,
+            0,
+            12402
+          ],
+          [
+            898,
+            3,
+            12397
+          ],
+          [
+            899,
+            0,
+            12409
+          ]
+        ]
+      },
       "baseline": {
         "input_sha256": "cd583e655bbabf2338a421de05c3b41e4fac4ab472fbbf03aa29f945e7fa300d",
         "reference_sha256": "172e744da879f0ce9ac5a8b27279d9cdaeae6fa2f929245cdeae331eb2a1ccab",
@@ -1015,6 +1211,202 @@
           ]
         ],
         "native_review": "24.57 秒保住了大部分红色，杯边和手指仍变形。真实末帧保留原生标题，字幕附近还有两个黑点。"
+      },
+      "lama-v5": {
+        "input_sha256": "cd583e655bbabf2338a421de05c3b41e4fac4ab472fbbf03aa29f945e7fa300d",
+        "reference_sha256": "172e744da879f0ce9ac5a8b27279d9cdaeae6fa2f929245cdeae331eb2a1ccab",
+        "output_sha256": "7845f32d9e60f461fb0b81e0347996b2829fd9f4b54f734fc81d47320746ba9b",
+        "revision": "c45733606cf023e44118ebeb7e240192e14960d2",
+        "seconds": 85.717,
+        "frames": 900,
+        "peak_gpu_mib": 6148,
+        "mean_gpu_percent": 15.2,
+        "regions": {
+          "clean": {
+            "luma_mae": 1.9309,
+            "temporal_luma_mae": 1.2537,
+            "pixels": 205035126
+          },
+          "covered": {
+            "luma_mae": 20.6325,
+            "temporal_luma_mae": 6.5624,
+            "pixels": 29377589
+          }
+        },
+        "red_fraction_recovered": 0.87467,
+        "cup_eligible_frames": [
+          730,
+          731,
+          732,
+          733,
+          734,
+          735,
+          736,
+          737,
+          739,
+          740,
+          741,
+          742,
+          743,
+          744,
+          745
+        ],
+        "red_recovery_pixels": [
+          86781,
+          99216
+        ],
+        "tail_dark_pixels_by_frame": [
+          [
+            870,
+            52,
+            12416
+          ],
+          [
+            871,
+            47,
+            12407
+          ],
+          [
+            872,
+            60,
+            12409
+          ],
+          [
+            873,
+            39,
+            12408
+          ],
+          [
+            874,
+            41,
+            12391
+          ],
+          [
+            875,
+            41,
+            12394
+          ],
+          [
+            876,
+            40,
+            12398
+          ],
+          [
+            877,
+            40,
+            12402
+          ],
+          [
+            878,
+            39,
+            12376
+          ],
+          [
+            879,
+            39,
+            12389
+          ],
+          [
+            880,
+            206,
+            12385
+          ],
+          [
+            881,
+            176,
+            12383
+          ],
+          [
+            882,
+            164,
+            12376
+          ],
+          [
+            883,
+            156,
+            12372
+          ],
+          [
+            884,
+            145,
+            12387
+          ],
+          [
+            885,
+            157,
+            12383
+          ],
+          [
+            886,
+            181,
+            12378
+          ],
+          [
+            887,
+            173,
+            12383
+          ],
+          [
+            888,
+            76,
+            12386
+          ],
+          [
+            889,
+            76,
+            12383
+          ],
+          [
+            890,
+            77,
+            12387
+          ],
+          [
+            891,
+            75,
+            12386
+          ],
+          [
+            892,
+            69,
+            12394
+          ],
+          [
+            893,
+            73,
+            12390
+          ],
+          [
+            894,
+            67,
+            12385
+          ],
+          [
+            895,
+            65,
+            12379
+          ],
+          [
+            896,
+            142,
+            12393
+          ],
+          [
+            897,
+            141,
+            12402
+          ],
+          [
+            898,
+            152,
+            12397
+          ],
+          [
+            899,
+            143,
+            12409
+          ]
+        ]
       }
     },
     "N01": {
@@ -1086,6 +1478,28 @@
           }
         },
         "native_review": "12.88 秒无字幕时保住了原猫腿轮廓。8.54 秒字幕与白猫脚相交的位置仍缺局部笔线。"
+      },
+      "lama-v5": {
+        "input_sha256": "5a6c954d11223df96b148d95a4c628e73198471ecd7977daf4e410fbe0004011",
+        "reference_sha256": "7a1a60f96a92a44d0bb175883685a9f6a582c99e10ce013f346250ac152e4bfc",
+        "output_sha256": "bbb79684db627cf31b817d517584446f048cca82dbf4f2bed338d1061a30f5a2",
+        "revision": "c45733606cf023e44118ebeb7e240192e14960d2",
+        "seconds": 36.827,
+        "frames": 720,
+        "peak_gpu_mib": 2802,
+        "mean_gpu_percent": 19.7,
+        "regions": {
+          "covered": {
+            "luma_mae": 7.0418,
+            "temporal_luma_mae": 0.4515,
+            "pixels": 6779521
+          },
+          "clean": {
+            "luma_mae": 2.3916,
+            "temporal_luma_mae": 0.1457,
+            "pixels": 65191570
+          }
+        }
       }
     },
     "G01": {
@@ -1135,6 +1549,43 @@
         "frames": 899,
         "peak_gpu_mib": 3302,
         "mean_gpu_percent": 20.7,
+        "regions": {
+          "covered": {
+            "luma_mae": 7.6983,
+            "temporal_luma_mae": 3.3935,
+            "pixels": 223531855
+          },
+          "glyph": {
+            "luma_mae": 11.3358,
+            "temporal_luma_mae": 3.885,
+            "pixels": 15415153
+          },
+          "plate_without_glyph": {
+            "luma_mae": 7.0367,
+            "temporal_luma_mae": 3.3059,
+            "pixels": 187078304
+          },
+          "clean": {
+            "luma_mae": 3.1341,
+            "temporal_luma_mae": 2.0347,
+            "pixels": 46901049
+          },
+          "plate_outside_roi": {
+            "luma_mae": 66.7452,
+            "temporal_luma_mae": 3.5057,
+            "pixels": 3007155
+          }
+        }
+      },
+      "lama-v5": {
+        "input_sha256": "6765a7dda1c7fc73d145d04e53c3f7d43fd51e072814e89f6ad8e5be4cced39f",
+        "reference_sha256": "a6fa0204526197e08541e58f75efa9d1456fef38a267391fb5f2242f567f15f7",
+        "output_sha256": "18bf91e609d2edd1bca46292e0e1dcc787d0af172511f0238a55836d9d133eb0",
+        "revision": "c45733606cf023e44118ebeb7e240192e14960d2",
+        "seconds": 73.243,
+        "frames": 899,
+        "peak_gpu_mib": 3302,
+        "mean_gpu_percent": 16.7,
         "regions": {
           "covered": {
             "luma_mae": 7.6983,
