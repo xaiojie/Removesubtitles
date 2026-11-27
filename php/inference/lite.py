@@ -11,6 +11,8 @@ import cv2
 import numpy as np
 from media import ROOT, capture, encode, geometry, report
 from job_trace import span
+from lite_masks import black_caption_cards
+from lite_tracking import track_block
 from subtitle_compositing import colored_caption_cards, large_caption_guidance, light_caption_cards
 
 
@@ -24,6 +26,8 @@ class LiteOptions:
     batch_size: int = 4
     export_crf: int = 18
     mask_mode: str = 'boxes'
+    adaptive_ocr: bool = False
+    inpaint_max_side: int = 0
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -32,6 +36,8 @@ class LiteOptions:
             raise ValueError('Lite 扩框或编码参数无效')
         if self.mask_mode not in ('boxes', 'joint', 'joint_cards', 'focused_cards'):
             raise ValueError('Lite 遮罩模式无效')
+        if type(self.inpaint_max_side) is not int or self.inpaint_max_side < 0:
+            raise ValueError('Lite 局部推理尺寸应为非负整数')
 
 
 def detect(frame, rois, detector, options=LiteOptions()):
@@ -213,6 +219,10 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options):
             if focused:
                 local = [box for box in local if left_edge <= box[0] and box[2] <= right_edge]
             mask = caption_plates(crop, local)
+            if focused:
+                dark_card = black_caption_cards(crop, local)
+                if dark_card is not None:
+                    mask |= dark_card
             if options.mask_mode in ('joint_cards', 'focused_cards'):
                 colored = colored_caption_cards(crop)
                 if colored is not None:
@@ -251,9 +261,20 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options):
                 full[top + y - t:top + y - t + h, left + x - l:left + x - l + w] = mask[y:y+h, x:x+w]
                 masks.append(full)
                 crops.append(cv2.cvtColor(frames[index][t:b, l:r], cv2.COLOR_BGR2RGB))
+            input_crops, input_masks = crops, masks
+            scale = 1.
+            if options.inpaint_max_side:
+                # Keep fine print at native detail; cap only sufficiently tall, wide repair areas.
+                scale = min(1., max(options.inpaint_max_side/max(r-l,b-t), 32/h))
+            if scale < 1:
+                size = (max(1, round((r-l)*scale)), max(1, round((b-t)*scale)))
+                input_crops = [cv2.resize(im,size,interpolation=cv2.INTER_AREA) for im in crops]
+                input_masks = [(cv2.resize(m,size,interpolation=cv2.INTER_AREA)>0).astype(np.uint8)*255 for m in masks]
             with span('lite_lama', device=str(lama.device), frames=len(batch)):
-                outputs = lama._inpaint_batch(crops, masks)
+                outputs = lama._inpaint_batch(input_crops,input_masks)
             for (index, _), mask, repaired in zip(batch, masks, outputs):
+                if scale < 1:
+                    repaired = cv2.resize(repaired, (r-l,b-t), interpolation=cv2.INTER_LINEAR)
                 selected = mask != 0
                 frames[index][t:b, l:r][selected] = cv2.cvtColor(repaired, cv2.COLOR_RGB2BGR)[selected]
     return frames
@@ -312,7 +333,8 @@ def run(folder, request):
                     if not ok:
                         break
                     frames.append(frame)
-                boxes, anchor = sample_block(frames, anchor, find)
+                boxes, anchor = (track_block(frames,anchor,find,rois) if options.adaptive_ocr
+                                 else sample_block(frames,anchor,find))
                 if ok:
                     first = frames.pop()
                 else:

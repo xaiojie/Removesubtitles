@@ -16,6 +16,64 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_lama_resolution_limit_preserves_output_size_and_pixels_outside_mask(self):
+        frame = np.full((160, 480, 3), (70, 110, 150), np.uint8)
+        original = frame.copy()
+        sizes=[]
+        def inpaint(images, masks):
+            sizes.append(images[0].shape[:2])
+            self.assertEqual(images[0].shape[:2],masks[0].shape)
+            return [np.full_like(im, 21) for im in images]
+        painter = SimpleNamespace(device='cpu',_inpaint_batch=inpaint)
+        restore_joint([frame], [[(50, 40, 430, 118)]], [(0, 0, 480, 160)], painter,
+                      LiteOptions(mask_mode='joint_cards',inpaint_max_side=260,context_padding=20))
+        self.assertLessEqual(max(sizes[0]),260)
+        self.assertTrue(np.all(frame[45:115,70:400]==21))
+        self.assertTrue(np.array_equal(frame[:30],original[:30]))
+
+    def test_dark_card_boundaries_survive_touching_black_scene_object(self):
+        from lite_masks import black_caption_cards
+        frame = np.full((130, 400, 3), 90, np.uint8)
+        frame[:, 163:190] = 0
+        frame[38:94, 55:337] = 0
+        cv2.putText(frame, 'VOICE OVER', (85, 76), cv2.FONT_HERSHEY_SIMPLEX,
+                    1., (218, 218, 218), 2)
+        boxes = [(79, 47, 278, 83)]
+        mask = black_caption_cards(frame, boxes)
+        self.assertIsNotNone(mask)
+        self.assertTrue(np.all(mask[38:94, 55:337]))
+        self.assertFalse(mask[10, 170])
+        self.assertFalse(mask[120, 170])
+        frame[:] = 0
+        cv2.putText(frame, 'VOICE OVER', (85, 76), cv2.FONT_HERSHEY_SIMPLEX, 1., (218, 218, 218), 2)
+        self.assertIsNone(black_caption_cards(frame, boxes))
+
+    def test_tracking_detects_one_frame_line_between_empty_anchors(self):
+        from lite_tracking import track_block
+        frames = [np.full((64, 230, 3), 60, np.uint8) for _ in range(9)]
+        cv2.putText(frames[2], 'ONE FRAME', (30,42), cv2.FONT_HERSHEY_SIMPLEX, .8, (245,245,245),2)
+        target=((25,16,190,51),)
+        def find(frame):
+            return target if frame.max() > 200 else ()
+        selected,end=track_block(frames,(),find,[(0,0,230,64)])
+        self.assertEqual(selected,[(),(),target,(),(),(),(),()])
+        self.assertEqual(end,())
+
+    def test_tracking_localizes_a_subtitle_change_without_ocr_on_every_frame(self):
+        from lite_tracking import track_block
+        a,b=((10,10,90,40),),((90,10,180,40),)
+        frames=[np.full((56,200,3),i,np.uint8) for i in range(9)]
+        seen=[]
+        def find(frame):
+            i=int(frame[0,0,0])
+            seen.append(i)
+            return a if i<4 else b
+        selected,end=track_block(frames,a,find,[(0,0,200,56)])
+        self.assertEqual(selected,[a]*4+[b]*4)
+        self.assertEqual(end,b)
+        self.assertLess(len(seen),8)
+        self.assertEqual(track_block(frames[:1],a,find,[(0,0,200,56)]),([],a))
+
     def test_focused_mask_keeps_smaller_peripheral_game_prompt(self):
         frame = np.full((80, 600, 3), 85, np.uint8)
         cv2.putText(frame, 'COMMENTARY', (180, 46), cv2.FONT_HERSHEY_SIMPLEX, 1,
