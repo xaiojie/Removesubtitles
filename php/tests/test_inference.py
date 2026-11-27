@@ -37,6 +37,32 @@ class InferenceTests(unittest.TestCase):
         extra = (1, boxes[0][1], 125, boxes[0][3])
         self.assertFalse(profile.wrapped_dialogue(frame, [extra, row], [row]))
 
+    def test_follow_a_verified_translucent_line_through_one_weak_edge(self):
+        from lite_line_panel import LinePanel
+
+        roi = (0, 20, 420, 134)
+        panel = LinePanel(roi, (420, 114), (90, 28, 330, 86), .55,
+                          np.full(3, 25., np.float32), (0, 48, 420, 106))
+        row = [(107, 37, 313, 77)]
+        def caption(frame):
+            image = frame.copy()
+            image[48:106, 90:330] = np.rint(.55 * image[48:106, 90:330] + 25).astype(np.uint8)
+            cv2.putText(image, 'CAPTION', (115, 88), cv2.FONT_HERSHEY_DUPLEX,
+                        1.35, (245, 245, 245), 3, cv2.LINE_AA)
+            return image
+
+        clear = np.full((160, 420, 3), 160, np.uint8)
+        weak = clear.copy()
+        weak[98:118, 117:306] = 57
+        self.assertIsNotNone(panel.restore(caption(clear), roi, row))
+        self.assertIsNone(panel.restore(caption(weak), roi, row))
+        self.assertIsNotNone(panel.restore(caption(clear), roi, row, frame_index=4))
+        recovered = panel.restore(caption(weak), roi, row, frame_index=5)
+        self.assertIsNotNone(recovered)
+        self.assertLess(np.abs(recovered[1][8:-8, 5:18].astype(int) - 160).mean(), 2)
+        self.assertIsNone(panel.restore(clear, roi, row, frame_index=6))
+        self.assertIsNone(panel.restore(caption(weak), roi, row, frame_index=60))
+
     def test_learned_horizontal_backing_protects_slanted_scene_signs_after_the_caption_ends(self):
         from lite_line_panel import LinePanel
         from lite_profile import BandProfile

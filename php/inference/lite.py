@@ -48,6 +48,7 @@ class LiteOptions:
     follow_wrapped_rows: bool = False
     native_thin_ocr: bool = False
     recover_static_text: bool = False
+    track_line_panel_edges: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -308,7 +309,10 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
             profile = profiles.get(key) if profiles else None
             empty_detection = not local
             if profile is not None and profile.panel is not None and key not in originals:
-                layer = profile.panel.restore(frame,key,local)
+                if options.track_line_panel_edges and isinstance(profile.panel, LinePanel):
+                    layer = profile.panel.restore(frame, key, local, frame_index=first_index+index)
+                else:
+                    layer = profile.panel.restore(frame,key,local)
                 if layer is not None:
                     (l,t,r,b),background,ink = layer
                     frame[t:b,l:r] = background

@@ -126,12 +126,14 @@ class LinePanel(Panel):
         self.native_box = self.window[0], native[0], self.window[2], native[1]
         return True
 
-    def restore(self, frame, roi, boxes):
+    def restore(self, frame, roi, boxes, *, frame_index=None):
         xmin, top, xmax, bottom = self.native_box
         x, y, _, _ = roi
         height = bottom - top
         boxes = [box for box in boxes if top + .18 * height < y + (box[1] + box[3]) / 2 < bottom - .18 * height]
         if not boxes:
+            if frame_index is not None:
+                self._verified_line = None
             return None
         left = x + min(box[0] for box in boxes)
         right = x + max(box[2] for box in boxes)
@@ -153,15 +155,34 @@ class LinePanel(Panel):
             i = int(np.argmax(gain + np.minimum(slope, np.maximum(0, gain))))
             sides.append((int(positions[i]), float(gain[i])))
         (l, a), (r, b) = sides
-        if min(a, b) < 2 or r - l < 1.4 * height:
+        if r - l < 1.4 * height or (frame_index is None and min(a, b) < 2):
             return None
         cols = np.arange(l + 3, r - 3, max(1, (r - l) // 100))
         outside = frame[[[top - 2], [bottom + 1]], cols].astype(np.float32)
         inside = frame[[[top + 1], [bottom - 2]], cols].astype(np.float32)
         gains = edge_gain(outside, inside, self.transmission, self.offset)
-        if (gains > 3).mean(axis=1).min() < .27:
-            return None
-        return self.restore_bounds(frame, roi, boxes, (l, top, r, bottom), cover_words=True)
+        upper, lower = (gains > 3).mean(axis=1)
+        strong = (a >= 2, b >= 2, upper >= .27, lower >= .27)
+        verified = all(strong)
+        if not verified:
+            previous = getattr(self, '_verified_line', None)
+            if frame_index is None or previous is None or not 0 < frame_index-previous[0] <= 12:
+                return None
+            _, old_left, old_right, old_text_left, old_text_right = previous
+            # A background colour close to the panel tint can hide one edge.
+            # The other three edges, word positions and current ink must still agree.
+            if (sum(strong) < 3 or min(a, b) < 0 or min(upper, lower) < .12 or max(upper, lower) < .38
+                    or max(abs(l-old_left), abs(r-old_right)) > max(3, .09*height)
+                    or max(abs(left-old_text_left), abs(right-old_text_right)) > .15*height):
+                return None
+            if not strong[0]:
+                l = old_left
+            if not strong[1]:
+                r = old_right
+        restored = self.restore_bounds(frame, roi, boxes, (l, top, r, bottom), cover_words=True)
+        if frame_index is not None and verified and restored is not None:
+            self._verified_line = frame_index, l, r, left, right
+        return restored
 
 
 def learn_line_panel(thumbnails, window):
