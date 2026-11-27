@@ -1,0 +1,121 @@
+{
+  "id": "P02",
+  "frames": 900,
+  "fps": 30,
+  "duration_seconds": 30,
+  "source_sha256": "03d6c7874731852eda7d7fcc99008caee5e010e6578c9cf7173da37a752b60a7",
+  "selection": [
+    {
+      "type": "subtitle",
+      "roi": [
+        6,
+        1238,
+        1072,
+        1740
+      ]
+    }
+  ],
+  "split": "tune",
+  "source_intent": "白色不透明叙事字卡覆盖黑白人物照片；观察整块底板、字卡高度变化和露出的脸部。",
+  "card_frames_inclusive": [
+    90,
+    169
+  ],
+  "card_region_xyxy": [
+    66,
+    1317,
+    1046,
+    1709
+  ],
+  "card_measure": "Near-white occupancy and co-located dark glyphs with a white ring, checked on each of the four original rows.",
+  "photograph_comparison": "For frames 90–169 align source frame 170 using exposed features above the caption. Compare interior [200,1355,933,1660] to that independent neighbor alignment.",
+  "end_strip": {
+    "source_frames_eligible": [
+      892,
+      893,
+      894,
+      895,
+      896,
+      897,
+      898,
+      899
+    ],
+    "frame_selection": "Inspect every one of the last 30 frames. Count the original near-white run at x1071 within y1510..1709 of length >=18 with >=18 co-located original near-white pixels at x1065. A retained in-box strip keeps >65% of those pixels above 235 in all channels.",
+    "last_frame": 899,
+    "last_frame_y_inclusive": [
+      1604,
+      1659
+    ],
+    "in_box_x": 1065,
+    "first_outside_box_x": 1072
+  },
+  "speaker_id": "At 16.60 s the red speaker identifier and lower black dialogue occupy the same selection. The fifth run retains the name and removes the dialogue. Its 150 OCR matches all correspond to the speaker name. The manifest targets narrative caption cards. The final white-strip finding is independent of speaker-name interpretation.",
+  "runs": {
+    "clear-fast": {
+      "revision": "b7f26f203dbb6f6a4b780a051d7b147c8023d30d",
+      "sha256": "7d4f0bf33fb952e138e960d5e6dbdb61466b2668fe4657075a7687b24065cb36",
+      "seconds": 1305.516,
+      "peak_job_gpu_mib": 20328,
+      "card_frames": 80,
+      "background_mean_luma_difference_from_registered_neighbor": 113.8571,
+      "median_background_edge_recall": 0.3854,
+      "nearwhite_strip_frames_at_x1065": 8,
+      "final_frame_fraction_bright_at_x1065": 1.0,
+      "final_frame_fraction_bright_at_x1072": 1.0,
+      "native_observation": "3.00～5.63 秒的 80 帧均留下四行可读德文和白底。10.33 秒仍可读双行字幕，29.97 秒真实末帧留下两行宽白底。",
+      "frames_retaining_original_glyphs_by_row": [
+        80,
+        80,
+        80,
+        80
+      ]
+    },
+    "ocr-lama": {
+      "revision": "2e5bcf2c1e52f1dd4233c8582845a0a954cee4b8",
+      "sha256": "f2a39eb467dcf136630c53e1db80404021ab5c0e0ad482903d39a6489b2d1b61",
+      "seconds": 212.401,
+      "peak_job_gpu_mib": 4990,
+      "card_frames": 80,
+      "background_mean_luma_difference_from_registered_neighbor": 115.5745,
+      "median_background_edge_recall": 0.0221,
+      "nearwhite_strip_frames_at_x1065": 1,
+      "final_frame_fraction_bright_at_x1065": 0.5893,
+      "final_frame_fraction_bright_at_x1072": 1.0,
+      "native_observation": "3.00～5.63 秒擦掉四行字，80 帧白卡和上方黑线仍在。0.00 秒误抹照片，16.60 秒连人物姓名条一起擦掉，29.97 秒最右边仍有白色窄条。",
+      "frames_retaining_original_glyphs_by_row": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "lama-v5": {
+      "revision": "c45733606cf023e44118ebeb7e240192e14960d2",
+      "sha256": "088a148ec7420443727ede0db3eee50cdb943f22d6c39e556c0cef9b535f126b",
+      "seconds": 94.831,
+      "peak_job_gpu_mib": 5204,
+      "card_frames": 0,
+      "background_mean_luma_difference_from_registered_neighbor": 0.8186,
+      "median_background_edge_recall": 0.9394,
+      "nearwhite_strip_frames_at_x1065": 6,
+      "final_frame_fraction_bright_at_x1065": 0.9464,
+      "final_frame_fraction_bright_at_x1072": 1.0,
+      "native_observation": "3.00～5.63 秒整张白卡消失，补回的照片轮廓与5.67 秒露出的原图一致。16.60 秒去掉对白并保留红色姓名条。29.97 秒最右侧仍有白边，底板未擦净。",
+      "frames_retaining_original_glyphs_by_row": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "clear_comparison_movie": {
+    "sha256": "cb44dcaad960cd9efd9d668f572fd1348590b60501a1d65b133e1091ae0b7e2f",
+    "video": {
+      "width": 1012,
+      "height": 900,
+      "avg_frame_rate": "30/1",
+      "nb_read_frames": "900"
+    }
+  }
+}

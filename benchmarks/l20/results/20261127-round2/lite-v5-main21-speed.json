@@ -1,0 +1,1223 @@
+{
+  "frozen_lite": "c45733606cf023e44118ebeb7e240192e14960d2",
+  "main_count": 21,
+  "timing": "fresh single worker through finalized media, excluding upload and queue",
+  "comparison": "ratio of summed seconds on paired main clips with matching encoded dimensions, frame rate and frame count, and no sampled outside compute process",
+  "ratios": {
+    "lite/original_lama": {
+      "clips": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "N01",
+        "N02",
+        "N03"
+      ],
+      "seconds": 1254.657,
+      "reference_seconds": 2793.932,
+      "ratio": 0.4491,
+      "unmatched_outputs": []
+    },
+    "lite/original_clear_fast": {
+      "clips": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "N01",
+        "N02",
+        "N03"
+      ],
+      "seconds": 1254.657,
+      "reference_seconds": 9117.277,
+      "ratio": 0.1376,
+      "unmatched_outputs": []
+    }
+  },
+  "clips": [
+    {
+      "id": "U01",
+      "style": "normal",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "327385b974514eb709ba6863a66e22588c0a13fa15e09ade159bed262d9bb494",
+      "runs": {
+        "lite": {
+          "seconds": 37.977,
+          "peak_vram_mib": 3236,
+          "mean_gpu_percent": 16.0,
+          "gpu_samples": 38,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "ba99aac49f76fb8074ee6fd791f09210374892beb3a629098335a69df29a9e78",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 69.445,
+          "peak_vram_mib": 1932,
+          "mean_gpu_percent": 14.1,
+          "gpu_samples": 74,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "7b8bd4cfd17b05268b0ac8f7e3def16bac5b09b580ad97b80953f38b2ec6aeb2",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 267.594,
+          "peak_vram_mib": 7356,
+          "mean_gpu_percent": 50.8,
+          "gpu_samples": 294,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "9571d5e8fb23f50eb4a60668def82637cbb00037831b42834e09b238ca1e70b5",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "U02",
+      "style": "bold",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "1d1974c98e6ee0cf04404dc8613e0ea6ab48fa3b2dcf2c268406d508a8199fbe",
+      "runs": {
+        "lite": {
+          "seconds": 39.768,
+          "peak_vram_mib": 2992,
+          "mean_gpu_percent": 17.5,
+          "gpu_samples": 40,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "af889516c2a12a8fb97930cb7d2329d8eb73257902b668338cd210244130b6be",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 68.171,
+          "peak_vram_mib": 1542,
+          "mean_gpu_percent": 15.7,
+          "gpu_samples": 73,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f7c45bc7e854c8f98627e8e98ce96d379b70865d4f9892fbcf9f063b8e3bdc4a",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 245.659,
+          "peak_vram_mib": 6812,
+          "mean_gpu_percent": 62.5,
+          "gpu_samples": 266,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "024f7eefbd67e01e9c5d4d26d0769dcbd70009849b008817e8ad2dea4b70f946",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "U03",
+      "style": "normal",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "3ec3d90e3804ec91bc0dd6915ef9c994f455af25a05525b59e633b6ee13aacce",
+      "runs": {
+        "lite": {
+          "seconds": 44.551,
+          "peak_vram_mib": 3460,
+          "mean_gpu_percent": 14.9,
+          "gpu_samples": 42,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "313cb9de8590a0998f3beacf8dc0417bef441bf4caa504a99615d012181268c7",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 66.942,
+          "peak_vram_mib": 1776,
+          "mean_gpu_percent": 13.9,
+          "gpu_samples": 68,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "e278b6a27bbe3172fc911a9c2f001d7c5fa355b2f76950bac7627e60e733553f",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 284.685,
+          "peak_vram_mib": 7354,
+          "mean_gpu_percent": 50.7,
+          "gpu_samples": 315,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "be242b6e292f2963bea263d8740f4117e541a8c1817146ae4f305a330cb50cdb",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "U04",
+      "style": "bold",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "548b68e766e1d447532d0b005ec339a7703f44f3873404cbb64ec9a484269b8f",
+      "runs": {
+        "lite": {
+          "seconds": 60.55,
+          "peak_vram_mib": 2660,
+          "mean_gpu_percent": 17.6,
+          "gpu_samples": 60,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "c1926dde2a71700aab6f111fa6fa27d6b9c9954f9dcc912181978a1249b23631",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 86.4,
+          "peak_vram_mib": 2268,
+          "mean_gpu_percent": 23.1,
+          "gpu_samples": 92,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "cd97c4cdbcf9401c22e88d346d6b0026f8abe5842527140cf704e2e46e728e59",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 347.541,
+          "peak_vram_mib": 6666,
+          "mean_gpu_percent": 39.7,
+          "gpu_samples": 385,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "12081152a70b5922eee0334439ef49d1da2ec4603e894f5b05f6f979167acff3",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P01",
+      "style": "plate",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "32c60c1ab3306c3b7728658ffe078a0b09a974cf5e96fd55b14523ac633ec816",
+      "runs": {
+        "lite": {
+          "seconds": 58.524,
+          "peak_vram_mib": 3506,
+          "mean_gpu_percent": 14.5,
+          "gpu_samples": 61,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "6e743b997690c7fc39c33db403c1de7b1fc81ce2d683a1df456930db6f3f95ad",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 115.204,
+          "peak_vram_mib": 2556,
+          "mean_gpu_percent": 9.7,
+          "gpu_samples": 123,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "fb97a04b885fd921e0f351bb2a9d360948942eca21269ccd0e6c6357440e8fe6",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 426.477,
+          "peak_vram_mib": 10320,
+          "mean_gpu_percent": 69.2,
+          "gpu_samples": 468,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "50167cca56d86c5e96df868a030b9afa09c00cf134557238d58544ed5770bf7b",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P02",
+      "style": "plate",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "03d6c7874731852eda7d7fcc99008caee5e010e6578c9cf7173da37a752b60a7",
+      "runs": {
+        "lite": {
+          "seconds": 94.831,
+          "peak_vram_mib": 5204,
+          "mean_gpu_percent": 11.3,
+          "gpu_samples": 99,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "088a148ec7420443727ede0db3eee50cdb943f22d6c39e556c0cef9b535f126b",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 212.401,
+          "peak_vram_mib": 4990,
+          "mean_gpu_percent": 15.6,
+          "gpu_samples": 234,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f2a39eb467dcf136630c53e1db80404021ab5c0e0ad482903d39a6489b2d1b61",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 1305.516,
+          "peak_vram_mib": 20328,
+          "mean_gpu_percent": 77.7,
+          "gpu_samples": 1474,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "7d4f0bf33fb952e138e960d5e6dbdb61466b2668fe4657075a7687b24065cb36",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P03",
+      "style": "plate",
+      "split": "tune",
+      "frames": 750,
+      "duration_seconds": 30.0,
+      "input_sha256": "ee164423db016c25fe46aaeb3fd1165cbaf87216bd136a35243d6889aa29e310",
+      "runs": {
+        "lite": {
+          "seconds": 80.579,
+          "peak_vram_mib": 3680,
+          "mean_gpu_percent": 14.1,
+          "gpu_samples": 83,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "04d702774a1e46153436322fd441300f5b51d88e65a53ac5f230a6516ed49aec",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_lama": {
+          "seconds": 181.68,
+          "peak_vram_mib": 2982,
+          "mean_gpu_percent": 8.8,
+          "gpu_samples": 202,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "62327705868d701b1111f36dff744e0c4489533c778c650b65ba87c94e96aea6",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 649.883,
+          "peak_vram_mib": 14718,
+          "mean_gpu_percent": 70.9,
+          "gpu_samples": 724,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "62a5f73d4d724e638226a6fdf005b3934e4b20f2323b446e6c7b60f4f1bd0a28",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        }
+      }
+    },
+    {
+      "id": "P04",
+      "style": "plate",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "0b4980d61dedb59730549616a8148d870ada2dd344d744f55b7de3bd68e0aafe",
+      "runs": {
+        "lite": {
+          "seconds": 24.621,
+          "peak_vram_mib": 1624,
+          "mean_gpu_percent": 20.3,
+          "gpu_samples": 23,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "8111044fa05675a2a2aa2f06d70040ff4be85785aa233ebcc81f98f556e79239",
+          "video": {
+            "width": 360,
+            "height": 640,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 60.066,
+          "peak_vram_mib": 900,
+          "mean_gpu_percent": 7.5,
+          "gpu_samples": 60,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "b5b6de63bf8a65e68a352c201ccaabbb1175557bb76ee1fce3039ae3dd6549ab",
+          "video": {
+            "width": 360,
+            "height": 640,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 111.169,
+          "peak_vram_mib": 5996,
+          "mean_gpu_percent": 32.4,
+          "gpu_samples": 115,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f4875dbaae5298b40239bd295b009a682866336444399a3d9de48935881b9059",
+          "video": {
+            "width": 360,
+            "height": 640,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P05",
+      "style": "plate",
+      "split": "holdout",
+      "frames": 720,
+      "duration_seconds": 30.0,
+      "input_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+      "runs": {
+        "lite": {
+          "seconds": 47.851,
+          "peak_vram_mib": 5080,
+          "mean_gpu_percent": 22.7,
+          "gpu_samples": 49,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "original_lama": {
+          "seconds": 171.658,
+          "peak_vram_mib": 2748,
+          "mean_gpu_percent": 7.5,
+          "gpu_samples": 190,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "c191455cb01f3aa8bc897dc2ca7a9ee032c3801c8616692eab63bc53cfdcaf49",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 309.882,
+          "peak_vram_mib": 9382,
+          "mean_gpu_percent": 59.4,
+          "gpu_samples": 345,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "6777cd2cd76a51d28afc7680a2f5175ea08460fb65f00d4c35fb064009b2b170",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 720,
+            "fps": "24"
+          }
+        }
+      }
+    },
+    {
+      "id": "P06",
+      "style": "plate",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "0aa39fad2f1ba073d68baef86b1edf1685e6793e67f78fb201e710a0171ddeb2",
+      "runs": {
+        "lite": {
+          "seconds": 35.827,
+          "peak_vram_mib": 3758,
+          "mean_gpu_percent": 22.6,
+          "gpu_samples": 32,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "a5ee14ca1f08ea918eeef0417a81d7d4e7f15d2e92c1041389b0bedc6da5c63d",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 89.974,
+          "peak_vram_mib": 1438,
+          "mean_gpu_percent": 10.2,
+          "gpu_samples": 94,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "c4deec751987859988d68177121a7648b6a36a53c2d12e9d5125bce417f2b9e5",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 229.848,
+          "peak_vram_mib": 6872,
+          "mean_gpu_percent": 60.2,
+          "gpu_samples": 250,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "77abc94ef75f2d8be2bb22eac0f9831b19d34f98e5ffe2261605e4791622c980",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P07",
+      "style": "plate",
+      "split": "tune",
+      "frames": 899,
+      "duration_seconds": 29.996633,
+      "input_sha256": "33e60b9010ff35c61e867bdbb6c446e34b9035efd4f2fdfa1512475441e96499",
+      "runs": {
+        "lite": {
+          "seconds": 85.662,
+          "peak_vram_mib": 3378,
+          "mean_gpu_percent": 8.4,
+          "gpu_samples": 89,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "200489dd285d89776be37a546bd22dd930b7a603f16538de01eb0f897396fdea",
+          "video": {
+            "width": 1920,
+            "height": 1080,
+            "frames": 899,
+            "fps": "30000/1001"
+          }
+        },
+        "original_lama": {
+          "seconds": 187.841,
+          "peak_vram_mib": 4234,
+          "mean_gpu_percent": 11.7,
+          "gpu_samples": 209,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0da3345622711f46718352d381ee01bc0ec7443bc1f80e0678e1079b786973d8",
+          "video": {
+            "width": 1920,
+            "height": 1080,
+            "frames": 899,
+            "fps": "30000/1001"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 754.976,
+          "peak_vram_mib": 9822,
+          "mean_gpu_percent": 40.5,
+          "gpu_samples": 839,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "145afe5f90000d776dd0016fa4fe305dab40bb55e53093979f5f9df297ecfff4",
+          "video": {
+            "width": 1920,
+            "height": 1080,
+            "frames": 899,
+            "fps": "30000/1001"
+          }
+        }
+      }
+    },
+    {
+      "id": "P08",
+      "style": "plate",
+      "split": "holdout",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+      "runs": {
+        "lite": {
+          "seconds": 77.652,
+          "peak_vram_mib": 5320,
+          "mean_gpu_percent": 15.0,
+          "gpu_samples": 83,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 245.662,
+          "peak_vram_mib": 3504,
+          "mean_gpu_percent": 8.7,
+          "gpu_samples": 275,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "22558ab755e349f9976127f9860b1b36427663ebc5c179e1fd70590239bce791",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 648.673,
+          "peak_vram_mib": 15608,
+          "mean_gpu_percent": 61.2,
+          "gpu_samples": 722,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "ee44a3d38c54da84f6398d9d88fc2ecbc4ce2b538b01ef633c0e6376cf7f5d33",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P09",
+      "style": "plate",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "3044d3b8b109cdeb09812129eb3d87edd642ac79760fbd0ab02402b8c72ad997",
+      "runs": {
+        "lite": {
+          "seconds": 154.999,
+          "peak_vram_mib": 7050,
+          "mean_gpu_percent": 10.4,
+          "gpu_samples": 168,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "9d828d15ec9bf754aa648a5c7d4651376253b6e59d3c94a5792fb2825a7c58f2",
+          "video": {
+            "width": 1620,
+            "height": 2880,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 325.08,
+          "peak_vram_mib": 6352,
+          "mean_gpu_percent": 13.2,
+          "gpu_samples": 362,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "a6368c19b4ddc689d1ca94d8fc3cbe418e87851e1632dee0f32cd5fa8641697d",
+          "video": {
+            "width": 1620,
+            "height": 2880,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 1044.669,
+          "peak_vram_mib": 10022,
+          "mean_gpu_percent": 30.1,
+          "gpu_samples": 1158,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "28ab01d52f27ac74da49cd01e9b0688559a1dffe8a5f9cb4f46f6631717c23b5",
+          "video": {
+            "width": 1620,
+            "height": 2880,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "P10",
+      "style": "plate",
+      "split": "tune",
+      "frames": 719,
+      "duration_seconds": 29.988292,
+      "input_sha256": "15713912c58660f0ba675b1bd592541ebaa6659a8b66aeb0779c0caf1c343fb8",
+      "runs": {
+        "lite": {
+          "seconds": 34.712,
+          "peak_vram_mib": 2886,
+          "mean_gpu_percent": 24.8,
+          "gpu_samples": 31,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "e44661b8601bff1f208b2e03793436bffb2020813009e5778850b7283bbd913e",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 719,
+            "fps": "24000/1001"
+          }
+        },
+        "original_lama": {
+          "seconds": 74.423,
+          "peak_vram_mib": 1756,
+          "mean_gpu_percent": 13.6,
+          "gpu_samples": 78,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "ea84dfcb2e80edf75f3e67d363ea08b449156d8da4bb6fd8529a686b69e9bf96",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 719,
+            "fps": "24000/1001"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 343.11,
+          "peak_vram_mib": 9550,
+          "mean_gpu_percent": 64.9,
+          "gpu_samples": 380,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1e8f6d85f9c6e7577130e589024c9f55dcbd62fa35f72232982d9ac3b33cd34e",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 719,
+            "fps": "24000/1001"
+          }
+        }
+      }
+    },
+    {
+      "id": "B01",
+      "style": "bold",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "cd583e655bbabf2338a421de05c3b41e4fac4ab472fbbf03aa29f945e7fa300d",
+      "runs": {
+        "lite": {
+          "seconds": 85.717,
+          "peak_vram_mib": 6148,
+          "mean_gpu_percent": 15.2,
+          "gpu_samples": 89,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "7845f32d9e60f461fb0b81e0347996b2829fd9f4b54f734fc81d47320746ba9b",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 185.795,
+          "peak_vram_mib": 3232,
+          "mean_gpu_percent": 11.4,
+          "gpu_samples": 203,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "d1e59358c13a972a841b81f473e4011d09bb957e9e74e09db0a540ce3705aaf0",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 428.219,
+          "peak_vram_mib": 13674,
+          "mean_gpu_percent": 31.5,
+          "gpu_samples": 470,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "e7458db88c13d98f21d4e76af63e569bd0d1d1ddb2cec99119a3b9754618a7a4",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "B02",
+      "style": "bold",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "26a8c9004cff592fde7809c021eb98f0325f68ca208663e53271b1e23688ad2f",
+      "runs": {
+        "lite": {
+          "seconds": 52.453,
+          "peak_vram_mib": 2520,
+          "mean_gpu_percent": 17.0,
+          "gpu_samples": 51,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "ede1238e76f0d91b3c1eb6a52765acde7028759599b783998bcd347911ab193a",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 78.991,
+          "peak_vram_mib": 2330,
+          "mean_gpu_percent": 18.5,
+          "gpu_samples": 85,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "0b4b46a486a273770002562e063da8503179a7175da6507188e611f83deaf07b",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 312.307,
+          "peak_vram_mib": 6666,
+          "mean_gpu_percent": 44.6,
+          "gpu_samples": 340,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "b88471642b7349f4ef01f84cd27555d56b53ee5ef740bd622e5de966fb4bc87e",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "B03",
+      "style": "bold",
+      "split": "tune",
+      "frames": 900,
+      "duration_seconds": 30.0,
+      "input_sha256": "a27a2a553e9b1c1f859507855c216d26ad51fb1f3dd6121e574e06dd7e709e69",
+      "runs": {
+        "lite": {
+          "seconds": 36.117,
+          "peak_vram_mib": 5186,
+          "mean_gpu_percent": 21.1,
+          "gpu_samples": 36,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "301c33e1e01aad48ec24fde78d860cb12b3739380d3280e8e65ae5c9e6ca69de",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_lama": {
+          "seconds": 80.238,
+          "peak_vram_mib": 1994,
+          "mean_gpu_percent": 11.0,
+          "gpu_samples": 83,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "fe26d7b109181d131b53b556198004632dbbb51b3ee7ef0bb10f5427576cf260",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 900,
+            "fps": "30"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 182.359,
+          "peak_vram_mib": 7266,
+          "mean_gpu_percent": 58.7,
+          "gpu_samples": 199,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "bb64973f12c1643413140c71745183f7b4c5adfcf1a9f196308bbd1bf162205e",
+          "video": {
+            "width": 720,
+            "height": 1280,
+            "frames": 900,
+            "fps": "30"
+          }
+        }
+      }
+    },
+    {
+      "id": "B04",
+      "style": "bold",
+      "split": "holdout",
+      "frames": 750,
+      "duration_seconds": 30.0,
+      "input_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+      "runs": {
+        "lite": {
+          "seconds": 85.941,
+          "peak_vram_mib": 8102,
+          "mean_gpu_percent": 15.5,
+          "gpu_samples": 89,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_lama": {
+          "seconds": 272.951,
+          "peak_vram_mib": 3700,
+          "mean_gpu_percent": 7.0,
+          "gpu_samples": 304,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "218ce60ad3bbdcfa05ca19c0758610faafa921cd95f353d9846f14951dca9df5",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 455.325,
+          "peak_vram_mib": 17420,
+          "mean_gpu_percent": 38.3,
+          "gpu_samples": 505,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "b2baf267cd9796dd0c0bc03e4c5b9b7e35324079c5f89a17cf1fb9077be45144",
+          "video": {
+            "width": 1080,
+            "height": 1920,
+            "frames": 750,
+            "fps": "25"
+          }
+        }
+      }
+    },
+    {
+      "id": "N01",
+      "style": "normal",
+      "split": "tune",
+      "frames": 720,
+      "duration_seconds": 30.0,
+      "input_sha256": "5a6c954d11223df96b148d95a4c628e73198471ecd7977daf4e410fbe0004011",
+      "runs": {
+        "lite": {
+          "seconds": 36.827,
+          "peak_vram_mib": 2802,
+          "mean_gpu_percent": 19.7,
+          "gpu_samples": 35,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "bbb79684db627cf31b817d517584446f048cca82dbf4f2bed338d1061a30f5a2",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "original_lama": {
+          "seconds": 63.377,
+          "peak_vram_mib": 2000,
+          "mean_gpu_percent": 20.2,
+          "gpu_samples": 67,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "9bd11ef58f00e7001de25c6024af59b1ceb55356ec4c205504ce8f11c9de5609",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 720,
+            "fps": "24"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 197.169,
+          "peak_vram_mib": 6748,
+          "mean_gpu_percent": 57.6,
+          "gpu_samples": 214,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "033f079ac8c69874c6790cf03443ffe63fde848767c10550669ca55b4e88a2e0",
+          "video": {
+            "width": 1280,
+            "height": 720,
+            "frames": 720,
+            "fps": "24"
+          }
+        }
+      }
+    },
+    {
+      "id": "N02",
+      "style": "normal",
+      "split": "holdout",
+      "frames": 750,
+      "duration_seconds": 30.0,
+      "input_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+      "runs": {
+        "lite": {
+          "seconds": 44.528,
+          "peak_vram_mib": 4272,
+          "mean_gpu_percent": 14.2,
+          "gpu_samples": 45,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1e40a34f8fc4ad1afc444ff562007a1941b89dd11cc6c7973968325c08cf1eaf",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_lama": {
+          "seconds": 91.567,
+          "peak_vram_mib": 3672,
+          "mean_gpu_percent": 12.2,
+          "gpu_samples": 99,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "1cb503918cda85251ecd5c3b92844d1b9b7ff497f049fd6a5f7daa424d36d52d",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 417.062,
+          "peak_vram_mib": 12710,
+          "mean_gpu_percent": 72.9,
+          "gpu_samples": 457,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "febcccfed936e2d095f0819904e0990a4a2dbb57e7d1fa6d20a6e5f9389feba5",
+          "video": {
+            "width": 1440,
+            "height": 1080,
+            "frames": 750,
+            "fps": "25"
+          }
+        }
+      }
+    },
+    {
+      "id": "N03",
+      "style": "normal",
+      "split": "tune",
+      "frames": 750,
+      "duration_seconds": 30.0,
+      "input_sha256": "ac9e1995ad0eeb64eb90b7aac4a0b47795b3eef87ba6ecf45f01978ef6db0910",
+      "runs": {
+        "lite": {
+          "seconds": 34.97,
+          "peak_vram_mib": 2778,
+          "mean_gpu_percent": 18.6,
+          "gpu_samples": 31,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "4c960e1eee1e9e462a7f7b98144e38020906144cb27c817253d096629e87c2cd",
+          "video": {
+            "width": 968,
+            "height": 544,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_lama": {
+          "seconds": 66.066,
+          "peak_vram_mib": 1206,
+          "mean_gpu_percent": 10.8,
+          "gpu_samples": 70,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "8ddfae6537e438e8965c024ddfff0b3fadb35c0d47ac59d9bb166b62aca3e62e",
+          "video": {
+            "width": 968,
+            "height": 544,
+            "frames": 750,
+            "fps": "25"
+          }
+        },
+        "original_clear_fast": {
+          "seconds": 155.154,
+          "peak_vram_mib": 6014,
+          "mean_gpu_percent": 47.9,
+          "gpu_samples": 168,
+          "monitor_errors": 0,
+          "other_compute_samples": 0,
+          "sha256": "5ed854c035928c1a63f0ceeb7e279802e14652bf231208f8515f02eae77f8f3a",
+          "video": {
+            "width": 968,
+            "height": 544,
+            "frames": 750,
+            "fps": "25"
+          }
+        }
+      }
+    }
+  ]
+}
