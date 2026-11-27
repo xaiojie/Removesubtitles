@@ -1,0 +1,442 @@
+{
+  "short_clip_graph_execution": {
+    "paired": {
+      "U02": {
+        "lama-v3": {
+          "seconds": 51.645,
+          "output_sha256": "be2b5e79db11086c59b46a32dbe254056a6663da575fc608eb73404712608634",
+          "frames": 900,
+          "peak_gpu_mib": 3166,
+          "mean_gpu_utilization_percent": 13.1,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 42.723,
+          "output_sha256": "f5808159ae1172bd6a7eef38c5337f80444b17891ef446f7175a5f5921d62043",
+          "frames": 900,
+          "peak_gpu_mib": 3334,
+          "mean_gpu_utilization_percent": 26.6,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "U03": {
+        "lama-v3": {
+          "seconds": 55.114,
+          "output_sha256": "dff5c58e567c077d388509d40f464f82f190e3e001f3039863587c3d4f660107",
+          "frames": 900,
+          "peak_gpu_mib": 3514,
+          "mean_gpu_utilization_percent": 14.2,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 44.421,
+          "output_sha256": "0be388f897a46c6263cb6af054838a96e72dc609cee2cb1a35c971ceaf4564aa",
+          "frames": 900,
+          "peak_gpu_mib": 3800,
+          "mean_gpu_utilization_percent": 30.1,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "P04": {
+        "lama-v3": {
+          "seconds": 33.45,
+          "output_sha256": "f9fa668041a77d6abfff03a9d3d7778b2ecaa7f1b0e72fbfc527d651a19ea296",
+          "frames": 900,
+          "peak_gpu_mib": 1498,
+          "mean_gpu_utilization_percent": 12.7,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 27.866,
+          "output_sha256": "8111044fa05675a2a2aa2f06d70040ff4be85785aa233ebcc81f98f556e79239",
+          "frames": 900,
+          "peak_gpu_mib": 1624,
+          "mean_gpu_utilization_percent": 18.8,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "N01": {
+        "lama-v3": {
+          "seconds": 46.405,
+          "output_sha256": "4352a281dfb5de7e2b396077f98f3b8ed5d2e3426ce1203ee15461d68f41cec3",
+          "frames": 720,
+          "peak_gpu_mib": 2624,
+          "mean_gpu_utilization_percent": 11.3,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 34.472,
+          "output_sha256": "1247767da637d0ff70d92464703ab28f423547c4fb16dc4f1cb6120c02f27d04",
+          "frames": 720,
+          "peak_gpu_mib": 2794,
+          "mean_gpu_utilization_percent": 11.2,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "R01": {
+        "lama-v3": {
+          "seconds": 126.356,
+          "output_sha256": "f5fe81b0f83c3fb4b5f2b104d4ee991dd615135c1967ffeea46f3a859b53c973",
+          "frames": 821,
+          "peak_gpu_mib": 3336,
+          "mean_gpu_utilization_percent": 11.4,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 114.921,
+          "output_sha256": "85da7c70a84b596c5ffd71a0336c1345d4301e338671f8dd7993dc597d321ea7",
+          "frames": 821,
+          "peak_gpu_mib": 3090,
+          "mean_gpu_utilization_percent": 12.9,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "P07": {
+        "lama-v3": {
+          "seconds": 91.382,
+          "output_sha256": "b2419b4d1f8ce02fc29961757bf319b6f9c266126860d6784915c80459218bb0",
+          "frames": 899,
+          "peak_gpu_mib": 3100,
+          "mean_gpu_utilization_percent": 9.4,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 85.575,
+          "output_sha256": "200489dd285d89776be37a546bd22dd930b7a603f16538de01eb0f897396fdea",
+          "frames": 899,
+          "peak_gpu_mib": 3378,
+          "mean_gpu_utilization_percent": 11.6,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "P09": {
+        "lama-v3": {
+          "seconds": 161.552,
+          "output_sha256": "a7f07f5df361f9d01d4caa8ef4fc0836d878c2debc4460dc2aad9a99db9db829",
+          "frames": 900,
+          "peak_gpu_mib": 6734,
+          "mean_gpu_utilization_percent": 8.8,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 151.2,
+          "output_sha256": "9d828d15ec9bf754aa648a5c7d4651376253b6e59d3c94a5792fb2825a7c58f2",
+          "frames": 900,
+          "peak_gpu_mib": 7050,
+          "mean_gpu_utilization_percent": 11.6,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      },
+      "B01": {
+        "lama-v3": {
+          "seconds": 95.705,
+          "output_sha256": "6e465f6fea972887f02af128db430486192abfdc9ffaab6143ef4a2bbe5a476c",
+          "frames": 900,
+          "peak_gpu_mib": 5308,
+          "mean_gpu_utilization_percent": 16.7,
+          "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3"
+        },
+        "lama-short-graph": {
+          "seconds": 83.596,
+          "output_sha256": "7845f32d9e60f461fb0b81e0347996b2829fd9f4b54f734fc81d47320746ba9b",
+          "frames": 900,
+          "peak_gpu_mib": 6148,
+          "mean_gpu_utilization_percent": 18.3,
+          "source_revision": "a796a132e3a382ca48edd6ee3c6dd8948ad4e7ca"
+        }
+      }
+    },
+    "v3_total_seconds": 661.609,
+    "short_total_seconds": 584.774,
+    "elapsed_reduction_percent": 11.61
+  },
+  "B03": {
+    "time_window": "source OCR matched the upper printed sentence in 85 native frames",
+    "runs": {
+      "lama-v3": {
+        "seconds": 44.985,
+        "output_sha256": "baf90399a902bc00348ea491132ea688962e105de3b382c7bdc7a6aec352bc29",
+        "frames": 900,
+        "peak_gpu_mib": 6434,
+        "mean_gpu_utilization_percent": 9.2,
+        "source_revision": "657b2dc78f73f3389ba17f07bcb0cdfb31d7bfa3",
+        "measured_frames": 85,
+        "original_lettering_majority_retained_frames": 74,
+        "max_retained_fraction": 1.0
+      },
+      "lama-row-control": {
+        "seconds": 34.38,
+        "output_sha256": "f17ebf46fd4b51417a81037e1c6ccdfa0d3f80f064737e832e9ce6c7201956de",
+        "frames": 900,
+        "peak_gpu_mib": 6912,
+        "mean_gpu_utilization_percent": 19.2,
+        "source_revision": "3a8cd581bacf75da92a6d94ab3e8e9a05efac29e",
+        "measured_frames": 85,
+        "original_lettering_majority_retained_frames": 74,
+        "max_retained_fraction": 1.0
+      },
+      "lama-wrapped-row": {
+        "seconds": 39.129,
+        "output_sha256": "1b365c7c85b0be1fe841b9a3a6d9bd63bba16ed3e7a2ac7d6af3c78684a7a838",
+        "frames": 900,
+        "peak_gpu_mib": 5186,
+        "mean_gpu_utilization_percent": 17.6,
+        "source_revision": "3a8cd581bacf75da92a6d94ab3e8e9a05efac29e",
+        "measured_frames": 85,
+        "original_lettering_majority_retained_frames": 0,
+        "max_retained_fraction": 0.0
+      }
+    }
+  },
+  "P10": {
+    "runs": {
+      "lama-line-control": {
+        "seconds": 39.42,
+        "output_sha256": "529e3ea171f6005284fef1811ca8bb48c5ce277c81dba6d008de7a96280bd8b9",
+        "frames": 719,
+        "peak_gpu_mib": 4132,
+        "mean_gpu_utilization_percent": 20.8,
+        "source_revision": "069cba1d171efab240410bc66951c2a405a730c6",
+        "source_measurable_frames": 546,
+        "two_edges_mostly_retained_frames": 543,
+        "median_retention": 1.0
+      },
+      "lama-line-words": {
+        "seconds": 36.613,
+        "output_sha256": "6a1cfb975e0a65c6314cb1ceaf6449da55c641db3ebb8a927fe2c2e2cd86d69f",
+        "frames": 719,
+        "peak_gpu_mib": 2886,
+        "mean_gpu_utilization_percent": 16.5,
+        "source_revision": "2026dba362aa4d5ebf8f8a76ce702e59c4335a1b",
+        "source_measurable_frames": 546,
+        "two_edges_mostly_retained_frames": 13,
+        "median_retention": 0.02758653491718094
+      },
+      "lama-panel-angle": {
+        "seconds": 31.94,
+        "output_sha256": "93b9cd18a9b8154b831d1d1cd83e01e810cbc06dccccc1320f2deaccff06513a",
+        "frames": 719,
+        "peak_gpu_mib": 2886,
+        "mean_gpu_utilization_percent": 30.0,
+        "source_revision": "cb33e629d5c545a5b4b169c58876c4904c445314",
+        "source_measurable_frames": 546,
+        "two_edges_mostly_retained_frames": 13,
+        "median_retention": 0.02758653491718094
+      }
+    },
+    "source_sign_edges": {
+      "lama-line-words": [
+        {
+          "frame": 701,
+          "original_edge_pixels": 881,
+          "fraction_matched": 0.9977,
+          "letter_brightness_mae": 1.913
+        },
+        {
+          "frame": 702,
+          "original_edge_pixels": 861,
+          "fraction_matched": 0.4704,
+          "letter_brightness_mae": 39.229
+        },
+        {
+          "frame": 703,
+          "original_edge_pixels": 805,
+          "fraction_matched": 0.4745,
+          "letter_brightness_mae": 42.292
+        },
+        {
+          "frame": 704,
+          "original_edge_pixels": 1230,
+          "fraction_matched": 0.9959,
+          "letter_brightness_mae": 3.985
+        },
+        {
+          "frame": 705,
+          "original_edge_pixels": 1175,
+          "fraction_matched": 0.9949,
+          "letter_brightness_mae": 3.066
+        },
+        {
+          "frame": 706,
+          "original_edge_pixels": 1272,
+          "fraction_matched": 0.9953,
+          "letter_brightness_mae": 3.246
+        },
+        {
+          "frame": 707,
+          "original_edge_pixels": 1217,
+          "fraction_matched": 1.0,
+          "letter_brightness_mae": 3.126
+        },
+        {
+          "frame": 710,
+          "original_edge_pixels": 1329,
+          "fraction_matched": 0.4891,
+          "letter_brightness_mae": 37.616
+        },
+        {
+          "frame": 713,
+          "original_edge_pixels": 1571,
+          "fraction_matched": 0.513,
+          "letter_brightness_mae": 40.027
+        },
+        {
+          "frame": 715,
+          "original_edge_pixels": 1232,
+          "fraction_matched": 1.0,
+          "letter_brightness_mae": 3.898
+        },
+        {
+          "frame": 718,
+          "original_edge_pixels": 1634,
+          "fraction_matched": 0.5355,
+          "letter_brightness_mae": 37.569
+        }
+      ],
+      "lama-panel-angle": [
+        {
+          "frame": 701,
+          "original_edge_pixels": 881,
+          "fraction_matched": 0.9989,
+          "letter_brightness_mae": 1.831
+        },
+        {
+          "frame": 702,
+          "original_edge_pixels": 861,
+          "fraction_matched": 0.9965,
+          "letter_brightness_mae": 2.727
+        },
+        {
+          "frame": 703,
+          "original_edge_pixels": 805,
+          "fraction_matched": 1.0,
+          "letter_brightness_mae": 2.446
+        },
+        {
+          "frame": 704,
+          "original_edge_pixels": 1230,
+          "fraction_matched": 0.9967,
+          "letter_brightness_mae": 2.993
+        },
+        {
+          "frame": 705,
+          "original_edge_pixels": 1175,
+          "fraction_matched": 0.9957,
+          "letter_brightness_mae": 2.93
+        },
+        {
+          "frame": 706,
+          "original_edge_pixels": 1272,
+          "fraction_matched": 0.9953,
+          "letter_brightness_mae": 3.042
+        },
+        {
+          "frame": 707,
+          "original_edge_pixels": 1217,
+          "fraction_matched": 0.9992,
+          "letter_brightness_mae": 2.697
+        },
+        {
+          "frame": 710,
+          "original_edge_pixels": 1329,
+          "fraction_matched": 0.9977,
+          "letter_brightness_mae": 3.312
+        },
+        {
+          "frame": 713,
+          "original_edge_pixels": 1571,
+          "fraction_matched": 1.0,
+          "letter_brightness_mae": 2.778
+        },
+        {
+          "frame": 715,
+          "original_edge_pixels": 1232,
+          "fraction_matched": 1.0,
+          "letter_brightness_mae": 3.166
+        },
+        {
+          "frame": 718,
+          "original_edge_pixels": 1634,
+          "fraction_matched": 0.9859,
+          "letter_brightness_mae": 3.991
+        }
+      ]
+    },
+    "angle_regression": {
+      "N01": {
+        "seconds": 34.239,
+        "output_sha256": "1247767da637d0ff70d92464703ab28f423547c4fb16dc4f1cb6120c02f27d04",
+        "frames": 720,
+        "peak_gpu_mib": 2794,
+        "mean_gpu_utilization_percent": 20.5,
+        "source_revision": "cb33e629d5c545a5b4b169c58876c4904c445314"
+      },
+      "P06": {
+        "seconds": 43.76,
+        "output_sha256": "cdc1169fa6da57b9e577a1559b85627665e69a9028800e668eabbdd9dc31a629",
+        "frames": 900,
+        "peak_gpu_mib": 5270,
+        "mean_gpu_utilization_percent": 16.7,
+        "source_revision": "cb33e629d5c545a5b4b169c58876c4904c445314"
+      }
+    }
+  },
+  "P02": {
+    "runs": {
+      "lama-card-control": {
+        "seconds": 85.112,
+        "output_sha256": "96d47923c729cb7d680995c5aa992f79f52bf9ec354a0968ea8eb8269a924d41",
+        "frames": 900,
+        "peak_gpu_mib": 4058,
+        "mean_gpu_utilization_percent": 14.4,
+        "source_revision": "756abb32dbdd6c63cd178117e3b93ed83c59bfb7",
+        "retained_plate": 80,
+        "retained_original_rows": [
+          80,
+          80,
+          0,
+          0
+        ]
+      },
+      "lama-multicard": {
+        "seconds": 84.35,
+        "output_sha256": "afa5dd69b2b99c474b585fe5a90fc9d3a28c7b647ed0051238b985acd36aa872",
+        "frames": 900,
+        "peak_gpu_mib": 4660,
+        "mean_gpu_utilization_percent": 13.2,
+        "source_revision": "756abb32dbdd6c63cd178117e3b93ed83c59bfb7",
+        "retained_plate": 0,
+        "retained_original_rows": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "lama-reveal": {
+        "seconds": 102.509,
+        "output_sha256": "01f5d87bb583cd99ea9d99c0472c9f49a1ae0bf7c4d9bfae08aad044f3c28dcc",
+        "frames": 900,
+        "peak_gpu_mib": 4522,
+        "mean_gpu_utilization_percent": 7.5,
+        "source_revision": "5c2d4fde2b1cde5308544c96affac768b95ceb83",
+        "retained_plate": 0,
+        "retained_original_rows": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "verified_source_frames_first_version": 79,
+    "missed_frame_first_version": 121,
+    "reference_source_frame": 170
+  },
+  "v3_independent_review": {
+    "P05": "visible translucent plate at 0.92 and 8.54s",
+    "P08": "readable TOO MANY at 4.20s",
+    "B04": "readable IMPOSED FINES ON on the last frame",
+    "N02": "first line readable at 2.28/4.28s and limit at 12.44s"
+  }
+}
