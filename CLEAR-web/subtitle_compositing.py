@@ -88,19 +88,21 @@ def large_caption_guidance(crop, include_outlined=False):
     nearby = cv2.erode(gray, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (17, 17)))
     bright = cv2.inRange(crop, (180, 180, 180), (255, 255, 255))
     bright |= cv2.inRange(crop, (0, 145, 180), (130, 255, 255))
-    strokes = ((bright > 0) & (cv2.subtract(gray, nearby) >= 90)).astype(np.uint8)
+    strokes = cv2.bitwise_and(bright, cv2.inRange(cv2.subtract(gray, nearby), 90, 255))
+    # Keep the original 0/1 mask scale used for dilation and distance measurement.
+    strokes = cv2.threshold(strokes, 0, 1, cv2.THRESH_BINARY)[1]
     count, labels, stats, _ = cv2.connectedComponentsWithStats(strokes, connectivity=8)
-    glyphs = []
+    widths, heights, areas = stats[1:, 2:5].T
+    glyphs = np.flatnonzero((heights >= 40) & (widths >= .2*heights) &
+                            (widths <= 1.7*heights) & (areas >= 1.6*heights)) + 1
     pairs = []
-    for label, (x, y, w, h, area) in enumerate(stats[1:], 1):
-        if h < 40 or not .2*h <= w <= 1.7*h or area < 1.6*h:
-            continue
-        for other in glyphs:
+    for index, label in enumerate(glyphs):
+        x, y, w, h = stats[label, :4]
+        for other in glyphs[:index]:
             ox, oy, ow, oh = stats[other, :4]
             if (.75*h <= oh <= 1.33*h and abs(y+h/2-oy-oh/2) <= .25*min(h, oh)
                     and .8*h <= abs(x+w/2-ox-ow/2) <= 2.8*h):
                 pairs.append((other, label))
-        glyphs.append(label)
     if not pairs:
         return False, None
     depth = cv2.distanceTransform(strokes, cv2.DIST_L2, 3)
@@ -129,15 +131,14 @@ def large_caption_guidance(crop, include_outlined=False):
 
 def light_caption_cards(crop):
     """Locate bounded light cards containing an aligned row of dark lettering."""
-    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     light = cv2.inRange(crop, (230, 230, 230), (255, 255, 255))
     contours, _ = cv2.findContours(light, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     mask = None
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        if h < 14 or h > gray.shape[0] * .85 or w < 1.8 * h or cv2.contourArea(contour) < .66 * w * h:
+        if h < 14 or h > crop.shape[0] * .85 or w < 1.8 * h or cv2.contourArea(contour) < .66 * w * h:
             continue
-        inside = gray[y:y+h, x:x+w]
+        inside = cv2.cvtColor(crop[y:y+h, x:x+w], cv2.COLOR_BGR2GRAY)
         ink = (inside < 105).astype(np.uint8)
         if not .07 <= np.mean(ink) <= .57:
             continue
@@ -148,7 +149,7 @@ def light_caption_cards(crop):
         if not any(sum(abs(base - other) <= .16 * h for other in glyphs) >= 3 for base in glyphs):
             continue
         if mask is None:
-            mask = np.zeros_like(gray)
+            mask = np.zeros(crop.shape[:2], np.uint8)
         cv2.drawContours(mask, [contour], -1, 255, cv2.FILLED)
     return cv2.dilate(mask, np.ones((5, 5), np.uint8)) if mask is not None else None
 

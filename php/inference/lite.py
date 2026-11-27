@@ -193,16 +193,16 @@ def outlined_text_mask(patch, padding, *, complete_flat_strokes=False):
     white = cv2.inRange(patch, (162, 162, 162), (255, 255, 255))
     yellow = cv2.inRange(patch, (0, 145, 176), (135, 255, 255))
     strokes = cv2.bitwise_and(white | yellow, cv2.inRange(cv2.subtract(gray, near_dark), 54, 255))
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(strokes, connectivity=8)
-    keep = np.zeros(count, np.uint8)
-    for index, (_, _, w, h, area) in enumerate(stats[1:], 1):
-        if h >= max(3, .18*glyph_height) and w <= 4*glyph_height and area >= max(4, .12*glyph_height):
-            keep[index] = 255
+    _, labels, stats, _ = cv2.connectedComponentsWithStats(strokes, connectivity=8)
+    widths, heights, areas = stats[:, 2:5].T
+    keep = ((heights >= max(3, .18*glyph_height)) & (widths <= 4*glyph_height) &
+            (areas >= max(4, .12*glyph_height))).astype(np.uint8) * 255
+    keep[0] = 0
     seed = keep[labels]
-    ys, xs = np.nonzero(seed)
-    if len(xs) < .025*glyph_height*max(1, width-2*padding):
+    if cv2.countNonZero(seed) < .025*glyph_height*max(1, width-2*padding):
         return None
-    if xs.max()-xs.min() < .70*(width-2*padding) or ys.max()-ys.min() < .50*glyph_height:
+    _, _, span_width, span_height = cv2.boundingRect(seed)
+    if span_width-1 < .70*(width-2*padding) or span_height-1 < .50*glyph_height:
         return None
     occupied = np.flatnonzero(seed.any(axis=0))
     if np.max(np.diff(occupied), initial=0) > 1.5*glyph_height:
@@ -213,10 +213,10 @@ def outlined_text_mask(patch, padding, *, complete_flat_strokes=False):
     supported = strokes & close_to_line
     if complete_flat_strokes:
         # A thin glyph such as 一 can be wider than the reach of either adjacent letter.
-        widths, heights, areas = stats[:, 2], stats[:, 3], stats[:, 4]
         candidates = ((widths >= .30*glyph_height) & (widths <= 1.25*glyph_height) &
                       (widths >= 3*heights) & (heights <= .18*glyph_height) &
                       (areas >= .60*widths*heights))
+        candidates[0] = False
         rim = max(2, round(.09*glyph_height))
         for component in np.flatnonzero(candidates):
             x, y, w, h, _ = stats[component]
