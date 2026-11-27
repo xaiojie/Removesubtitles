@@ -85,6 +85,7 @@ def fit_panel(images,box):
 
 @dataclass
 class Panel:
+    calibration_tolerance = 1
     window: tuple
     size: tuple
     box: tuple
@@ -131,7 +132,7 @@ class Panel:
             if len(values) < 2:
                 return False
             middle = int(np.median(values))
-            if sum(abs(value-middle) <= 1 for value in values) < max(2, .7*len(values)):
+            if sum(abs(value-middle) <= self.calibration_tolerance for value in values) < max(2, .7*len(values)):
                 return False
             selected.append(middle)
         if len(selected) != 4 or selected[2] <= selected[0] or selected[3] <= selected[1]:
@@ -196,4 +197,7 @@ def learn_panel(thumbnails,window):
             if fit is not None and fit[0]>best:
                 best,transmission,offset = fit
                 winner = Panel(window,(width,height),box,transmission,offset)
+    if winner is None:
+        from lite_gradient import learn_gradient_panel
+        winner = learn_gradient_panel(images, window, xs, ys)
     return winner

@@ -87,6 +87,33 @@ class InferenceTests(unittest.TestCase):
         rect, _, _ = panel.restore(frames[0], (12, 40, 601, 197), [(108, 41, 296, 93)])
         self.assertEqual(rect, (39, 40, 571, 165))
 
+    def test_gradient_panel_recovers_scene_print_and_tracks_fixed_decoration(self):
+        from lite_gradient import learn_gradient_panel
+        rng = np.random.default_rng(52)
+        frames, scenes = [], []
+        left, top, right, bottom = 12, 14, 232, 78
+        offset = np.stack((np.linspace(104,120,220), np.linspace(43,111,220), np.full(220,127)), axis=1)
+        for index in range(11):
+            coarse = rng.integers(50, 225, (4, 8, 3), dtype=np.uint8)
+            clean = cv2.resize(coarse, (244, 96))
+            cv2.putText(clean, 'STAMP', (90, 50), cv2.FONT_HERSHEY_SIMPLEX, .46, (10, 10, 10), 2)
+            source = clean.copy()
+            source[top:bottom,left:right] = (clean[top:bottom,left:right]*.47 + offset).astype(np.uint8)
+            cv2.circle(source,(47,69),6,(12,37,180),-1)
+            cv2.putText(source,str(index),(139,41),cv2.FONT_HERSHEY_SIMPLEX,.48,(250,250,250),2)
+            frames.append(source)
+            scenes.append(clean)
+        panel = learn_gradient_panel(np.array(frames), (0,0,244,96), [left,right], [top,bottom])
+        self.assertIsNotNone(panel)
+        self.assertTrue(panel.calibrate([panel.measure_edges(frame) for frame in frames[:5]]))
+        rect, bg, mask = panel.restore(frames[3],(0,0,244,96),[(134,24,172,47)])
+        l,t,r,b = rect
+        self.assertEqual(rect,(left,top,right,bottom))
+        self.assertEqual(int(mask[69,47]),255)
+        self.assertLess(np.abs(bg[43-t:52-t,94-l:124-l].astype(float) -
+                               scenes[3][43:52,94:124]).mean(),9)
+        self.assertIsNone(panel.restore(scenes[3],(0,0,244,96),[]))
+
     def test_profile_preserves_scene_print_outside_the_dialogue_row(self):
         from lite_profile import BandProfile,find_rows
         samples=[[(70,52,310,84),(10,4,46,24)]]*12
