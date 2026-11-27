@@ -3,6 +3,45 @@ import cv2
 import numpy as np
 
 
+class SideLabelTrack:
+    """Protect a previously excluded interface label while the same graphic remains visible."""
+
+    def __init__(self):
+        self.labels = []
+        self.last_frame = -2
+
+    def select(self, crop, boxes, kept, frame_index):
+        if len(kept) < len(boxes):
+            width = crop.shape[1]
+            self.labels = []
+            for box in boxes:
+                x, y, r, b = box
+                if box not in kept and r-x < .22*width and abs((x+r)/2-width/2) > .34*width:
+                    self.labels.append((box, crop[y:b, x:r].copy()))
+            self.last_frame = frame_index
+            return kept
+        previous = self.labels if frame_index == self.last_frame+1 else ()
+        self.labels = []
+        self.last_frame = frame_index
+        protected = set()
+        for bounds, reference in previous:
+            x, y, r, b = bounds
+            matched = []
+            for box in kept:
+                left, top, right, bottom = box
+                overlap = max(0, min(r,right)-max(x,left)) * max(0, min(b,bottom)-max(y,top))
+                if overlap >= .87*(right-left)*(bottom-top):
+                    matched.append(box)
+            if matched:
+                # Compare against the last confirmed graphic, so small frame-by-frame drift cannot
+                # turn a different word in the same place into a permanently protected label.
+                delta = cv2.absdiff(crop[y:b, x:r], reference).max(axis=2)
+                if delta.mean() <= 3 and np.count_nonzero(delta > 16) <= max(3, .008*delta.size):
+                    self.labels.append((bounds, reference))
+                    protected.update(matched)
+        return [box for box in kept if box not in protected]
+
+
 def reject_transient_skin(frames,boxes,previous,following):
     """Ignore isolated OCR responses on moving skin when there is no dark or bright printed ink."""
     def overlaps(box,neighbor):

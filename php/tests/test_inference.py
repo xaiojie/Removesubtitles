@@ -16,6 +16,34 @@ from media import capture, encode
 
 
 class InferenceTests(unittest.TestCase):
+    def test_protected_side_label_survives_a_gap_in_the_center_dialogue(self):
+        from lite_profile import BandProfile
+
+        roi = (0, 0, 800, 100)
+        central = (260, 21, 540, 79)
+        label = (704, 36, 787, 74)
+        separate = [(704, 36, 746, 74), (740, 36, 787, 74)]
+        scene = np.full((100, 800, 3), 66, np.uint8)
+        cv2.putText(scene, 'LIVE', (708, 65), cv2.FONT_HERSHEY_DUPLEX, .9, (245, 245, 245), 2)
+        speaking = scene.copy()
+        cv2.putText(speaking, 'DIALOGUE', (271, 64), cv2.FONT_HERSHEY_DUPLEX, 1.45, (245,245,245), 3)
+        changed = scene.copy()
+        changed[36:74, 704:787] = 66
+        cv2.putText(changed, 'NEXT', (708, 65), cv2.FONT_HERSHEY_DUPLEX, .9, (245,245,245), 2)
+        frames = [speaking, scene.copy(), changed.copy()]
+        rows = [[central, label], separate, [label]]
+        profile = BandProfile(800, 100, [(50, 60)], None)
+        options = LiteOptions(mask_mode='tracked_cards', layout_profile=True, protect_side_labels=True)
+        painter = SimpleNamespace(device='cpu', _inpaint_batch=lambda images, masks:
+                                  [np.full_like(image, 18) for image in images])
+        tracks = {}
+        for i, frame in enumerate(frames):
+            restore_joint([frame], [rows[i]], [roi], painter, options,
+                          tracks=tracks, profiles={roi: profile}, first_index=i)
+        np.testing.assert_array_equal(frames[0][:, 704:], scene[:, 704:])
+        np.testing.assert_array_equal(frames[1], scene)
+        self.assertFalse(np.array_equal(frames[2][:, 704:], changed[:, 704:]))
+
     def test_multiline_card_touching_a_matching_decoration_keeps_its_own_bounds(self):
         from lite_profile import BandProfile
         from subtitle_compositing import colored_caption_cards

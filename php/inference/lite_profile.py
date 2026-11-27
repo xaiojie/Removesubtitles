@@ -6,6 +6,7 @@ from video_capture import open_video_capture
 from lite_layer import learn_panel
 from lite_highlight import learn_highlight
 from lite_masks import OpaqueCardTrack, chip_examples, repeated_chips
+from lite_tracking import SideLabelTrack
 from subtitle_compositing import colored_caption_cards
 
 
@@ -114,6 +115,7 @@ class BandProfile:
     chip: object = None
     highlight: object = None
     opaque_card: OpaqueCardTrack = field(default_factory=OpaqueCardTrack, repr=False, compare=False)
+    side_labels: SideLabelTrack = field(default_factory=SideLabelTrack, repr=False, compare=False)
 
     def wrapped_dialogue(self, frame, boxes, selected, *, group_words=False):
         """Keep an adjacent row matching the font of an established, centred subtitle."""

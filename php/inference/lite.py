@@ -54,6 +54,7 @@ class LiteOptions:
     group_wrapped_words: bool = False
     follow_scaled_rows: bool = False
     track_opaque_cards: bool = False
+    protect_side_labels: bool = False
 
     def __post_init__(self):
         if min(self.sample_stride, self.detector_max_side, self.batch_size) < 1:
@@ -355,7 +356,11 @@ def restore_joint(frames, boxes_by_frame, rois, lama, options, tracks=None, prof
             left_edge, right_edge = (caption_band(local, right-left, bottom-top, options.box_padding)
                                      if focused else (0, right-left))
             if focused:
-                local = [box for box in local if left_edge <= box[0] and box[2] <= right_edge]
+                within_band = [box for box in local if left_edge <= box[0] and box[2] <= right_edge]
+                if (options.protect_side_labels and profile is not None and not dialogue
+                        and right-left >= 4*(bottom-top)):
+                    within_band = profile.side_labels.select(crop, local, within_band, first_index+index)
+                local = within_band
             dark_card = None
             if tracked:
                 local, dark_card = tracks[key].update(crop, local)
