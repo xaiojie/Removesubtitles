@@ -1,0 +1,145 @@
+{
+  "clip": "P03",
+  "source_sha256": "ee164423db016c25fe46aaeb3fd1165cbaf87216bd136a35243d6889aa29e310",
+  "selection": [
+    {
+      "type": "subtitle",
+      "roi": [
+        28,
+        1145,
+        1035,
+        1455
+      ]
+    }
+  ],
+  "runs": {
+    "clear-fast": {
+      "seconds": 649.883,
+      "peak_vram_mib": 14718,
+      "mean_gpu_percent": 70.9,
+      "gpu_samples": 724,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "62a5f73d4d724e638226a6fdf005b3934e4b20f2323b446e6c7b60f4f1bd0a28",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "ocr-lama": {
+      "seconds": 181.68,
+      "peak_vram_mib": 2982,
+      "mean_gpu_percent": 8.8,
+      "gpu_samples": 202,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "62327705868d701b1111f36dff744e0c4489533c778c650b65ba87c94e96aea6",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      }
+    },
+    "lama-v5": {
+      "seconds": 80.579,
+      "peak_vram_mib": 3680,
+      "mean_gpu_percent": 14.1,
+      "gpu_samples": 83,
+      "monitor_errors": 0,
+      "other_compute_samples": 0,
+      "sha256": "04d702774a1e46153436322fd441300f5b51d88e65a53ac5f230a6516ed49aec",
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "frames": 750,
+        "fps": "25"
+      }
+    }
+  },
+  "plate_analysis": {
+    "reference_bgr": [
+      217,
+      175,
+      90
+    ],
+    "tolerance_per_channel": 12,
+    "evaluated_source_frames": 750,
+    "first_last_eligible": [
+      0,
+      749
+    ],
+    "metric": "among original pixels in a large connected flat blue caption plate, fraction of the encoded output pixels still close to the plate color",
+    "frames_retaining_more_than_half": {
+      "clear-fast": 606,
+      "ocr-lama": 5,
+      "lama-v5": 6
+    },
+    "high_retention_lama_frames": {
+      "ocr-lama": [
+        452,
+        453,
+        454,
+        458,
+        459
+      ],
+      "lama-v5": [
+        452,
+        453,
+        454,
+        458,
+        459,
+        460
+      ]
+    },
+    "median_retained_fraction": {
+      "clear-fast": 0.79524,
+      "ocr-lama": 0.0,
+      "lama-v5": 0.0
+    },
+    "checkpoints": {
+      "0": {
+        "clear-fast": 0.94099,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      },
+      "418": {
+        "clear-fast": 0.88856,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      },
+      "422": {
+        "clear-fast": 0.84847,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      },
+      "423": {
+        "clear-fast": 0.91288,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      },
+      "424": {
+        "clear-fast": 0.85852,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      },
+      "570": {
+        "clear-fast": 0.35132,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      },
+      "749": {
+        "clear-fast": 0.56304,
+        "ocr-lama": 0.0,
+        "lama-v5": 0.0
+      }
+    }
+  },
+  "native_review": {
+    "first_frame": "CLEAR still shows both original lines. Original OCR-LaMa and Lite v5 remove the text and blue bar.",
+    "16.72_to_16.96": "At 16.92 s CLEAR retains the flat blue card and degrades the second phone message line. Original LaMa removes the card but also much of the message. Lite v5 keeps the phone message, with smearing where the card covered the person.",
+    "22.80_and_29.96": "CLEAR still has readable white dialogue and the blue plate. Both LaMa runs have removed the plate at those frames. On the last frame Lite v5 keeps the link; original LaMa has damaged it."
+  }
+}
