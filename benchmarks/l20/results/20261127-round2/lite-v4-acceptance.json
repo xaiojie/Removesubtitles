@@ -1,0 +1,167 @@
+{
+  "frozen_revision": "d87233c30ee64d12ab6576107a3a78d3309326a5",
+  "repeat_source_holdout": {
+    "quality_gate": "any readable target caption, reappearance or backing left behind fails the clip",
+    "review": "matching source and output crops at listed times, subtitle changes and true tail, with full decoded OCR used for triage",
+    "passed": 0,
+    "of": 4,
+    "elapsed_seconds": {
+      "lama-v3": 293.688,
+      "lama-v4": 260.116
+    },
+    "rows": {
+      "P05": {
+        "source_sha256": "948d94ab199e84ed048af9f1f27d4cbcf824a01bec10f3310631e21792adfb61",
+        "frames": 720,
+        "failure": "backplate",
+        "observed_seconds": [
+          0,
+          0.92,
+          8.54,
+          29.96
+        ],
+        "finding": "0.92 秒衣服上、8.54 秒手上及末帧都能看到空灰底。衣服上方的白色职称条是原画内容。",
+        "runs": {
+          "lama-v3": {
+            "seconds": 61.318,
+            "sha256": "4f019e812752bb9d24274a96dfe5e3cddfbbd2727ab62df230fbb17b5eb38e39",
+            "peak_gpu_mib": 4602,
+            "mean_gpu_percent": 13.3
+          },
+          "lama-v4": {
+            "seconds": 51.56,
+            "sha256": "0164605f604e9e2975cbf0d341dc406484169410ea147547221e4656a2ea06c7",
+            "peak_gpu_mib": 5080,
+            "mean_gpu_percent": 16.6
+          }
+        }
+      },
+      "P08": {
+        "source_sha256": "0f18149c592362e749068fc524f0f8680ce2e92cae428558de5217b6f598dec5",
+        "frames": 900,
+        "failure": "readable_subtitle",
+        "observed_seconds": [
+          4.2,
+          4.4
+        ],
+        "finding": "4.20、4.40 秒，人物胸前两行大字“TOO MANY / STILL DON’T”仍可读。12.00 秒的小字号字幕已经擦除。",
+        "runs": {
+          "lama-v3": {
+            "seconds": 86.277,
+            "sha256": "5d75e0cd1872273b90756d603590757054ec6f0de6b51088c76dbc07ce1ad90c",
+            "peak_gpu_mib": 4966,
+            "mean_gpu_percent": 13.1
+          },
+          "lama-v4": {
+            "seconds": 79.373,
+            "sha256": "123241629908c1959196af10a81d24c85128ac6eb2fee1f2c057c9443dc1cf2f",
+            "peak_gpu_mib": 5320,
+            "mean_gpu_percent": 14.6
+          }
+        }
+      },
+      "B04": {
+        "source_sha256": "9edec7b77ffeb3b3d0ef70fe63419c8a4150e76e6408c54a84575775844e0b2b",
+        "frames": 750,
+        "failure": "readable_subtitle",
+        "observed_seconds": [
+          4.08,
+          29,
+          29.52,
+          29.96
+        ],
+        "finding": "4.08 秒蓝底上仍留最下方的一行黄字。29 秒到真实末帧，仍能读到“IMPOSED FINES ON”。",
+        "runs": {
+          "lama-v3": {
+            "seconds": 93.37,
+            "sha256": "0d5b25aa0d420806b94dbb6d8f67afdd1360cbc27b13d89a8693b0082d433897",
+            "peak_gpu_mib": 7594,
+            "mean_gpu_percent": 11.7
+          },
+          "lama-v4": {
+            "seconds": 84.936,
+            "sha256": "f0298e29e26ffd09c0dd431388b923126c4af6394af4a0b54e9d250f95850783",
+            "peak_gpu_mib": 8102,
+            "mean_gpu_percent": 22.2
+          }
+        }
+      },
+      "N02": {
+        "source_sha256": "36f5587bb10eb1227ee177ce0e7ac3d10f9dfa68aaddeab96256596988099fc7",
+        "frames": 750,
+        "failure": "readable_subtitle",
+        "observed_seconds": [
+          2.28,
+          4.28,
+          12.44
+        ],
+        "finding": "2.28、4.28 秒，上行“Imagine all of Europe”仍可读。12.44 秒残留“limit…”；片末蓝色画面是原片内容。",
+        "runs": {
+          "lama-v3": {
+            "seconds": 52.723,
+            "sha256": "c2127b0b4217a14b6417fb6de8d76eb4a9ee660b6fbb297107abfadcc1b4bbeb",
+            "peak_gpu_mib": 4024,
+            "mean_gpu_percent": 11.4
+          },
+          "lama-v4": {
+            "seconds": 44.247,
+            "sha256": "0b773fa03dd31bf671b8c47a9a176ebe9001c572e1163ef77625cb817a31028f",
+            "peak_gpu_mib": 4272,
+            "mean_gpu_percent": 12.3
+          }
+        }
+      }
+    }
+  },
+  "development_visible_photograph": {
+    "clip": "P02",
+    "first": 90,
+    "last": 169,
+    "frames": 80,
+    "independent_alignment": "landmarks well above the production band, using the original exposed frame 170",
+    "runs": {
+      "lama-multicard": {
+        "seconds": 84.35,
+        "output_sha256": "afa5dd69b2b99c474b585fe5a90fc9d3a28c7b647ed0051238b985acd36aa872",
+        "source_reference_frames": [],
+        "restored_frame_count": 0,
+        "mean_aligned_luma_mae": 45.0903,
+        "median_source_edge_recall": 0.0,
+        "frame121_edge_recall": 0.0
+      },
+      "lama-reveal": {
+        "seconds": 102.509,
+        "output_sha256": "01f5d87bb583cd99ea9d99c0472c9f49a1ae0bf7c4d9bfae08aad044f3c28dcc",
+        "source_reference_frames": [
+          170
+        ],
+        "restored_frame_count": 79,
+        "mean_aligned_luma_mae": 1.3777,
+        "median_source_edge_recall": 0.9408,
+        "frame121_edge_recall": 0.0
+      },
+      "lama-source-flow": {
+        "seconds": 95.391,
+        "output_sha256": "088a148ec7420443727ede0db3eee50cdb943f22d6c39e556c0cef9b535f126b",
+        "source_reference_frames": [
+          170
+        ],
+        "restored_frame_count": 80,
+        "mean_aligned_luma_mae": 0.8105,
+        "median_source_edge_recall": 0.9387,
+        "frame121_edge_recall": 0.9436
+      },
+      "lama-v4": {
+        "seconds": 90.901,
+        "output_sha256": "088a148ec7420443727ede0db3eee50cdb943f22d6c39e556c0cef9b535f126b",
+        "source_reference_frames": [
+          170
+        ],
+        "restored_frame_count": 80,
+        "mean_aligned_luma_mae": 0.8105,
+        "median_source_edge_recall": 0.9387,
+        "frame121_edge_recall": 0.9436
+      }
+    }
+  }
+}
